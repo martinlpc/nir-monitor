@@ -7,11 +7,8 @@ export interface GeoPosition {
 
 export interface EMFSample {
   deviceId: string // 'nbm500' | 'future-device-x'
-  x: number // µT o V/m según el dispositivo
-  y: number
-  z: number
-  total: number // magnitud resultante
-  unit: 'µT' | 'V/m' | 'mA/m'
+  rss: number
+  unit: 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
 }
 
 export interface GeoTimestamp {

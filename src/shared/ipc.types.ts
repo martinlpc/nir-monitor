@@ -1,9 +1,10 @@
-import type { GeoTimestamp } from './GeoTimeStamp'
+import type { GeoPosition, GeoTimestamp } from './GeoTimestamp'
 import type { DeviceMeta, DeviceStatus } from './device.types'
 
 // Canales Main → Renderer (push)
 export interface IPCEvents {
   'device:status': { deviceId: string; status: DeviceStatus }
+  'gps:position': { coords: GeoPosition; valid: boolean }
   'session:sample': GeoTimestamp
   'session:started': { sessionId: string; startedAt: number }
   'session:stopped': { sessionId: string; duration: number }
