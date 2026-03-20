@@ -16,7 +16,6 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private config: NBM550Config
   private responseBuffer: string = ''
   private pendingResolve: ((val: string) => void) | null = null
-  private pendingReject: ((err: Error) => void) | null = null
   private pendingTimeout: NodeJS.Timeout | null = null
 
   constructor(config: NBM550Config) {
@@ -99,12 +98,10 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
       }
 
       this.pendingResolve = resolve
-      this.pendingReject = reject
       this.responseBuffer = ''
 
       this.pendingTimeout = setTimeout(() => {
         this.pendingResolve = null
-        this.pendingReject = null
         reject(new Error(`Timeout esperando respuesta a: ${command}`))
       }, RESPONSE_TIMEOUT_MS)
 
@@ -112,7 +109,6 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
         if (err) {
           clearTimeout(this.pendingTimeout!)
           this.pendingResolve = null
-          this.pendingReject = null
           reject(err)
         }
       })
@@ -141,7 +137,6 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
           clearTimeout(this.pendingTimeout!)
           const resolve = this.pendingResolve
           this.pendingResolve = null
-          this.pendingReject = null
           resolve(response)
         }
       }
