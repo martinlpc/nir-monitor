@@ -2,10 +2,17 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { DeviceManager } from './services/DeviceManager'
+import { SessionService } from './services/SessionService'
+import { setupIPC } from './ipc/handlers'
 
-function createWindow(): void {
+let mainWindow: BrowserWindow | null = null
+let deviceManager: DeviceManager | null = null
+let sessionService: SessionService | null = null
+
+function createWindow(): BrowserWindow {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  const window = new BrowserWindow({
     width: 900,
     height: 670,
     show: false,
@@ -17,11 +24,17 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.on('ready-to-show', () => {
-    mainWindow.show()
+  window.on('ready-to-show', () => {
+    window.show()
   })
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  window.on('closed', () => {
+    if (mainWindow === window) {
+      mainWindow = null
+    }
+  })
+
+  window.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
@@ -29,10 +42,13 @@ function createWindow(): void {
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    window.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+    window.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  mainWindow = window
+  return window
 }
 
 // This method will be called when Electron has finished
@@ -52,12 +68,23 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  createWindow()
+  deviceManager = new DeviceManager()
+  sessionService = new SessionService()
+
+  const window = createWindow()
+  setupIPC(window, deviceManager, sessionService)
+
+  void deviceManager.initialize().catch((error: unknown) => {
+    console.error('No pudo inicializarse DeviceManager', error)
+  })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (BrowserWindow.getAllWindows().length === 0 && deviceManager && sessionService) {
+      const nextWindow = createWindow()
+      setupIPC(nextWindow, deviceManager, sessionService)
+    }
   })
 })
 
@@ -68,6 +95,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('before-quit', () => {
+  void deviceManager?.disconnectAll().catch(() => {})
 })
 
 // In this file you can include the rest of your app's specific main process
