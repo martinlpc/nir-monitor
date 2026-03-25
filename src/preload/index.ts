@@ -49,6 +49,11 @@ const api = {
     onPosition: (cb: (data: { coords: GeoPosition; valid: boolean }) => void) => {
       ipcRenderer.on(IPC_EVENTS.GPS_POSITION, (_, data) => cb(data))
       return () => ipcRenderer.removeAllListeners(IPC_EVENTS.GPS_POSITION)
+    },
+
+    onNmea: (cb: (data: { line: string; port: string }) => void) => {
+      ipcRenderer.on(IPC_EVENTS.GPS_NMEA, (_, data) => cb(data))
+      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.GPS_NMEA)
     }
   },
 

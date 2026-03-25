@@ -28,6 +28,10 @@ export function setupIPC(
 // -- Eventos Main -> Renderer ----------------------------------------
 
 function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void {
+  const onGpsNmea = (data): void => {
+    window.webContents.send(IPC_EVENTS.GPS_NMEA, data)
+  }
+
   const onDeviceStatus = (data): void => {
     window.webContents.send(IPC_EVENTS.DEVICE_STATUS, data)
   }
@@ -47,12 +51,14 @@ function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void
     })
   }
 
+  dm.on('gps:nmea', onGpsNmea)
   dm.on('device:status', onDeviceStatus)
   dm.on('device:error', onDeviceError)
   dm.on('state', onState)
   dm.on('scanning', onScanning)
 
   window.on('closed', () => {
+    dm.off('gps:nmea', onGpsNmea)
     dm.off('device:status', onDeviceStatus)
     dm.off('device:error', onDeviceError)
     dm.off('state', onState)

@@ -10,6 +10,10 @@ let mainWindow: BrowserWindow | null = null
 let deviceManager: DeviceManager | null = null
 let sessionService: SessionService | null = null
 
+function isDebugPanelEnabled(): boolean {
+  return is.dev || process.env['NIR_DEBUG_UI'] === '1'
+}
+
 function createWindow(): BrowserWindow {
   // Create the browser window.
   const window = new BrowserWindow({
@@ -42,9 +46,15 @@ function createWindow(): BrowserWindow {
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    window.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    const rendererUrl = new URL(process.env['ELECTRON_RENDERER_URL'])
+    if (isDebugPanelEnabled()) {
+      rendererUrl.searchParams.set('debug', '1')
+    }
+    window.loadURL(rendererUrl.toString())
   } else {
-    window.loadFile(join(__dirname, '../renderer/index.html'))
+    window.loadFile(join(__dirname, '../renderer/index.html'), {
+      query: isDebugPanelEnabled() ? { debug: '1' } : {}
+    })
   }
 
   mainWindow = window

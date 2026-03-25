@@ -20,6 +20,7 @@ declare global {
       }
       gps: {
         onPosition: (cb: (data: { coords: GeoPosition; valid: boolean }) => void) => () => void
+        onNmea: (cb: (data: { line: string; port: string }) => void) => () => void
       }
       session: {
         start: (payload: {

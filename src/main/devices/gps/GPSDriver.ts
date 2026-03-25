@@ -112,6 +112,8 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
   private handleNMEALine(line: string): void {
     if (!line.startsWith('$')) return
 
+    this.emit('nmea', line)
+
     try {
       const sentence = parseNmeaSentence(line)
 

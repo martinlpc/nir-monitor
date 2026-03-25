@@ -270,6 +270,10 @@ export class DeviceManager extends EventEmitter {
       this.emit('device:error', { deviceId: 'gps', error: err.message })
     })
 
+    this.gps.on('nmea', (line: string) => {
+      this.emit('gps:nmea', { line, port })
+    })
+
     await this.gps.connect()
   }
 }

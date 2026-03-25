@@ -1,6 +1,7 @@
 // Main -> Renderer (push)
 export const IPC_EVENTS = {
   GPS_POSITION: 'gps:position',
+  GPS_NMEA: 'gps:nmea',
   DEVICE_STATUS: 'device:status',
   DEVICE_ERROR: 'device:error',
   SESSION_SAMPLE: 'session:sample',
