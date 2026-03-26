@@ -4,6 +4,7 @@ import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import { loadPortConfig, savePortConfig, type PortConfigData } from './PortConfig'
 import type { DeviceStatus } from '../../shared/device.types'
+import type { GeoPosition } from '../../shared/GeoTimestamp'
 
 const NBM_BAUD_RATE = 460800
 const GPS_BAUD_RATE = 4800
@@ -272,6 +273,10 @@ export class DeviceManager extends EventEmitter {
 
     this.gps.on('nmea', (line: string) => {
       this.emit('gps:nmea', { line, port })
+    })
+
+    this.gps.on('position', (coords: GeoPosition | null, valid: boolean) => {
+      this.emit('gps:position', { coords, valid, port })
     })
 
     await this.gps.connect()

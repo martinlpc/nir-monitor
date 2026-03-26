@@ -137,6 +137,10 @@ select {
   padding: 22px;
 }
 
+.panel.panel-compact {
+  padding: 18px;
+}
+
 .panel-head,
 .toolbar,
 .device-header,
@@ -258,6 +262,11 @@ select {
   overflow: auto;
 }
 
+.log-list.log-list-compact {
+  gap: 8px;
+  max-height: 180px;
+}
+
 .log-entry {
   display: grid;
   grid-template-columns: 76px 130px 1fr;
@@ -289,6 +298,17 @@ select {
   grid-template-columns: 76px 90px 1fr;
 }
 
+.log-list-compact .log-entry {
+  padding: 8px 10px;
+  gap: 10px;
+}
+
+.log-list-compact .log-time,
+.log-list-compact .log-type,
+.log-list-compact .nmea-line {
+  font-size: 0.75rem;
+}
+
 .nmea-line {
   font-family: 'Cascadia Code', 'Fira Code', monospace;
   font-size: 0.82rem;
@@ -297,6 +317,59 @@ select {
 
 .empty-state {
   color: #90a5be;
+}
+
+.map-view {
+  display: grid;
+  gap: 16px;
+}
+
+.map-view__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.map-view__meta {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.map-view__header h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.map-view__caption {
+  margin: 6px 0 0;
+  color: #90a5be;
+}
+
+.map-view__stats {
+  display: grid;
+  gap: 4px;
+  justify-items: end;
+  color: #d8e2ef;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 0.82rem;
+}
+
+.map-view__canvas {
+  min-height: 420px;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(180, 203, 232, 0.1);
+}
+
+.map-leaflet {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
 }
 
 @media (max-width: 980px) {

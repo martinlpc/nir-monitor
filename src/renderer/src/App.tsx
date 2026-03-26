@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { DeviceManagerState } from '../../main/services/DeviceManager'
 import type { SessionSummary } from '../../shared/ipc.types'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
+import MapView from './components/map/MapView'
 
 type PortInfo = { path: string; manufacturer: string }
 type DeviceId = 'nbm550' | 'gps'
@@ -46,6 +47,7 @@ function DebugPanel(): React.JSX.Element {
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [sessionSummary, setSessionSummary] = useState<SessionSummary | null>(null)
   const [lastSample, setLastSample] = useState<GeoTimestamp | null>(null)
+  const [gpsFix, setGpsFix] = useState(false)
   const [gpsText, setGpsText] = useState('Sin datos')
   const [nmeaLines, setNmeaLines] = useState<NmeaEntry[]>([])
   const [busyAction, setBusyAction] = useState<string | null>(null)
@@ -125,6 +127,8 @@ function DebugPanel(): React.JSX.Element {
     })
 
     const offGps = window.api.gps.onPosition((data) => {
+      setGpsFix(data.valid)
+
       if (!data.coords) {
         setGpsText(`GPS ${data.valid ? 'valido' : 'sin fix'}`)
         return
@@ -196,6 +200,7 @@ function DebugPanel(): React.JSX.Element {
           <span className={`badge ${deviceState.scanning ? 'warn' : 'ok'}`}>
             {deviceState.scanning ? 'Escaneando' : 'Idle'}
           </span>
+          <span className={`badge ${gpsFix ? 'ok' : 'danger'}`}>{gpsFix ? 'GPS fix' : 'GPS sin fix'}</span>
           <span className={`badge ${sessionId ? 'active' : ''}`}>
             {sessionId ? 'Sesion activa' : 'Sin sesion'}
           </span>
@@ -369,10 +374,6 @@ function DebugPanel(): React.JSX.Element {
             <Stat label="Sesion actual" value={sessionId ?? 'sin iniciar'} />
             <Stat label="Ultimo GPS" value={gpsText} />
             <Stat
-              label="Ultima trama NMEA"
-              value={nmeaLines[0] ? `${nmeaLines[0].port} | ${nmeaLines[0].line}` : 'sin tramas'}
-            />
-            <Stat
               label="Ultima muestra"
               value={
                 lastSample
@@ -413,13 +414,13 @@ function DebugPanel(): React.JSX.Element {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel panel-compact">
         <div className="panel-head">
           <h2>NMEA crudo</h2>
           <button onClick={() => setNmeaLines([])}>Limpiar</button>
         </div>
 
-        <div className="log-list">
+        <div className="log-list log-list-compact">
           {nmeaLines.length === 0 ? (
             <p className="empty-state">Todavia no llegaron sentencias NMEA.</p>
           ) : (
@@ -433,6 +434,10 @@ function DebugPanel(): React.JSX.Element {
           )}
         </div>
       </section>
+
+      <section className="panel">
+        <MapView />
+      </section>
     </main>
   )
 }
@@ -444,8 +449,10 @@ function ProductionShell(): React.JSX.Element {
         <p className="eyebrow">nir-monitor</p>
         <h1>Aplicacion operativa</h1>
         <p className="hero-copy">
-          El panel interno de diagnostico no esta habilitado en esta compilacion.
+          Visualizacion de la sesion activa sobre mapa. El debug interno no esta habilitado en esta
+          compilacion.
         </p>
+        <MapView />
       </section>
     </main>
   )

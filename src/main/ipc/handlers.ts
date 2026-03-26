@@ -3,7 +3,6 @@ import { SerialPort } from 'serialport'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
-import type { GeoPosition } from '../../shared/GeoTimestamp'
 
 let handlersRegistered = false
 
@@ -32,6 +31,10 @@ function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void
     window.webContents.send(IPC_EVENTS.GPS_NMEA, data)
   }
 
+  const onGpsPosition = (data): void => {
+    window.webContents.send(IPC_EVENTS.GPS_POSITION, data)
+  }
+
   const onDeviceStatus = (data): void => {
     window.webContents.send(IPC_EVENTS.DEVICE_STATUS, data)
   }
@@ -52,6 +55,7 @@ function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void
   }
 
   dm.on('gps:nmea', onGpsNmea)
+  dm.on('gps:position', onGpsPosition)
   dm.on('device:status', onDeviceStatus)
   dm.on('device:error', onDeviceError)
   dm.on('state', onState)
@@ -59,6 +63,7 @@ function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void
 
   window.on('closed', () => {
     dm.off('gps:nmea', onGpsNmea)
+    dm.off('gps:position', onGpsPosition)
     dm.off('device:status', onDeviceStatus)
     dm.off('device:error', onDeviceError)
     dm.off('state', onState)
@@ -71,10 +76,6 @@ function bindSessionServiceEvents(window: BrowserWindow, ss: SessionService): vo
     window.webContents.send(IPC_EVENTS.SESSION_SAMPLE, point)
   }
 
-  const onPosition = (coords: GeoPosition, valid: boolean): void => {
-    window.webContents.send(IPC_EVENTS.GPS_POSITION, { coords, valid })
-  }
-
   const onStarted = (data): void => {
     window.webContents.send(IPC_EVENTS.SESSION_STARTED, data)
   }
@@ -84,13 +85,11 @@ function bindSessionServiceEvents(window: BrowserWindow, ss: SessionService): vo
   }
 
   ss.on('point', onPoint)
-  ss.on('position', onPosition)
   ss.on('started', onStarted)
   ss.on('stopped', onStopped)
 
   window.on('closed', () => {
     ss.off('point', onPoint)
-    ss.off('position', onPosition)
     ss.off('started', onStarted)
     ss.off('stopped', onStopped)
   })
