@@ -22,6 +22,11 @@ declare global {
         onPosition: (cb: (data: { coords: GeoPosition; valid: boolean }) => void) => () => void
         onNmea: (cb: (data: { line: string; port: string }) => void) => () => void
       }
+      nbm: {
+        onSample: (
+          cb: (data: { rss: number; unit: string; battery: number; timestamp: number }) => void
+        ) => () => void
+      }
       session: {
         start: (payload: {
           label?: string

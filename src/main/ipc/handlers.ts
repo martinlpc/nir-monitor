@@ -4,8 +4,6 @@ import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 
-let handlersRegistered = false
-
 // -- Setup -----------------------------------------------------------
 // Registrar handlers y conectar eventos de servicios hacia el Renderer
 // vía webContents.send()
@@ -15,55 +13,101 @@ export function setupIPC(
   deviceManager: DeviceManager,
   sessionService: SessionService
 ): void {
+  // CRÍTICO: Limpiar listeners viejos ANTES de registrar nuevos
+  // Esto previene duplicados cuando se abre múltiples ventanas o al recargar
+  deviceManager.removeAllListeners('gps:nmea')
+  deviceManager.removeAllListeners('gps:position')
+  deviceManager.removeAllListeners('nbm:sample')
+  deviceManager.removeAllListeners('device:status')
+  deviceManager.removeAllListeners('device:error')
+  deviceManager.removeAllListeners('state')
+  deviceManager.removeAllListeners('scanning')
+
+  sessionService.removeAllListeners('point')
+  sessionService.removeAllListeners('started')
+  sessionService.removeAllListeners('stopped')
+
   bindDeviceManagerEvents(window, deviceManager)
   bindSessionServiceEvents(window, sessionService)
-
-  if (!handlersRegistered) {
-    registerHandlers(deviceManager, sessionService)
-    handlersRegistered = true
-  }
+  registerHandlers(deviceManager, sessionService)
 }
 
 // -- Eventos Main -> Renderer ----------------------------------------
 
 function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void {
   const onGpsNmea = (data): void => {
-    window.webContents.send(IPC_EVENTS.GPS_NMEA, data)
+    // No loguear cada NMEA para evitar stderr overflow
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.GPS_NMEA, data)
+    }
   }
 
   const onGpsPosition = (data): void => {
-    window.webContents.send(IPC_EVENTS.GPS_POSITION, data)
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.GPS_POSITION, data)
+    }
+  }
+
+  const onGpsFixLost = (): void => {
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.GPS_FIX_LOST)
+    }
+  }
+
+  const onNbmSample = (data): void => {
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.NBM_SAMPLE, data)
+    }
   }
 
   const onDeviceStatus = (data): void => {
-    window.webContents.send(IPC_EVENTS.DEVICE_STATUS, data)
+    console.log(`[IPC] onDeviceStatus received:`, data)
+    if (!window.webContents.isDestroyed()) {
+      console.log(`[IPC] Sending DEVICE_STATUS to renderer:`, data)
+      window.webContents.send(IPC_EVENTS.DEVICE_STATUS, data)
+    } else {
+      console.log(`[IPC] webContents destroyed, cannot send DEVICE_STATUS`)
+    }
   }
 
   const onDeviceError = (data): void => {
-    window.webContents.send(IPC_EVENTS.DEVICE_ERROR, data)
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.DEVICE_ERROR, data)
+    }
   }
 
   const onState = (state): void => {
-    window.webContents.send(IPC_EVENTS.SCAN_STATE, state)
+    // No loguear state para evitar verbosidad
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.SCAN_STATE, state)
+    }
   }
 
   const onScanning = (scanning: boolean): void => {
-    window.webContents.send(IPC_EVENTS.SCAN_STATE, {
-      ...dm.getState(),
-      scanning
-    })
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.SCAN_STATE, {
+        ...dm.getState(),
+        scanning
+      })
+    }
   }
 
   dm.on('gps:nmea', onGpsNmea)
   dm.on('gps:position', onGpsPosition)
+  dm.on('gps:fix-lost', onGpsFixLost)
+  dm.on('nbm:sample', onNbmSample)
   dm.on('device:status', onDeviceStatus)
   dm.on('device:error', onDeviceError)
   dm.on('state', onState)
   dm.on('scanning', onScanning)
 
+  console.log('[IPC] ✓ DeviceManager event listeners registered')
+
   window.on('closed', () => {
+    console.log('[IPC] Cleaning up DeviceManager listeners')
     dm.off('gps:nmea', onGpsNmea)
     dm.off('gps:position', onGpsPosition)
+    dm.off('nbm:sample', onNbmSample)
     dm.off('device:status', onDeviceStatus)
     dm.off('device:error', onDeviceError)
     dm.off('state', onState)
@@ -73,22 +117,33 @@ function bindDeviceManagerEvents(window: BrowserWindow, dm: DeviceManager): void
 
 function bindSessionServiceEvents(window: BrowserWindow, ss: SessionService): void {
   const onPoint = (point): void => {
-    window.webContents.send(IPC_EVENTS.SESSION_SAMPLE, point)
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.SESSION_SAMPLE, point)
+    }
   }
 
   const onStarted = (data): void => {
-    window.webContents.send(IPC_EVENTS.SESSION_STARTED, data)
+    console.log('[IPC] Session started:', data)
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.SESSION_STARTED, data)
+    }
   }
 
   const onStopped = (data): void => {
-    window.webContents.send(IPC_EVENTS.SESSION_STOPPED, data)
+    console.log('[IPC] Session stopped:', data)
+    if (!window.webContents.isDestroyed()) {
+      window.webContents.send(IPC_EVENTS.SESSION_STOPPED, data)
+    }
   }
 
   ss.on('point', onPoint)
   ss.on('started', onStarted)
   ss.on('stopped', onStopped)
 
+  console.log('[IPC] ✓ All SessionService event listeners registered')
+
   window.on('closed', () => {
+    console.log('[IPC] ✓ Window closed - cleaning up SessionService listeners')
     ss.off('point', onPoint)
     ss.off('started', onStarted)
     ss.off('stopped', onStopped)
@@ -128,11 +183,15 @@ function registerHandlers(dm: DeviceManager, ss: SessionService): void {
     if (deviceId === 'nbm550') {
       const nbm = dm.getNBM()
       if (!nbm) throw new Error('NBM-550 no encontrado')
-      await nbm.connect()
+      if (!nbm.isConnected()) {
+        await nbm.connect()
+      }
     } else {
       const gps = dm.getGPS()
       if (!gps) throw new Error('GPS no encontrado')
-      await gps.connect()
+      if (!gps.isConnected()) {
+        await gps.connect()
+      }
     }
   })
 

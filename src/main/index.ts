@@ -11,7 +11,7 @@ let deviceManager: DeviceManager | null = null
 let sessionService: SessionService | null = null
 
 function isDebugPanelEnabled(): boolean {
-  return is.dev || process.env['NIR_DEBUG_UI'] === '1'
+  return process.env['NIR_APP_MODE'] === 'debug'
 }
 
 function createWindow(): BrowserWindow {
@@ -36,6 +36,11 @@ function createWindow(): BrowserWindow {
     if (mainWindow === window) {
       mainWindow = null
     }
+    // Limpiar conexiones de dispositivos cuando se cierra la ventana
+    console.log('[Main] Window closed, disconnecting devices...')
+    void deviceManager?.disconnectAll().catch((err) => {
+      console.error('[Main] Error disconnecting devices:', err)
+    })
   })
 
   window.webContents.setWindowOpenHandler((details) => {

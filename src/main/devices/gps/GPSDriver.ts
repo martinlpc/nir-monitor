@@ -27,6 +27,7 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
   private lineParser: ReadlineParser | null = null
   private state: GPSState = { ...INITIAL_GPS_STATE }
   private config: GPSConfig
+  private fixLossTimeoutRef: NodeJS.Timeout | null = null
 
   constructor(config: GPSConfig) {
     super()
@@ -65,6 +66,11 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
 
   async disconnect(): Promise<void> {
     this.state = { ...INITIAL_GPS_STATE }
+
+    if (this.fixLossTimeoutRef) {
+      clearTimeout(this.fixLossTimeoutRef)
+      this.fixLossTimeoutRef = null
+    }
 
     if (this.port?.isOpen) {
       await this.closePort()
@@ -123,6 +129,11 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
           const valid = gga.fixType !== 'none'
 
           if (valid) {
+            // Limpiar timeout anterior si existe
+            if (this.fixLossTimeoutRef) {
+              clearTimeout(this.fixLossTimeoutRef)
+            }
+
             this.state.position = {
               lat: gga.latitude,
               lon: gga.longitude,
@@ -130,6 +141,14 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
               hdop: gga.horizontalDilution
             }
             this.state.satelliteCount = gga.satellitesInView
+
+            // Reiniciar timeout - si pasan 5s sin nueva posición válida, marcar como sin fix
+            this.fixLossTimeoutRef = setTimeout(() => {
+              this.state.valid = false
+              this.state.position = null
+              this.emit('fix-lost')
+              this.fixLossTimeoutRef = null
+            }, 5000)
           }
 
           this.state.valid = valid

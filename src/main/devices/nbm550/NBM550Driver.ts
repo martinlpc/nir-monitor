@@ -17,6 +17,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private responseBuffer: string = ''
   private pendingResolve: ((val: string) => void) | null = null
   private pendingTimeout: NodeJS.Timeout | null = null
+  private currentBattery: number = 100
 
   constructor(config: NBM550Config) {
     super()
@@ -33,35 +34,62 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   }
 
   async connect(): Promise<void> {
-    this.setStatus('connecting')
+    try {
+      this.setStatus('connecting')
+      console.log(`[NBM550Driver] Connecting to ${this.config.port}...`)
 
-    this.port = new SerialPort({
-      path: this.config.port,
-      baudRate: this.config.baudRate,
-      dataBits: 8,
-      stopBits: 1,
-      parity: 'none',
-      autoOpen: false
-    })
+      this.port = new SerialPort({
+        path: this.config.port,
+        baudRate: this.config.baudRate,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        autoOpen: false
+      })
 
-    await this.openPort()
-    this.attachDataListener()
+      await this.openPort()
+      console.log(`[NBM550Driver] Port opened: ${this.config.port}`)
 
-    // Secuencia de inicialización
-    await this.delay(INIT_DELAY_MS)
-    await this.sendCommand('REMOTE ON')
-    await this.delay(INIT_DELAY_MS)
-    await this.sendCommand(`SAMPLE_RATE 5`) //5 Hz para MAXHOLD
-    await this.sendCommand('MEAS_VIEW NORMAL') // Result1 = RSS (RT)
-    await this.sendCommand('RESULT_TYPE MAX') //MAXHOLD acumulado
-    await this.sendCommand(`RESULT_UNIT ${this.config.unit}`)
+      this.attachDataListener()
 
-    // Confirmar unidad activa
-    const unitRaw = await this.query('RESULT_UNIT?')
-    const unit = this.parser.parseUnit(unitRaw)
-    if (unit) this.parser.setUnit(unit)
+      // Secuencia de inicialización
+      await this.delay(INIT_DELAY_MS)
 
-    this.setStatus('connected')
+      console.log(`[NBM550Driver] Sending REMOTE ON...`)
+      await this.sendCommand('REMOTE ON')
+
+      await this.delay(INIT_DELAY_MS)
+
+      console.log(`[NBM550Driver] Sending SAMPLE_RATE 5...`)
+      await this.sendCommand('SAMPLE_RATE 5')
+
+      console.log(`[NBM550Driver] Sending MEAS_VIEW NORMAL...`)
+      await this.sendCommand('MEAS_VIEW NORMAL')
+
+      console.log(`[NBM550Driver] Sending RESULT_TYPE MAX...`)
+      await this.sendCommand('RESULT_TYPE MAX')
+
+      console.log(`[NBM550Driver] Sending RESULT_UNIT ${this.config.unit}...`)
+      await this.sendCommand(`RESULT_UNIT ${this.config.unit}`)
+
+      // Confirmar unidad activa
+      console.log(`[NBM550Driver] Querying RESULT_UNIT?...`)
+      const unitRaw = await this.query('RESULT_UNIT?')
+      console.log(`[NBM550Driver] RESULT_UNIT? response:`, unitRaw)
+
+      const unit = this.parser.parseUnit(unitRaw)
+      if (unit) {
+        console.log(`[NBM550Driver] Unit set to: ${unit}`)
+        this.parser.setUnit(unit)
+      }
+
+      console.log(`[NBM550Driver] Connection successful, setting status to connected`)
+      this.setStatus('connected')
+    } catch (err) {
+      console.error(`[NBM550Driver] Connection error:`, err)
+      this.setStatus('error')
+      throw err
+    }
   }
 
   async disconnect(): Promise<void> {
@@ -85,7 +113,26 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
   async readMeasurement(): Promise<NBM550Sample | null> {
     const raw = await this.query('MEAS?')
-    return this.parser.parseMeasurement(raw)
+    const sample = this.parser.parseMeasurement(raw)
+    if (sample) {
+      // Usar la batería actualizada más recientemente
+      sample.battery = this.currentBattery
+    }
+    return sample
+  }
+
+  async readBattery(): Promise<number | null> {
+    try {
+      const raw = await this.query('BATTERY?')
+      const battery = this.parser.parseBattery(raw)
+      if (battery !== null) {
+        this.currentBattery = battery
+      }
+      return battery
+    } catch (err) {
+      console.error(`[NBM550Driver] readBattery error:`, err)
+      return null
+    }
   }
 
   // ── Serial I/O ───────────────────────────────────────────

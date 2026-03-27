@@ -28,18 +28,21 @@ const api = {
       ipcRenderer.invoke(IPC_HANDLERS.DEVICE_DISCONNECT, deviceId),
 
     onStatus: (cb: (data: { deviceId: string; status: string }) => void) => {
-      ipcRenderer.on(IPC_EVENTS.DEVICE_STATUS, (_, data) => cb(data))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.DEVICE_STATUS)
+      const handler = (_: any, data: any) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.DEVICE_STATUS, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.DEVICE_STATUS, handler)
     },
 
     onError: (cb: (data: { deviceId: string; error: string }) => void) => {
-      ipcRenderer.on(IPC_EVENTS.DEVICE_ERROR, (_, data) => cb(data))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.DEVICE_ERROR)
+      const handler = (_: any, data: any) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.DEVICE_ERROR, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.DEVICE_ERROR, handler)
     },
 
     onScanState: (cb: (state: DeviceManagerState) => void) => {
-      ipcRenderer.on(IPC_EVENTS.SCAN_STATE, (_, state) => cb(state))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.SCAN_STATE)
+      const handler = (_: any, state: any) => cb(state)
+      ipcRenderer.on(IPC_EVENTS.SCAN_STATE, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.SCAN_STATE, handler)
     }
   },
 
@@ -47,13 +50,41 @@ const api = {
 
   gps: {
     onPosition: (cb: (data: { coords: GeoPosition; valid: boolean }) => void) => {
-      ipcRenderer.on(IPC_EVENTS.GPS_POSITION, (_, data) => cb(data))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.GPS_POSITION)
+      const handler = (_: any, data: any) => {
+        cb(data)
+      }
+      ipcRenderer.on(IPC_EVENTS.GPS_POSITION, handler)
+      return () => {
+        ipcRenderer.removeListener(IPC_EVENTS.GPS_POSITION, handler)
+      }
     },
 
     onNmea: (cb: (data: { line: string; port: string }) => void) => {
-      ipcRenderer.on(IPC_EVENTS.GPS_NMEA, (_, data) => cb(data))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.GPS_NMEA)
+      const handler = (_: any, data: any) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.GPS_NMEA, handler)
+      return () => {
+        ipcRenderer.removeListener(IPC_EVENTS.GPS_NMEA, handler)
+      }
+    },
+
+    onFixLost: (cb: () => void) => {
+      const handler = () => cb()
+      ipcRenderer.on(IPC_EVENTS.GPS_FIX_LOST, handler)
+      return () => {
+        ipcRenderer.removeListener(IPC_EVENTS.GPS_FIX_LOST, handler)
+      }
+    }
+  },
+
+  // -- NBM550 ---------------------------------------------------------------
+
+  nbm: {
+    onSample: (
+      cb: (data: { rss: number; unit: string; battery: number; timestamp: number }) => void
+    ) => {
+      const handler = (_: any, data: any) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.NBM_SAMPLE, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.NBM_SAMPLE, handler)
     }
   },
 
@@ -70,18 +101,21 @@ const api = {
     stop: (): Promise<SessionSummary> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_STOP),
 
     onSample: (cb: (point: GeoTimestamp) => void) => {
-      ipcRenderer.on(IPC_EVENTS.SESSION_SAMPLE, (_, point) => cb(point))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.SESSION_SAMPLE)
+      const handler = (_: any, point: any) => cb(point)
+      ipcRenderer.on(IPC_EVENTS.SESSION_SAMPLE, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_SAMPLE, handler)
     },
 
     onStarted: (cb: (data: { sessionId: string; startedAt: number; label: string }) => void) => {
-      ipcRenderer.on(IPC_EVENTS.SESSION_STARTED, (_, data) => cb(data))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.SESSION_STARTED)
+      const handler = (_: any, data: any) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.SESSION_STARTED, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STARTED, handler)
     },
 
     onStopped: (cb: (data: SessionSummary) => void) => {
-      ipcRenderer.on(IPC_EVENTS.SESSION_STOPPED, (_, data) => cb(data))
-      return () => ipcRenderer.removeAllListeners(IPC_EVENTS.SESSION_STOPPED)
+      const handler = (_: any, data: any) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.SESSION_STOPPED, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STOPPED, handler)
     }
   }
 }

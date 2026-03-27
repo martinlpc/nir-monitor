@@ -47,7 +47,9 @@ function SyncMapView({
       return
     }
 
-    const bounds = new LatLngBounds(points.map((point) => [point.lat, point.lng] as [number, number]))
+    const bounds = new LatLngBounds(
+      points.map((point) => [point.lat, point.lng] as [number, number])
+    )
     map.fitBounds(bounds, { padding: [32, 32] })
   }, [currentPosition, map, points])
 
@@ -65,14 +67,10 @@ export default function MapView(): React.JSX.Element {
 
   useEffect(() => {
     const offGps = window.api.gps.onPosition((data) => {
-      if (!data.coords) {
-        return
-      }
-
       setCurrentPosition({
-        lat: data.coords.lat,
-        lng: data.coords.lon,
-        alt: data.coords.alt,
+        lat: data.coords?.lat ?? 0,
+        lng: data.coords?.lon ?? 0,
+        alt: data.coords?.alt ?? 0,
         valid: data.valid
       })
     })
@@ -136,7 +134,7 @@ export default function MapView(): React.JSX.Element {
           />
           <SyncMapView currentPosition={currentPosition} points={points} />
           {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
-          {currentPosition?.valid ? (
+          {currentPosition?.valid && currentPosition.lat !== 0 ? (
             <CircleMarker
               center={[currentPosition.lat, currentPosition.lng]}
               radius={10}
