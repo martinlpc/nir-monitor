@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { describe, expect, it } from 'vitest'
 import { SessionService } from './SessionService'
+import { GeoFusionService } from './GeoFusionService'
 import type { GeoPosition } from '../../shared/GeoTimestamp'
 
 class FakeNBMDriver extends EventEmitter {
@@ -56,7 +57,8 @@ class FakeGPSDriver extends EventEmitter {
 
 describe('SessionService', () => {
   it('requires both devices to be connected before starting', async () => {
-    const session = new SessionService()
+    const fusion = new GeoFusionService()
+    const session = new SessionService(fusion)
     const nbm = new FakeNBMDriver()
     const gps = new FakeGPSDriver()
 
@@ -68,7 +70,8 @@ describe('SessionService', () => {
   })
 
   it('starts a session and counts captured points', async () => {
-    const session = new SessionService()
+    const fusion = new GeoFusionService()
+    const session = new SessionService(fusion)
     const nbm = new FakeNBMDriver()
     const gps = new FakeGPSDriver()
 
@@ -77,7 +80,10 @@ describe('SessionService', () => {
     session.setNBM(nbm as never)
     session.setGPS(gps as never)
 
-    const sessionId = await session.start('Recorrido de prueba', { triggerMode: 'distance', minDistanceMeters: 1 })
+    const sessionId = await session.start('Recorrido de prueba', {
+      triggerMode: 'distance',
+      minDistanceMeters: 1
+    })
     const pointPromise = new Promise<any>((resolve) => session.once('point', resolve))
 
     gps.emitPosition()

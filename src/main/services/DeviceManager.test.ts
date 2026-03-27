@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeviceManager } from './DeviceManager'
+import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 
 type OpenCallback = (err?: Error | null) => void
 type WriteCallback = (err?: Error | null) => void
@@ -10,7 +11,8 @@ const {
   serialPortInstances,
   FakeSerialPort,
   loadPortConfigMock,
-  savePortConfigMock
+  savePortConfigMock,
+  mockScanner
 } = vi.hoisted(() => {
   const serialPortListMock = vi.fn()
   const serialPortInstances: Array<{
@@ -55,12 +57,24 @@ const {
     }
   }
 
+  const mockScanner: ISerialPortScanner = {
+    listAvailablePorts: vi.fn(async () => []),
+    scanAndProbeAll: vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: null,
+      allProbed: []
+    })),
+    probeNBM: vi.fn(async () => false),
+    probeGPS: vi.fn(async () => false)
+  }
+
   return {
     serialPortListMock,
     serialPortInstances,
     FakeSerialPort,
     loadPortConfigMock: vi.fn(),
-    savePortConfigMock: vi.fn()
+    savePortConfigMock: vi.fn(),
+    mockScanner
   }
 })
 
@@ -105,7 +119,7 @@ describe('DeviceManager', () => {
   })
 
   it('loads saved port config during initialization', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const scanSpy = vi.spyOn(manager, 'scan').mockResolvedValue(manager.getState())
 
     loadPortConfigMock.mockReturnValue({ nbm550: 'COM9', gps: 'COM8' })
@@ -118,7 +132,7 @@ describe('DeviceManager', () => {
   })
 
   it('prioritizes persisted ports and saves detected devices after scanning', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const initNBMSpy = vi
       .spyOn(manager as any, 'initNBM')
       .mockImplementation(async (...args: unknown[]) => {
@@ -152,7 +166,7 @@ describe('DeviceManager', () => {
   })
 
   it('falls back to the remaining ports when saved ports are missing or invalid', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
 
     vi.spyOn(manager as any, 'initNBM').mockImplementation(async (...args: unknown[]) => {
       ;(manager as any).nbm = createFakeDevice(args[0] as string)
@@ -177,7 +191,7 @@ describe('DeviceManager', () => {
   })
 
   it('allows setting a port manually and persists the new mapping', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const previousNBM = createFakeDevice('COM1')
     ;(manager as any).nbm = previousNBM
 
@@ -196,7 +210,7 @@ describe('DeviceManager', () => {
   })
 
   it('disconnects connected devices and clears the manager state', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const nbm = createFakeDevice('COM4')
     const gps = createFakeDevice('COM5')
 
@@ -217,7 +231,7 @@ describe('DeviceManager', () => {
   it('identifies an NBM probe response and sends the expected commands', async () => {
     vi.useFakeTimers()
 
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const probePromise = (manager as any).probeNBM('COM10')
 
     expect(serialPortInstances).toHaveLength(1)
@@ -237,7 +251,7 @@ describe('DeviceManager', () => {
   })
 
   it('rejects an NBM probe when the response does not match the device', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const probePromise = (manager as any).probeNBM('COM11')
     const port = serialPortInstances[0]
 
@@ -248,7 +262,7 @@ describe('DeviceManager', () => {
   })
 
   it('identifies a GPS probe from incoming NMEA data', async () => {
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const probePromise = (manager as any).probeGPS('COM12')
     const port = serialPortInstances[0]
 
@@ -262,7 +276,7 @@ describe('DeviceManager', () => {
   it('times out a GPS probe when no NMEA frame arrives', async () => {
     vi.useFakeTimers()
 
-    const manager = new DeviceManager()
+    const manager = new DeviceManager(mockScanner)
     const probePromise = (manager as any).probeGPS('COM13')
     const port = serialPortInstances[0]
 

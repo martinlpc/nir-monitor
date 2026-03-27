@@ -19,9 +19,9 @@ export class SessionService extends EventEmitter {
   private nbm: NBM550Driver | null = null
   private gps: GPSDriver | null = null
 
-  constructor() {
+  constructor(fusion: GeoFusionService) {
     super()
-    this.fusion = new GeoFusionService()
+    this.fusion = fusion
 
     this.fusion.on('point', (point: GeoTimestamp) => {
       this.pointCount++

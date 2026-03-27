@@ -1,21 +1,18 @@
-import { SerialPort } from 'serialport'
 import { EventEmitter } from 'events'
 import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import { loadPortConfig, savePortConfig, type PortConfigData } from './PortConfig'
 import type { DeviceStatus } from '../../shared/device.types'
 import type { GeoPosition } from '../../shared/GeoTimestamp'
-
-const NBM_BAUD_RATE = 460800
-const GPS_BAUD_RATE = 4800
-const PROBE_TIMEOUT_MS = 3000 // tiempo maximo para identificar un puerto
-const NMEA_LISTEN_MS = 4000 // tiempo de escucha para detectar GPS - aumentado para dar más tiempo
+import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 
 export interface DeviceManagerState {
   nbm550: { port: string | null; status: DeviceStatus }
   gps: { port: string | null; status: DeviceStatus }
   scanning: boolean
 }
+
+const GPS_BAUD_RATE = 4800
 
 export class DeviceManager extends EventEmitter {
   private nbm: NBM550Driver | null = null
@@ -24,6 +21,12 @@ export class DeviceManager extends EventEmitter {
   private scanning: boolean = false
   private nbmPollInterval: NodeJS.Timeout | null = null
   private nbmSampleCount: number = 0
+  private scanner: ISerialPortScanner
+
+  constructor(scanner: ISerialPortScanner) {
+    super()
+    this.scanner = scanner
+  }
 
   // -- Init ------------------------------------------
 
@@ -32,7 +35,7 @@ export class DeviceManager extends EventEmitter {
     await this.scan()
   }
 
-  // -- Accesors de SessionService --------------------------
+  // ── Accesors de SessionService --------------------------
 
   getNBM(): NBM550Driver | null {
     return this.nbm
@@ -66,63 +69,19 @@ export class DeviceManager extends EventEmitter {
     try {
       await this.disconnectAll()
 
-      const ports = await SerialPort.list()
-      const portPaths = ports.map((p) => p.path)
-      console.log(`[DeviceManager] Scan started. Available ports:`, portPaths)
+      // Delegar scanning al scanner inyectado
+      const { nbmPort, gpsPort } = await this.scanner.scanAndProbeAll()
 
-      // Busca si hay info persistida en config para intentar primero
-      const nbmPort = this.portConfig.nbm550
-      const gpsPort = this.portConfig.gps
-
-      let nbmFound: string | null = null
-      let gpsFound: string | null = null
-
-      // Intentar puertos persistidos primero
-      if (nbmPort && portPaths.includes(nbmPort)) {
-        console.log(`[DeviceManager] Probing saved NBM port: ${nbmPort}`)
-        const ok = await this.probeNBM(nbmPort)
-        if (ok) nbmFound = nbmPort
-      }
-
-      if (gpsPort && portPaths.includes(gpsPort)) {
-        console.log(`[DeviceManager] Probing saved GPS port: ${gpsPort}`)
-        const ok = await this.probeGPS(gpsPort)
-        if (ok) gpsFound = gpsPort
-      }
-
-      // Escanear resto de puertos
-      const remaining = portPaths.filter((p) => p !== nbmPort && p !== gpsPort)
-      console.log(`[DeviceManager] Scanning ${remaining.length} remaining ports...`)
-
-      for (const path of remaining) {
-        if (nbmFound && gpsFound) break
-
-        if (!nbmFound) {
-          console.log(`[DeviceManager] Probing NBM on: ${path}`)
-          const ok = await this.probeNBM(path)
-          if (ok) {
-            nbmFound = path
-            continue
-          }
-        }
-
-        if (!gpsFound) {
-          console.log(`[DeviceManager] Probing GPS on: ${path}`)
-          const ok = await this.probeGPS(path)
-          if (ok) gpsFound = path
-        }
-      }
-
-      console.log(`[DeviceManager] Scan complete. NBM: ${nbmFound}, GPS: ${gpsFound}`)
+      console.log(`[DeviceManager] Scan complete. NBM: ${nbmPort}, GPS: ${gpsPort}`)
 
       // Inicializar drivers
-      if (nbmFound) await this.initNBM(nbmFound)
-      if (gpsFound) await this.initGPS(gpsFound)
+      if (nbmPort) await this.initNBM(nbmPort)
+      if (gpsPort) await this.initGPS(gpsPort)
 
-      // Persistir info encontrada en la config de puertos
+      // Persistir info encontrada
       this.portConfig = {
-        nbm550: nbmFound ?? undefined,
-        gps: gpsFound ?? undefined
+        nbm550: nbmPort ?? undefined,
+        gps: gpsPort ?? undefined
       }
       savePortConfig(this.portConfig)
     } finally {
@@ -158,231 +117,6 @@ export class DeviceManager extends EventEmitter {
     if (this.gps?.isConnected()) await this.gps.disconnect().catch(() => {})
     this.nbm = null
     this.gps = null
-  }
-
-  // -- Probe: identificar dispositivos --------------------------
-
-  private async probeNBM(path: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      let port: SerialPort | null = null
-      let buffer = ''
-      let done = false
-      let responsesReceived = 0
-
-      const finish = (result: boolean, reason: string = ''): void => {
-        if (done) return
-        done = true
-        clearTimeout(timer)
-
-        console.log(`[DeviceManager] probeNBM(${path}) finishing (${reason})`)
-
-        // Drain y cerrar el puerto de forma segura
-        if (port) {
-          try {
-            port.removeAllListeners('data')
-            port.removeAllListeners('error')
-            port.removeAllListeners('close')
-          } catch (err) {
-            // ignorar
-          }
-
-          // Intentar cerrar
-          if (port.isOpen) {
-            try {
-              port.close((err) => {
-                if (err) console.log(`[DeviceManager] probeNBM(${path}) close error:`, err.message)
-                console.log(
-                  `[DeviceManager] probeNBM(${path}): ${result ? '✓ NBM detected' : '✗ No NBM'}`
-                )
-                resolve(result)
-              })
-              return
-            } catch (err) {
-              console.log(`[DeviceManager] probeNBM(${path}) close exception:`, err)
-            }
-          }
-        }
-
-        console.log(`[DeviceManager] probeNBM(${path}): ${result ? '✓ NBM detected' : '✗ No NBM'}`)
-        resolve(result)
-      }
-
-      const timer = setTimeout(() => finish(false, 'timeout'), PROBE_TIMEOUT_MS)
-
-      try {
-        port = new SerialPort({
-          path,
-          baudRate: NBM_BAUD_RATE,
-          dataBits: 8,
-          stopBits: 1,
-          parity: 'none',
-          autoOpen: false
-        })
-
-        // Error handler que ignora si ya terminamos
-        port.on('error', (err) => {
-          if (!done) {
-            console.log(`[DeviceManager] probeNBM(${path}) port error:`, err.message)
-            finish(false, 'port error')
-          }
-        })
-
-        port.open((err) => {
-          if (err) {
-            if (!done) {
-              console.log(`[DeviceManager] probeNBM(${path}) open error:`, err.message)
-              finish(false, 'open error')
-            }
-            return
-          }
-
-          if (done) return
-
-          console.log(`[DeviceManager] probeNBM(${path}) port opened`)
-
-          port!.on('data', (chunk: Buffer) => {
-            if (done) return
-
-            buffer += chunk.toString('ascii')
-
-            // NBM responde con terminador ";"
-            while (buffer.includes(';')) {
-              const endIdx = buffer.indexOf(';')
-              const response = buffer.substring(0, endIdx + 1)
-              buffer = buffer.substring(endIdx + 1)
-              responsesReceived++
-
-              console.log(
-                `[DeviceManager] probeNBM(${path}) response ${responsesReceived}:`,
-                response
-              )
-
-              // Segunda respuesta debería contener "NARDA" o "550"
-              if (responsesReceived === 2) {
-                if (
-                  response.toUpperCase().includes('NARDA') ||
-                  response.toUpperCase().includes('550') ||
-                  response.toUpperCase().includes('NBM')
-                ) {
-                  finish(true, 'NBM detected')
-                  return
-                } else {
-                  finish(false, 'invalid response')
-                  return
-                }
-              }
-            }
-          })
-
-          setTimeout(() => {
-            if (done) return
-            console.log(`[DeviceManager] probeNBM(${path}) sending REMOTE ON`)
-            port?.write('REMOTE ON;\r\n', () => {
-              setTimeout(() => {
-                if (done) return
-                console.log(`[DeviceManager] probeNBM(${path}) sending DEVICE_INFO?`)
-                port?.write('DEVICE_INFO?;\r\n', () => {})
-              }, 200)
-            })
-          }, 100)
-        })
-      } catch (err) {
-        console.log(`[DeviceManager] probeNBM(${path}) exception:`, err)
-        finish(false, 'exception')
-      }
-    })
-  }
-
-  private async probeGPS(path: string): Promise<boolean> {
-    return new Promise((resolve) => {
-      let port: SerialPort | null = null
-      let done = false
-      let buffer = ''
-
-      const finish = (result: boolean, reason: string = ''): void => {
-        if (done) return
-        done = true
-        clearTimeout(timer)
-
-        console.log(`[DeviceManager] probeGPS(${path}) finishing (${reason})`)
-
-        // Cerrar el puerto de forma segura
-        if (port) {
-          try {
-            port.removeAllListeners('data')
-            port.removeAllListeners('error')
-            port.removeAllListeners('close')
-          } catch (err) {
-            // ignorar
-          }
-
-          // Intentar cerrar
-          if (port.isOpen) {
-            try {
-              port.close((err) => {
-                if (err) console.log(`[DeviceManager] probeGPS(${path}) close error:`, err.message)
-                console.log(
-                  `[DeviceManager] probeGPS(${path}): ${result ? '✓ GPS detected' : '✗ No GPS'}`
-                )
-                resolve(result)
-              })
-              return
-            } catch (err) {
-              console.log(`[DeviceManager] probeGPS(${path}) close exception:`, err)
-            }
-          }
-        }
-
-        console.log(`[DeviceManager] probeGPS(${path}): ${result ? '✓ GPS detected' : '✗ No GPS'}`)
-        resolve(result)
-      }
-
-      const timer = setTimeout(() => finish(false, 'timeout'), NMEA_LISTEN_MS)
-
-      try {
-        port = new SerialPort({
-          path,
-          baudRate: GPS_BAUD_RATE,
-          dataBits: 8,
-          stopBits: 1,
-          parity: 'none',
-          autoOpen: false
-        })
-
-        // Error handler que ignora si ya terminamos
-        port.on('error', (err) => {
-          if (!done) {
-            console.log(`[DeviceManager] probeGPS(${path}) port error:`, err.message)
-            finish(false, 'port error')
-          }
-        })
-
-        port.open((err) => {
-          if (err) {
-            if (!done) {
-              console.log(`[DeviceManager] probeGPS(${path}) open error:`, err.message)
-              finish(false, 'open error')
-            }
-            return
-          }
-
-          if (done) return
-
-          port!.on('data', (chunk: Buffer) => {
-            if (done) return
-
-            buffer += chunk.toString('ascii')
-            // Tramas NMEA empiezan con $GP, $GN, $GL, $GA
-            if (/\$G[PNLA]/.test(buffer)) {
-              finish(true, 'NMEA detected')
-            }
-          })
-        })
-      } catch (err) {
-        console.log(`[DeviceManager] probeGPS(${path}) exception:`, err)
-        finish(false, 'exception')
-      }
-    })
   }
 
   // -- Init drivers ---------------------------------------------

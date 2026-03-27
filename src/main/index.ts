@@ -2,13 +2,12 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { DeviceManager } from './services/DeviceManager'
-import { SessionService } from './services/SessionService'
+import { createServices } from './factories/ServiceFactory'
 import { setupIPC } from './ipc/handlers'
+import type { Services } from './factories/ServiceFactory'
 
 let mainWindow: BrowserWindow | null = null
-let deviceManager: DeviceManager | null = null
-let sessionService: SessionService | null = null
+let services: Services | null = null
 
 function isDebugPanelEnabled(): boolean {
   return process.env['NIR_APP_MODE'] === 'debug'
@@ -38,7 +37,7 @@ function createWindow(): BrowserWindow {
     }
     // Limpiar conexiones de dispositivos cuando se cierra la ventana
     console.log('[Main] Window closed, disconnecting devices...')
-    void deviceManager?.disconnectAll().catch((err) => {
+    void services?.deviceManager.disconnectAll().catch((err) => {
       console.error('[Main] Error disconnecting devices:', err)
     })
   })
@@ -83,22 +82,22 @@ app.whenReady().then(() => {
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
 
-  deviceManager = new DeviceManager()
-  sessionService = new SessionService()
+  // Crear servicios con inyección de dependencias
+  services = createServices()
 
   const window = createWindow()
-  setupIPC(window, deviceManager, sessionService)
+  setupIPC(window, services.deviceManager, services.sessionService)
 
-  void deviceManager.initialize().catch((error: unknown) => {
+  void services.deviceManager.initialize().catch((error: unknown) => {
     console.error('No pudo inicializarse DeviceManager', error)
   })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
-    if (BrowserWindow.getAllWindows().length === 0 && deviceManager && sessionService) {
+    if (BrowserWindow.getAllWindows().length === 0 && services) {
       const nextWindow = createWindow()
-      setupIPC(nextWindow, deviceManager, sessionService)
+      setupIPC(nextWindow, services.deviceManager, services.sessionService)
     }
   })
 })
@@ -113,7 +112,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  void deviceManager?.disconnectAll().catch(() => {})
+  void services?.deviceManager.disconnectAll().catch(() => {})
 })
 
 // In this file you can include the rest of your app's specific main process

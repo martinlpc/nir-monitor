@@ -84,18 +84,18 @@ export default function DeviceCard({
       }
     })
 
-    // Escuchar evento de pérdida de fix desde el servidor
-    const unsubscribeFixLost = window.api.gps.onFixLost(() => {
-      if (fixTimeoutRef.current) {
-        clearTimeout(fixTimeoutRef.current)
-        fixTimeoutRef.current = null
-      }
-      setGpsInfo({})
-    })
+    // TODO: Escuchar evento de pérdida de fix desde el servidor (será refacto en Fase 3 IPC Refactor)
+    // const unsubscribeFixLost = window.api.gps.onFixLost(() => {
+    //   if (fixTimeoutRef.current) {
+    //     clearTimeout(fixTimeoutRef.current)
+    //     fixTimeoutRef.current = null
+    //   }
+    //   setGpsInfo({})
+    // })
 
     return () => {
       unsubscribePosition()
-      unsubscribeFixLost()
+      // unsubscribeFixLost()
       if (fixTimeoutRef.current) {
         clearTimeout(fixTimeoutRef.current)
         fixTimeoutRef.current = null
