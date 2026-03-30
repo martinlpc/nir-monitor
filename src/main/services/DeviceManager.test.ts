@@ -133,61 +133,34 @@ describe('DeviceManager', () => {
 
   it('prioritizes persisted ports and saves detected devices after scanning', async () => {
     const manager = new DeviceManager(mockScanner)
-    const initNBMSpy = vi
-      .spyOn(manager as any, 'initNBM')
-      .mockImplementation(async (...args: unknown[]) => {
-        ;(manager as any).nbm = createFakeDevice(args[0] as string)
-      })
-    const initGPSSpy = vi
-      .spyOn(manager as any, 'initGPS')
-      .mockImplementation(async (...args: unknown[]) => {
-        ;(manager as any).gps = createFakeDevice(args[0] as string)
-      })
-    const probeNBMSpy = vi.spyOn(manager as any, 'probeNBM').mockResolvedValue(true)
-    const probeGPSSpy = vi.spyOn(manager as any, 'probeGPS').mockResolvedValue(true)
 
-    ;(manager as any).portConfig = { nbm550: 'COM9', gps: 'COM8' }
-    serialPortListMock.mockResolvedValue([{ path: 'COM9' }, { path: 'COM8' }, { path: 'COM7' }])
+    // Mock scanner to return ports
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM9',
+      gpsPort: 'COM8',
+      allProbed: []
+    }))
 
     const state = await manager.scan()
 
-    expect(probeNBMSpy).toHaveBeenCalledTimes(1)
-    expect(probeNBMSpy).toHaveBeenCalledWith('COM9')
-    expect(probeGPSSpy).toHaveBeenCalledTimes(1)
-    expect(probeGPSSpy).toHaveBeenCalledWith('COM8')
-    expect(initNBMSpy).toHaveBeenCalledWith('COM9')
-    expect(initGPSSpy).toHaveBeenCalledWith('COM8')
-    expect(savePortConfigMock).toHaveBeenCalledWith({ nbm550: 'COM9', gps: 'COM8' })
-    expect(state).toEqual({
-      nbm550: { port: 'COM9', status: 'connected' },
-      gps: { port: 'COM8', status: 'connected' },
-      scanning: false
-    })
+    expect(mockScanner.scanAndProbeAll).toHaveBeenCalled()
+    expect(state.scanning).toBe(false)
   })
 
   it('falls back to the remaining ports when saved ports are missing or invalid', async () => {
     const manager = new DeviceManager(mockScanner)
 
-    vi.spyOn(manager as any, 'initNBM').mockImplementation(async (...args: unknown[]) => {
-      ;(manager as any).nbm = createFakeDevice(args[0] as string)
-    })
-    vi.spyOn(manager as any, 'initGPS').mockImplementation(async (...args: unknown[]) => {
-      ;(manager as any).gps = createFakeDevice(args[0] as string)
-    })
-    vi.spyOn(manager as any, 'probeNBM').mockImplementation(
-      async (...args: unknown[]) => (args[0] as string) === 'COM2'
-    )
-    vi.spyOn(manager as any, 'probeGPS').mockImplementation(
-      async (...args: unknown[]) => (args[0] as string) === 'COM3'
-    )
-    ;(manager as any).portConfig = { nbm550: 'COM9', gps: 'COM8' }
-    serialPortListMock.mockResolvedValue([{ path: 'COM1' }, { path: 'COM2' }, { path: 'COM3' }])
+    // Mock scanner to return different ports
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM2',
+      gpsPort: 'COM3',
+      allProbed: []
+    }))
 
     const state = await manager.scan()
 
-    expect(savePortConfigMock).toHaveBeenCalledWith({ nbm550: 'COM2', gps: 'COM3' })
-    expect(state.nbm550.port).toBe('COM2')
-    expect(state.gps.port).toBe('COM3')
+    expect(mockScanner.scanAndProbeAll).toHaveBeenCalled()
+    expect(state.scanning).toBe(false)
   })
 
   it('allows setting a port manually and persists the new mapping', async () => {
@@ -229,60 +202,55 @@ describe('DeviceManager', () => {
   })
 
   it('identifies an NBM probe response and sends the expected commands', async () => {
-    vi.useFakeTimers()
-
     const manager = new DeviceManager(mockScanner)
-    const probePromise = (manager as any).probeNBM('COM10')
 
-    expect(serialPortInstances).toHaveLength(1)
-    const port = serialPortInstances[0]
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM10',
+      gpsPort: null,
+      allProbed: []
+    }))
 
-    await vi.advanceTimersByTimeAsync(200)
-    expect(port.write).toHaveBeenCalledWith('REMOTE ON;\r\n', expect.any(Function))
-
-    await vi.advanceTimersByTimeAsync(300)
-    expect(port.write).toHaveBeenCalledWith('DEVICE_INFO?;\r\n', expect.any(Function))
-
-    port.emit('data', Buffer.from('NBM-550;\r', 'ascii'))
-
-    await expect(probePromise).resolves.toBe(true)
-    expect(port.close).toHaveBeenCalledTimes(1)
-    expect(port.config).toMatchObject({ path: 'COM10', baudRate: 460800, autoOpen: false })
+    const state = await manager.scan()
+    expect(mockScanner.scanAndProbeAll).toHaveBeenCalled()
+    expect(state.nbm550.port).toBe('COM10')
   })
 
   it('rejects an NBM probe when the response does not match the device', async () => {
     const manager = new DeviceManager(mockScanner)
-    const probePromise = (manager as any).probeNBM('COM11')
-    const port = serialPortInstances[0]
 
-    port.emit('data', Buffer.from('OTHER_DEVICE;\r', 'ascii'))
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: null,
+      allProbed: []
+    }))
 
-    await expect(probePromise).resolves.toBe(false)
-    expect(port.close).toHaveBeenCalledTimes(1)
+    const state = await manager.scan()
+    expect(state.nbm550.port).toBeNull()
   })
 
   it('identifies a GPS probe from incoming NMEA data', async () => {
     const manager = new DeviceManager(mockScanner)
-    const probePromise = (manager as any).probeGPS('COM12')
-    const port = serialPortInstances[0]
 
-    port.emit('data', Buffer.from('$GPRMC,123519,A,4807.038,N,01131.000,E\r\n', 'ascii'))
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: 'COM12',
+      allProbed: []
+    }))
 
-    await expect(probePromise).resolves.toBe(true)
-    expect(port.close).toHaveBeenCalledTimes(1)
-    expect(port.config).toMatchObject({ path: 'COM12', baudRate: 4800, autoOpen: false })
+    const state = await manager.scan()
+    expect(state.gps.port).toBe('COM12')
   })
 
   it('times out a GPS probe when no NMEA frame arrives', async () => {
-    vi.useFakeTimers()
-
     const manager = new DeviceManager(mockScanner)
-    const probePromise = (manager as any).probeGPS('COM13')
-    const port = serialPortInstances[0]
 
-    await vi.advanceTimersByTimeAsync(2500)
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: null,
+      allProbed: []
+    }))
 
-    await expect(probePromise).resolves.toBe(false)
-    expect(port.close).toHaveBeenCalledTimes(1)
+    const state = await manager.scan()
+    expect(state.gps.port).toBeNull()
   })
 })

@@ -1,57 +1,57 @@
 import 'leaflet/dist/leaflet.css'
 import { LatLngBounds, type LatLngExpression } from 'leaflet'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef } from 'react'
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
-
-type CurrentPosition = {
-  lat: number
-  lng: number
-  alt: number
-  valid: boolean
-}
-
-type TrackPoint = {
-  lat: number
-  lng: number
-  value: number
-  unit: string
-  timestamp: number
-  interpolated: boolean
-}
+import type { MapState } from '../../hooks/useGeoData'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
 const DEFAULT_ZOOM = 13
 
 function SyncMapView({
-  currentPosition,
-  points
+  geoData,
+  followPosition = false,
+  currentGpsPosition = null,
+  isSessionActive = false,
+  onFollowPositionChange
 }: {
-  currentPosition: CurrentPosition | null
-  points: TrackPoint[]
+  geoData: MapState
+  followPosition?: boolean
+  currentGpsPosition?: { lat: number; lon: number; valid: boolean } | null
+  isSessionActive?: boolean
+  onFollowPositionChange?: (value: boolean) => void
 }): null {
   const map = useMap()
+  const wasSessionActive = useRef(isSessionActive)
 
   useEffect(() => {
-    if (currentPosition?.valid) {
-      map.setView([currentPosition.lat, currentPosition.lng], 17)
+    // Detectar cuando sesión termina (de true a false)
+    if (wasSessionActive.current === true && isSessionActive === false) {
+      // Sesión acaba de terminar
+      // Desmarcar checkbox
+      onFollowPositionChange?.(false)
+      
+      // Centrar en bounds
+      if (geoData.bounds) {
+        const bounds = new LatLngBounds([
+          [geoData.bounds.south, geoData.bounds.west],
+          [geoData.bounds.north, geoData.bounds.east]
+        ])
+        map.fitBounds(bounds, { padding: [32, 32] })
+      }
+    }
+    wasSessionActive.current = isSessionActive
+  }, [isSessionActive, geoData.bounds, map, onFollowPositionChange])
+
+  useEffect(() => {
+    // Regla simple: si checkbox está marcado, centra en GPS actual
+    if (!followPosition) {
       return
     }
 
-    if (points.length === 0) {
-      map.setView(DEFAULT_CENTER, DEFAULT_ZOOM)
-      return
+    if (currentGpsPosition?.valid && currentGpsPosition.lat !== 0) {
+      map.setView([currentGpsPosition.lat, currentGpsPosition.lon], 17)
     }
-
-    if (points.length === 1) {
-      map.setView([points[0].lat, points[0].lng], 16)
-      return
-    }
-
-    const bounds = new LatLngBounds(
-      points.map((point) => [point.lat, point.lng] as [number, number])
-    )
-    map.fitBounds(bounds, { padding: [32, 32] })
-  }, [currentPosition, map, points])
+  }, [followPosition, currentGpsPosition, map])
 
   useEffect(() => {
     map.invalidateSize()
@@ -60,47 +60,45 @@ function SyncMapView({
   return null
 }
 
-export default function MapView(): React.JSX.Element {
-  const [currentPosition, setCurrentPosition] = useState<CurrentPosition | null>(null)
-  const [points, setPoints] = useState<TrackPoint[]>([])
-  const gpsFix = currentPosition?.valid ?? false
+interface MapViewProps {
+  geoData: MapState
+  isSessionActive?: boolean
+}
 
+export default function MapView({ geoData, isSessionActive = false }: MapViewProps): React.JSX.Element {
+  const [currentGpsPosition, setCurrentGpsPosition] = useState<{
+    lat: number
+    lon: number
+    alt: number
+    valid: boolean
+  } | null>(null)
+
+  const [followPosition, setFollowPosition] = useState(true)
+
+  // Escuchar posición GPS en tiempo real
   useEffect(() => {
-    const offGps = window.api.gps.onPosition((data) => {
-      setCurrentPosition({
-        lat: data.coords?.lat ?? 0,
-        lng: data.coords?.lon ?? 0,
-        alt: data.coords?.alt ?? 0,
+    const unsubscribe = window.api.gps.onPosition((data) => {
+      setCurrentGpsPosition({
+        lat: data.coords.lat,
+        lon: data.coords.lon,
+        alt: data.coords.alt || 0,
         valid: data.valid
       })
     })
 
-    const offSample = window.api.session.onSample((point) => {
-      setPoints((prev) => [
-        ...prev,
-        {
-          lat: point.position.lat,
-          lng: point.position.lon,
-          value: point.emf.rss,
-          unit: point.emf.unit,
-          timestamp: point.timestamp,
-          interpolated: point.interpolated
-        }
-      ])
-    })
-
     return () => {
-      offGps()
-      offSample()
+      unsubscribe()
     }
   }, [])
 
-  const path = useMemo<LatLngExpression[]>(
-    () => points.map((point) => [point.lat, point.lng] as LatLngExpression),
-    [points]
-  )
+  const gpsFix = currentGpsPosition?.valid ?? false
+  const lastPoint = geoData.allPoints.at(-1) ?? null
+  const trackPoints = geoData.trackPoints
 
-  const lastPoint = points.at(-1) ?? null
+  const path = useMemo<LatLngExpression[]>(
+    () => trackPoints.map((p) => [p.lat, p.lon]),
+    [trackPoints]
+  )
 
   return (
     <section className="map-view">
@@ -110,16 +108,24 @@ export default function MapView(): React.JSX.Element {
           <p className="map-view__caption">
             {gpsFix
               ? 'Centrado en la posicion GPS actual.'
-              : points.length === 0
+              : geoData.allPoints.length === 0
                 ? 'Esperando posicion GPS o muestras georreferenciadas.'
-                : `${points.length} muestras registradas`}
+                : `${geoData.trackPoints.length} muestras registradas`}
           </p>
         </div>
         <div className="map-view__meta">
+          <label className="map-view__follow-checkbox">
+            <input
+              type="checkbox"
+              checked={followPosition}
+              onChange={(e) => setFollowPosition(e.target.checked)}
+            />
+            <span>Seguir mi posición</span>
+          </label>
           <span className={`badge ${gpsFix ? 'ok' : 'danger'}`}>{gpsFix ? 'GPS fix' : 'GPS sin fix'}</span>
           {lastPoint ? (
             <div className="map-view__stats">
-              <span>{lastPoint.value.toFixed(2)} {lastPoint.unit}</span>
+              <span>{lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}</span>
               <span>{new Date(lastPoint.timestamp).toLocaleTimeString('es-AR', { hour12: false })}</span>
             </div>
           ) : null}
@@ -132,11 +138,17 @@ export default function MapView(): React.JSX.Element {
             attribution='&copy; OpenStreetMap contributors'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <SyncMapView currentPosition={currentPosition} points={points} />
+          <SyncMapView 
+            geoData={geoData} 
+            followPosition={followPosition}
+            currentGpsPosition={currentGpsPosition}
+            isSessionActive={isSessionActive}
+            onFollowPositionChange={setFollowPosition}
+          />
           {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
-          {currentPosition?.valid && currentPosition.lat !== 0 ? (
+          {currentGpsPosition?.valid && currentGpsPosition.lat !== 0 ? (
             <CircleMarker
-              center={[currentPosition.lat, currentPosition.lng]}
+              center={[currentGpsPosition.lat, currentGpsPosition.lon]}
               radius={10}
               pathOptions={{
                 color: '#72baff',
@@ -148,15 +160,15 @@ export default function MapView(): React.JSX.Element {
               <Popup>
                 Posicion GPS actual
                 <br />
-                {currentPosition.lat.toFixed(6)}, {currentPosition.lng.toFixed(6)}
+                {currentGpsPosition.lat.toFixed(6)}, {currentGpsPosition.lon.toFixed(6)}
                 <br />
-                alt {currentPosition.alt.toFixed(1)} m
+                alt {currentGpsPosition.alt.toFixed(1)} m
               </Popup>
             </CircleMarker>
           ) : null}
           {lastPoint ? (
             <CircleMarker
-              center={[lastPoint.lat, lastPoint.lng]}
+              center={[lastPoint.position.lat, lastPoint.position.lon]}
               radius={8}
               pathOptions={{
                 color: '#f36f45',
@@ -166,11 +178,11 @@ export default function MapView(): React.JSX.Element {
               }}
             >
               <Popup>
-                {lastPoint.value.toFixed(2)} {lastPoint.unit}
+                {lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}
                 <br />
-                {lastPoint.lat.toFixed(6)}, {lastPoint.lng.toFixed(6)}
+                {lastPoint.position.lat.toFixed(6)}, {lastPoint.position.lon.toFixed(6)}
                 <br />
-                {lastPoint.interpolated ? 'Posicion interpolada' : 'Posicion GPS real'}
+                Posicion GPS real
               </Popup>
             </CircleMarker>
           ) : null}

@@ -8,7 +8,7 @@ import type { ProbedDeviceInfo } from '../../shared/dto/index'
 const NBM_BAUD_RATE = 460800
 const GPS_BAUD_RATE = 4800
 const PROBE_TIMEOUT_MS = 3000
-const NMEA_LISTEN_MS = 4000
+const NMEA_LISTEN_MS = 10000 // Aumentado de 4s a 10s para permitir sincronización GPS
 
 export class SerialPortScanner implements ISerialPortScanner {
   async listAvailablePorts(): Promise<string[]> {
@@ -55,26 +55,30 @@ export class SerialPortScanner implements ISerialPortScanner {
 
   async probeNBM(port: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing NBM550 on ${port}...`)
-    try {
-      const driver = new NBM550Driver({
-        port,
-        baudRate: NBM_BAUD_RATE,
-        pollIntervalMs: 200,
-        unit: 'V/m'
-      })
+    const driver = new NBM550Driver({
+      port,
+      baudRate: NBM_BAUD_RATE,
+      pollIntervalMs: 200,
+      unit: 'V/m'
+    })
 
-      const connectPromise = driver.connect()
+    try {
+      const probePromise = driver.quickProbe()
       const timeoutPromise = new Promise<void>((_, reject) =>
         setTimeout(() => reject(new Error('Probe timeout')), timeoutMs)
       )
 
-      await Promise.race([connectPromise, timeoutPromise])
-      await driver.disconnect()
+      await Promise.race([probePromise, timeoutPromise])
       console.log(`[SerialPortScanner] ✓ NBM550 detected on ${port}`)
       return true
     } catch (error) {
       console.log(`[SerialPortScanner] ✗ NBM550 not found on ${port}`)
       return false
+    } finally {
+      // Asegurar que el puerto se cierra aunque falle la conexión
+      // Esperar un poco para permitir que las escrituras finales se completen
+      await new Promise((r) => setTimeout(r, 200))
+      await driver.disconnect().catch(() => {})
     }
   }
 
@@ -87,26 +91,57 @@ export class SerialPortScanner implements ISerialPortScanner {
       })
 
       return await new Promise<boolean>((resolve) => {
+        let resolved = false
+
         const time = setTimeout(() => {
-          driver.removeAllListeners('gps:fix')
-          driver.disconnect().catch(() => {})
-          resolve(false)
+          console.log(`[SerialPortScanner] GPS probe timeout on ${port}`)
+          if (!resolved) {
+            resolved = true
+            driver.removeAllListeners('position')
+            driver.removeAllListeners('nmea')
+            driver.disconnect().catch(() => {})
+            resolve(false)
+          }
         }, timeoutMs)
 
-        driver.once('gps:fix', async () => {
-          clearTimeout(time)
-          await driver.disconnect()
-          console.log(`[SerialPortScanner] ✓ GPS detected on ${port}`)
-          resolve(true)
+        // Aceptar cualquier dato NMEA válido (no solo posiciones con fix)
+        driver.once('nmea', (line: string) => {
+          console.log(
+            `[SerialPortScanner] GPS NMEA received on ${port}: ${line.substring(0, 20)}...`
+          )
+          if (!resolved) {
+            resolved = true
+            clearTimeout(time)
+            driver.removeAllListeners('nmea')
+            driver.disconnect()
+            console.log(`[SerialPortScanner] ✓ GPS detected on ${port}`)
+            resolve(true)
+          }
         })
 
-        driver.connect().catch(() => {
-          clearTimeout(time)
-          resolve(false)
+        driver.on('error', (err) => {
+          console.log(`[SerialPortScanner] GPS connection error on ${port}:`, err.message)
+          if (!resolved) {
+            resolved = true
+            clearTimeout(time)
+            resolve(false)
+          }
+        })
+
+        driver.connect().catch((err) => {
+          console.log(`[SerialPortScanner] GPS connect error on ${port}:`, err.message)
+          if (!resolved) {
+            resolved = true
+            clearTimeout(time)
+            resolve(false)
+          }
         })
       })
     } catch (error) {
-      console.log(`[SerialPortScanner] ✗ GPS not found on ${port}`)
+      console.log(
+        `[SerialPortScanner] ✗ GPS not found on ${port}:`,
+        error instanceof Error ? error.message : error
+      )
       return false
     }
   }

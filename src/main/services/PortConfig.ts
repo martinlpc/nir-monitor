@@ -7,12 +7,20 @@ export interface PortConfigData {
   gps?: string
 }
 
-const CONFIG_PATH = join(app.getPath('userData'), 'port-config.json')
+let CONFIG_PATH: string | null = null
+
+function getConfigPath(): string {
+  if (!CONFIG_PATH) {
+    CONFIG_PATH = join(app.getPath('userData'), 'port-config.json')
+  }
+  return CONFIG_PATH
+}
 
 export function loadPortConfig(): PortConfigData {
   try {
-    if (!existsSync(CONFIG_PATH)) return {}
-    return JSON.parse(readFileSync(CONFIG_PATH, 'utf-8'))
+    const filePath = getConfigPath()
+    if (!existsSync(filePath)) return {}
+    return JSON.parse(readFileSync(filePath, 'utf-8'))
   } catch {
     return {}
   }
@@ -20,7 +28,8 @@ export function loadPortConfig(): PortConfigData {
 
 export function savePortConfig(config: PortConfigData): void {
   try {
-    writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8')
+    const filePath = getConfigPath()
+    writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8')
   } catch {
     console.error('No pudo guardarse la configuración de puertos')
   }

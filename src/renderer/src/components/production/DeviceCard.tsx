@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react'
-import type { DeviceMeta, DeviceStatus } from '../../../../shared/device.types'
 import './production.css'
 
 type GpsInfo = {
@@ -14,8 +13,16 @@ type NBMInfo = {
   battery?: number
 }
 
+interface DeviceInfo {
+  id: string
+  name: string
+  type: 'emf' | 'gps'
+  port: string
+  baudRate: number
+}
+
 interface DeviceCardProps {
-  device: DeviceMeta
+  device: DeviceInfo
   isLoading?: boolean
   onConnect?: () => void
   onDisconnect?: () => void
@@ -27,31 +34,18 @@ export default function DeviceCard({
   onConnect,
   onDisconnect
 }: DeviceCardProps): React.JSX.Element {
-  const [status, setStatus] = useState<DeviceStatus>('disconnected')
+  const [status, setStatus] = useState<'connected' | 'connecting' | 'error' | 'disconnected'>('disconnected')
   const [gpsInfo, setGpsInfo] = useState<GpsInfo>({})
   const [nbmInfo, setNbmInfo] = useState<NBMInfo>({})
   const fixTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
+  // Escuchar cambios de estado del dispositivo
   useEffect(() => {
-    // Escuchar cambios de estado del dispositivo
     const unsubscribe = window.api.devices.onStatus((data) => {
       if (data.deviceId === device.id) {
-        setStatus(data.status as DeviceStatus)
+        setStatus(data.status as any)
       }
     })
-
-    // Cargar estado actual después de registrar el listener
-    const loadStatus = async (): Promise<void> => {
-      try {
-        const state = (await window.api.devices.list()) as any
-        const deviceStatus = device.id === 'nbm550' ? state.nbm550.status : state.gps.status
-        setStatus(deviceStatus as DeviceStatus)
-      } catch (err) {
-        console.error('Error loading device status:', err)
-      }
-    }
-
-    loadStatus()
 
     return () => {
       unsubscribe()
@@ -64,7 +58,6 @@ export default function DeviceCard({
 
     const unsubscribePosition = window.api.gps.onPosition((data) => {
       if (data.coords) {
-        // Limpiar timeout anterior si existe
         if (fixTimeoutRef.current) {
           clearTimeout(fixTimeoutRef.current)
           fixTimeoutRef.current = null
@@ -76,7 +69,7 @@ export default function DeviceCard({
           alt: data.coords.alt
         })
 
-        // Si no llega otra posición en 5 segundos, limpiar coordenadas
+        // Timeout para limpiar si no hay más posiciones
         fixTimeoutRef.current = setTimeout(() => {
           setGpsInfo({})
           fixTimeoutRef.current = null
@@ -84,18 +77,20 @@ export default function DeviceCard({
       }
     })
 
-    // TODO: Escuchar evento de pérdida de fix desde el servidor (será refacto en Fase 3 IPC Refactor)
-    // const unsubscribeFixLost = window.api.gps.onFixLost(() => {
-    //   if (fixTimeoutRef.current) {
-    //     clearTimeout(fixTimeoutRef.current)
-    //     fixTimeoutRef.current = null
-    //   }
-    //   setGpsInfo({})
-    // })
+    // Listen for GPS fix lost events
+    const unsubscribeFixLost = window.api.gps.onPosition((data) => {
+      if (!data.valid) {
+        if (fixTimeoutRef.current) {
+          clearTimeout(fixTimeoutRef.current)
+          fixTimeoutRef.current = null
+        }
+        setGpsInfo({})
+      }
+    })
 
     return () => {
       unsubscribePosition()
-      // unsubscribeFixLost()
+      unsubscribeFixLost()
       if (fixTimeoutRef.current) {
         clearTimeout(fixTimeoutRef.current)
         fixTimeoutRef.current = null
@@ -142,7 +137,7 @@ export default function DeviceCard({
   // Para GPS sin fix: cambiar color del LED a rojo
   let displayStatusColor = statusColor
   if (device.type === 'gps' && isConnected && !hasGPSFix) {
-    displayStatusColor = '#ef4444' // Red for no fix
+    displayStatusColor = '#ef4444'
   }
 
   return (
@@ -157,7 +152,11 @@ export default function DeviceCard({
           <div>
             <h3 className="device-name">
               {device.type === 'gps' ? 'GPS (NMEA)' : device.name}
-              {isAutoConnected && <span style={{ fontSize: '0.7em', marginLeft: '8px', color: '#4ade80' }}>🔗 AUTO</span>}
+              {isAutoConnected && (
+                <span style={{ fontSize: '0.7em', marginLeft: '8px', color: '#4ade80' }}>
+                  🔗 AUTO
+                </span>
+              )}
             </h3>
             <p className="device-type">{device.type.toUpperCase()}</p>
           </div>

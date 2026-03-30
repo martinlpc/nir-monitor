@@ -57,7 +57,7 @@ export default function DebugPanel(): React.JSX.Element {
       />
 
       <section className="panel">
-        <MapView />
+        <MapView geoData={{ center: null, bounds: null, allPoints: [], trackPoints: [] }} />
       </section>
     </main>
   )

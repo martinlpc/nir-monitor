@@ -359,6 +359,32 @@ select {
   font-size: 0.82rem;
 }
 
+.map-view__follow-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(180, 203, 232, 0.15);
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  color: #d8e2ef;
+}
+
+.map-view__follow-checkbox:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(180, 203, 232, 0.3);
+}
+
+.map-view__follow-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #72baff;
+}
+
 .map-view__canvas {
   min-height: 420px;
   border-radius: 22px;
@@ -373,6 +399,7 @@ select {
 }
 
 @media (max-width: 980px) {
+
   .grid,
   .device-grid {
     grid-template-columns: 1fr;
@@ -380,6 +407,7 @@ select {
 }
 
 @media (max-width: 720px) {
+
   .prod-shell,
   .debug-shell {
     width: min(100vw - 20px, 100%);

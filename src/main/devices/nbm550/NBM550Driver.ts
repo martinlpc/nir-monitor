@@ -4,8 +4,8 @@ import { NBM550Parser } from './NBM550Parser'
 import type { NBM550Config, NBM550Sample } from './nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
 
-const RESPONSE_TIMEOUT_MS = 3000
-const INIT_DELAY_MS = 500
+const RESPONSE_TIMEOUT_MS = 5000 // Aumentado de 3s a 5s para mayor tiempo de respuesta
+const INIT_DELAY_MS = 1000 // Aumentado de 500ms a 1s tras abrir puerto
 
 export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   readonly meta: DeviceMeta
@@ -30,6 +30,40 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
       type: 'emf',
       port: config.port,
       baudRate: config.baudRate
+    }
+  }
+
+  // Para probe rápida: solo verificar que responde (sin esperar estatus de conexión completa)
+  async quickProbe(): Promise<void> {
+    try {
+      this.setStatus('connecting')
+      console.log(`[NBM550Driver] Quick probe to ${this.config.port}...`)
+
+      this.port = new SerialPort({
+        path: this.config.port,
+        baudRate: this.config.baudRate,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        autoOpen: false
+      })
+
+      await this.openPort()
+      console.log(`[NBM550Driver] Port opened (probe): ${this.config.port}`)
+
+      this.attachDataListener()
+      await this.delay(INIT_DELAY_MS)
+
+      // Solo enviar REMOTE ON para probe - si responde, es un NBM550
+      console.log(`[NBM550Driver] Quick probe: sending REMOTE ON...`)
+      await this.sendCommand('REMOTE ON')
+
+      console.log(`[NBM550Driver] Quick probe successful!`)
+      // NO cerramos aquí - dejamos que se cierre en disconnect()
+    } catch (err) {
+      console.error(`[NBM550Driver] Quick probe failed:`, err)
+      this.setStatus('error')
+      throw err
     }
   }
 
@@ -145,12 +179,14 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
       }
 
       this.pendingResolve = resolve
-      this.responseBuffer = ''
+      this.responseBuffer = '' // LIMPIO el buffer antes de cada comando
 
-      this.pendingTimeout = setTimeout(() => {
+      const timeout = setTimeout(() => {
         this.pendingResolve = null
         reject(new Error(`Timeout esperando respuesta a: ${command}`))
       }, RESPONSE_TIMEOUT_MS)
+
+      this.pendingTimeout = timeout
 
       this.port.write(`${command};\r\n`, (err) => {
         if (err) {
@@ -175,15 +211,18 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
     this.port!.on('data', (chunk: Buffer) => {
       this.responseBuffer += chunk.toString('ascii')
 
-      // La respuesta termina en ";\r" según el protocolo
-      if (this.responseBuffer.includes(';')) {
-        const response = this.responseBuffer
-        this.responseBuffer = ''
+      // La respuesta termina en ";" según el protocolo
+      const semicolonIndex = this.responseBuffer.indexOf(';')
+      if (semicolonIndex !== -1) {
+        // Extraer la respuesta hasta el ; (inclusive)
+        const response = this.responseBuffer.slice(0, semicolonIndex + 1)
+        this.responseBuffer = this.responseBuffer.slice(semicolonIndex + 1)
 
         if (this.pendingResolve) {
           clearTimeout(this.pendingTimeout!)
           const resolve = this.pendingResolve
           this.pendingResolve = null
+          this.pendingTimeout = null
           resolve(response)
         }
       }
