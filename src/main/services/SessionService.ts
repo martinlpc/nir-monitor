@@ -37,29 +37,11 @@ export class SessionService extends EventEmitter {
 
       // Guardar incrementalmente en la BD de forma asincrónica (no bloquea)
       if (this.state === 'running' && this.repository && this.currentSessionId) {
-        console.log(`[SessionService] Saving point async...`)
-        this.savePointAsync(point).catch((err) => {
+        this.repository.addPoint(this.currentSessionId, point).catch((err) => {
           console.error('[SessionService] Failed to save point:', err)
         })
       }
     })
-  }
-
-  private async savePointAsync(point: GeoTimestamp): Promise<void> {
-    if (!this.repository || !this.currentSessionId) return
-
-    try {
-      // Obtener la sesión actual para actualizarla con el nuevo punto
-      const existing = await this.repository.getSession(this.currentSessionId)
-      if (existing) {
-        // Actualizar sesión existente con el punto nuevo
-        const updatedPoints = [...existing.points, point]
-        await this.repository.saveSession(this.currentSessionId, existing.metadata, updatedPoints)
-      }
-    } catch (err) {
-      console.error('[SessionService] Error saving point:', err)
-      // No throw - continuar capturando aunque falle la persistencia
-    }
   }
 
   // ── Registro de devices ───────────────────────────────────
@@ -123,6 +105,21 @@ export class SessionService extends EventEmitter {
       console.warn(`[SessionService] Warning: resetMaxHold failed (this may be normal):`, err)
     }
 
+    // Inicializar sesión en el repositorio antes de empezar a capturar
+    if (this.repository) {
+      try {
+        await this.repository.initSession(this.currentSessionId, {
+          id: this.currentSessionId,
+          label: this.label,
+          startedAt: this.startedAt,
+          stoppedAt: null,
+          sampleCount: 0
+        })
+      } catch (err) {
+        console.error('[SessionService] Failed to init session in repository:', err)
+      }
+    }
+
     console.log(`[SessionService] Calling fusion.start()...`)
     this.fusion.start(this.currentSessionId)
     this.state = 'running'
@@ -154,16 +151,16 @@ export class SessionService extends EventEmitter {
       sampleCount: this.pointCount
     }
 
-    // Persistir sesión si el repositorio está disponible
+    // Finalizar sesión en el repositorio (actualizar metadatos + computar stats + flush a disco)
     if (this.repository && this.currentSessionId) {
       try {
-        console.log(`[SessionService] Persisting ${this.accumulatedPoints.length} points to DB...`)
-        await this.repository.saveSession(this.currentSessionId, summary, this.accumulatedPoints)
         console.log(
-          `[SessionService] Session ${this.currentSessionId} persisted successfully with ${this.accumulatedPoints.length} points`
+          `[SessionService] Finalizing session with ${this.accumulatedPoints.length} points...`
         )
+        await this.repository.finalizeSession(this.currentSessionId, summary)
+        console.log(`[SessionService] Session ${this.currentSessionId} finalized successfully`)
       } catch (err) {
-        console.error(`[SessionService] Failed to persist session: ${err}`)
+        console.error(`[SessionService] Failed to finalize session: ${err}`)
         // No throw - sesión termina pero sin persistencia
       }
     }

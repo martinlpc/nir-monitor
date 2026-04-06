@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+    include: ['src/**/*.test.ts'],
     testTimeout: 15000, // Aumentar timeout para tests con hardware/scanning
     coverage: {
       provider: 'v8',

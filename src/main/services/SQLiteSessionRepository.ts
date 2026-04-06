@@ -17,6 +17,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private db: SqlJsDatabase | null = null
   private dbPath: string
   private initialized = false
+  private pendingPoints = 0
+  private flushInterval: ReturnType<typeof setInterval> | null = null
+  private readonly FLUSH_EVERY_N_POINTS = 10
+  private readonly FLUSH_INTERVAL_MS = 30_000
 
   constructor() {
     const dataPath = app.getPath('userData')
@@ -208,6 +212,136 @@ export class SQLiteSessionRepository implements ISessionRepository {
     } catch (err) {
       console.error(`[SQLiteSessionRepository] Error saving session:`, err)
       throw new Error(`Cannot save session: ${err}`)
+    }
+  }
+
+  // ── Flujo incremental: initSession → addPoint(s) → finalizeSession ──
+
+  async initSession(sessionId: string, metadata: SessionSummary): Promise<void> {
+    await this.initialize()
+    const db = this.ensureDb()
+
+    try {
+      db.run(
+        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount)
+         VALUES (?, ?, ?, ?, ?)`,
+        [sessionId, metadata.label, this.unixToISO(metadata.startedAt), null, 0]
+      )
+      this.save()
+      this.pendingPoints = 0
+      this.startFlushTimer()
+      console.log(`[SQLiteSessionRepository] Session ${sessionId} initialized`)
+    } catch (err) {
+      console.error(`[SQLiteSessionRepository] Error initializing session:`, err)
+      throw new Error(`Cannot initialize session: ${err}`)
+    }
+  }
+
+  async addPoint(sessionId: string, point: GeoTimestamp): Promise<void> {
+    await this.initialize()
+    const db = this.ensureDb()
+
+    try {
+      db.run(
+        `INSERT INTO geo_points
+         (id, sessionId, timestamp, lat, lon, alt, hdop, rss, unit, interpolated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          point.id,
+          sessionId,
+          this.unixToISO(point.timestamp),
+          point.position.lat,
+          point.position.lon,
+          point.position.alt,
+          point.position.hdop,
+          point.emf.rss,
+          point.emf.unit,
+          point.interpolated ? 1 : 0
+        ]
+      )
+
+      // Actualizar sampleCount en sessions
+      db.run(`UPDATE sessions SET sampleCount = sampleCount + 1 WHERE id = ?`, [sessionId])
+
+      this.pendingPoints++
+      if (this.pendingPoints >= this.FLUSH_EVERY_N_POINTS) {
+        this.flush()
+      }
+    } catch (err) {
+      console.error(`[SQLiteSessionRepository] Error adding point:`, err)
+      // No throw - continuar capturando aunque falle la persistencia de un punto
+    }
+  }
+
+  async finalizeSession(sessionId: string, metadata: SessionSummary): Promise<void> {
+    await this.initialize()
+    const db = this.ensureDb()
+
+    try {
+      // Actualizar metadatos finales
+      db.run(`UPDATE sessions SET stoppedAt = ?, sampleCount = ? WHERE id = ?`, [
+        metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
+        metadata.sampleCount,
+        sessionId
+      ])
+
+      // Calcular y guardar estadísticas
+      const statsResult = db.exec(
+        `SELECT
+          AVG(rss) as avgRss,
+          MAX(rss) as maxRss,
+          MIN(rss) as minRss,
+          COUNT(*) as pointCount
+        FROM geo_points
+        WHERE sessionId = ?`,
+        [sessionId]
+      )
+
+      const stats = statsResult[0]?.values[0]
+        ? {
+            avgRss: statsResult[0].values[0][0] as number | null,
+            maxRss: statsResult[0].values[0][1] as number | null,
+            minRss: statsResult[0].values[0][2] as number | null,
+            pointCount: statsResult[0].values[0][3] as number
+          }
+        : { avgRss: null, maxRss: null, minRss: null, pointCount: 0 }
+
+      db.run(
+        `INSERT OR REPLACE INTO session_stats (sessionId, avgRss, maxRss, minRss, pointCount)
+         VALUES (?, ?, ?, ?, ?)`,
+        [sessionId, stats.avgRss, stats.maxRss, stats.minRss, stats.pointCount]
+      )
+
+      this.stopFlushTimer()
+      this.flush()
+      console.log(`[SQLiteSessionRepository] Session ${sessionId} finalized`)
+    } catch (err) {
+      console.error(`[SQLiteSessionRepository] Error finalizing session:`, err)
+      throw new Error(`Cannot finalize session: ${err}`)
+    }
+  }
+
+  flush(): void {
+    this.save()
+    this.pendingPoints = 0
+  }
+
+  private startFlushTimer(): void {
+    this.stopFlushTimer()
+    this.flushInterval = setInterval(() => {
+      if (this.pendingPoints > 0) {
+        console.log(
+          `[SQLiteSessionRepository] Periodic flush (${this.pendingPoints} pending points)`
+        )
+        this.flush()
+      }
+    }, this.FLUSH_INTERVAL_MS)
+  }
+
+  private stopFlushTimer(): void {
+    if (this.flushInterval) {
+      clearInterval(this.flushInterval)
+      this.flushInterval = null
     }
   }
 
@@ -492,6 +626,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
    * Cerrar conexión a base de datos
    */
   close(): void {
+    this.stopFlushTimer()
     if (this.db) {
       this.save()
       this.db.close()

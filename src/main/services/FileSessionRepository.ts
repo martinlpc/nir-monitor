@@ -79,6 +79,38 @@ export class FileSessionRepository implements ISessionRepository {
     }
   }
 
+  async initSession(sessionId: string, metadata: SessionSummary): Promise<void> {
+    await this.ensureDir()
+    const sessionDir = this.getSessionDir(sessionId)
+    await fs.mkdir(sessionDir, { recursive: true })
+    await fs.writeFile(this.getMetadataPath(sessionId), JSON.stringify(metadata, null, 2), 'utf-8')
+    // Crear archivo de puntos vacío
+    const geojson = this.toGeoJSON([])
+    await fs.writeFile(this.getPointsPath(sessionId), JSON.stringify(geojson, null, 2), 'utf-8')
+  }
+
+  async addPoint(sessionId: string, point: GeoTimestamp): Promise<void> {
+    try {
+      const pointsPath = this.getPointsPath(sessionId)
+      const content = await fs.readFile(pointsPath, 'utf-8')
+      const geojson = JSON.parse(content)
+      const points = this.fromGeoJSON(geojson)
+      points.push(point)
+      const updated = this.toGeoJSON(points)
+      await fs.writeFile(pointsPath, JSON.stringify(updated, null, 2), 'utf-8')
+    } catch (err) {
+      console.error(`Error adding point to session ${sessionId}:`, err)
+    }
+  }
+
+  async finalizeSession(sessionId: string, metadata: SessionSummary): Promise<void> {
+    await fs.writeFile(this.getMetadataPath(sessionId), JSON.stringify(metadata, null, 2), 'utf-8')
+  }
+
+  flush(): void {
+    // No-op: file-based repo writes to disk on every operation
+  }
+
   async getSession(sessionId: string): Promise<PersistedSession | null> {
     try {
       const metadataPath = this.getMetadataPath(sessionId)

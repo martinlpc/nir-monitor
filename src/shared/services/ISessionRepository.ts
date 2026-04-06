@@ -13,6 +13,26 @@ export interface ISessionRepository {
   saveSession(sessionId: string, metadata: SessionSummary, points: GeoTimestamp[]): Promise<void>
 
   /**
+   * Inicializar una sesión nueva en el almacenamiento (solo metadatos, sin puntos)
+   */
+  initSession(sessionId: string, metadata: SessionSummary): Promise<void>
+
+  /**
+   * Agregar un punto individual a una sesión existente
+   */
+  addPoint(sessionId: string, point: GeoTimestamp): Promise<void>
+
+  /**
+   * Finalizar sesión: actualizar metadatos finales y computar estadísticas
+   */
+  finalizeSession(sessionId: string, metadata: SessionSummary): Promise<void>
+
+  /**
+   * Forzar flush de la base de datos a disco
+   */
+  flush(): void
+
+  /**
    * Obtener sesión completada por ID
    */
   getSession(sessionId: string): Promise<PersistedSession | null>
