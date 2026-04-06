@@ -33,8 +33,26 @@ declare global {
           triggerMode?: 'distance' | 'time'
           minDistanceMeters?: number
           intervalMs?: number
+          testMode?: boolean
         }) => Promise<string>
         stop: () => Promise<SessionSummary>
+        list: () => Promise<SessionSummary[]>
+        get: (sessionId: string) => Promise<{ success: boolean; session?: any; error?: string }>
+        delete: (sessionId: string) => Promise<{ success: boolean; error?: string }>
+        exportGeoJSON: (
+          sessionId: string
+        ) => Promise<{ success: boolean; data?: string; error?: string }>
+        exportCSV: (
+          sessionId: string
+        ) => Promise<{ success: boolean; data?: string; error?: string }>
+        getStats: (sessionId: string) => Promise<{ success: boolean; stats?: any; error?: string }>
+        getPointsInBounds: (
+          sessionId: string,
+          north: number,
+          south: number,
+          east: number,
+          west: number
+        ) => Promise<{ success: boolean; points?: any; error?: string }>
         onSample: (cb: (point: GeoTimestamp) => void) => () => void
         onStarted: (
           cb: (data: { sessionId: string; startedAt: number; label: string }) => void

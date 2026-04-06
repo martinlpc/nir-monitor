@@ -1,0 +1,109 @@
+.points-table-container {
+    padding: 16px;
+    background: #f9f9f9;
+    border-top: 1px solid #ddd;
+    flex: 2;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.points-table-container h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.table-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.points-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    background: white;
+}
+
+.points-table thead {
+    background: #f0f0f0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.points-table th {
+    text-align: left;
+    padding: 8px;
+    font-weight: 600;
+    border-bottom: 1px solid #ddd;
+    color: #333;
+}
+
+.points-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #eee;
+    color: #555;
+}
+
+.points-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.points-table tbody tr:hover {
+    background-color: #f5f5f5;
+}
+
+.points-table tbody tr.interpolated {
+    background-color: #fff9e6;
+    opacity: 0.85;
+}
+
+.points-table tbody tr.interpolated:hover {
+    background-color: #fffacd;
+}
+
+.points-table tbody tr.row-placeholder {
+    height: 28px;
+}
+
+.points-table tbody tr.row-placeholder:nth-child(odd) {
+    background-color: #fafafa;
+}
+
+.points-table tbody tr.row-placeholder:hover {
+    background-color: inherit;
+}
+
+.cell-number,
+.cell-coord {
+    font-family: 'Monaco', 'Courier New', monospace;
+    text-align: right;
+}
+
+.cell-timestamp {
+    font-family: 'Monaco', 'Courier New', monospace;
+    white-space: nowrap;
+}
+
+.cell-emf,
+.cell-unit,
+.cell-interp {
+    text-align: center;
+}
+
+.cell-unit {
+    font-size: 10px;
+    color: #666;
+}
+
+.cell-interp {
+    color: #d4a574;
+    font-weight: 500;
+}

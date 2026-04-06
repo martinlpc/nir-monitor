@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import type { GeoTimestamp } from '../../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../../shared/ipc.types'
-// SessionStateDTO es interno, aquí usamos SessionState con tipos propios
 
 export interface SessionState {
   sessionId: string | null
@@ -27,6 +26,7 @@ export function useSession() {
   })
 
   const [error, setError] = useState<string | null>(null)
+  const [duration, setDuration] = useState(0)
   const unsubscribeRef = useRef<(() => void)[]>([])
 
   // Iniciar sesión
@@ -36,15 +36,20 @@ export function useSession() {
       triggerMode?: 'distance' | 'time'
       minDistanceMeters?: number
       intervalMs?: number
+      testMode?: boolean
     }) => {
       try {
         setError(null)
-        const sessionId = await window.api.session.start({
+        // Si testMode está activado, NO pasar triggerMode (dejar que SessionService lo maneje)
+        const config = {
           label: options?.label || 'Nueva sesión',
-          triggerMode: options?.triggerMode || 'distance',
+          ...(options?.testMode ? {} : { triggerMode: options?.triggerMode || 'distance' }),
           minDistanceMeters: options?.minDistanceMeters,
-          intervalMs: options?.intervalMs
-        })
+          intervalMs: options?.intervalMs,
+          testMode: options?.testMode || false
+        }
+        console.log('[useSession] Calling session.start() with config:', config)
+        const sessionId = await window.api.session.start(config)
 
         setSession((prev) => ({
           ...prev,
@@ -121,6 +126,7 @@ export function useSession() {
         label: data.label,
         points: []
       }))
+      setDuration(0)
     })
     listeners.push(unsubscribeStarted)
 
@@ -141,6 +147,39 @@ export function useSession() {
     }
   }, [])
 
+  // Timer para actualizar duración cada segundo cuando sesión está corriendo
+  useEffect(() => {
+    if (session.status !== 'running' || !session.startedAt) return
+
+    const timer = setInterval(() => {
+      setDuration(Date.now() - (session.startedAt as number))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [session.status, session.startedAt])
+
+  // Cargar sesión guardada
+  const setLoadedSession = useCallback(
+    (loadedData: {
+      sessionId: string
+      label: string
+      points: GeoTimestamp[]
+      summary: SessionSummary
+    }) => {
+      console.log('[useSession] Loading saved session:', loadedData.sessionId)
+      setSession({
+        sessionId: loadedData.sessionId,
+        status: 'stopped',
+        startedAt: loadedData.summary.startedAt,
+        label: loadedData.label,
+        points: loadedData.points,
+        summary: loadedData.summary
+      })
+      setDuration((loadedData.summary.stoppedAt || Date.now()) - loadedData.summary.startedAt)
+    },
+    []
+  )
+
   return {
     // Estado
     sessionId: session.sessionId,
@@ -155,12 +194,13 @@ export function useSession() {
     start,
     stop,
     reset,
+    setLoadedSession,
 
     // Helpers
     isRunning: session.status === 'running',
     isStopped: session.status === 'stopped',
     isIdle: session.status === 'idle',
     pointCount: session.points.length,
-    duration: session.startedAt ? Date.now() - session.startedAt : 0
+    duration
   }
 }

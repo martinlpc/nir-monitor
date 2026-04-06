@@ -16,7 +16,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     return ports.map((p) => p.path)
   }
 
-  async scanAndProbeAll(): Promise<{
+  async scanAndProbeAll(preferred?: { gps?: string; nbm550?: string }): Promise<{
     nbmPort: string | null
     gpsPort: string | null
     allProbed: ProbedDeviceInfo[]
@@ -28,23 +28,68 @@ export class SerialPortScanner implements ISerialPortScanner {
     let gpsPort: string | null = null
     const allProbed: ProbedDeviceInfo[] = []
 
-    for (const port of ports) {
-      if (nbmPort && gpsPort) break
-
-      if (!nbmPort) {
-        const isNBM = await this.probeNBM(port)
-        if (isNBM) {
-          nbmPort = port
-          allProbed.push({ port, type: 'nbm550' })
-          continue
-        }
+    // Paso 0: probar primero los puertos preferidos (última sesión conocida)
+    if (preferred?.gps && ports.includes(preferred.gps)) {
+      console.log(`[SerialPortScanner] Trying preferred GPS port: ${preferred.gps}`)
+      const isGPS = await this.probeGPS(preferred.gps)
+      if (isGPS) {
+        gpsPort = preferred.gps
+        allProbed.push({ port: preferred.gps, type: 'gps' })
+        console.log(`[SerialPortScanner] ✓ GPS confirmed on preferred port ${preferred.gps}`)
+      } else {
+        console.log(
+          `[SerialPortScanner] Preferred GPS port ${preferred.gps} did not respond, will scan all`
+        )
       }
+    }
 
-      if (!gpsPort) {
+    if (preferred?.nbm550 && ports.includes(preferred.nbm550)) {
+      console.log(`[SerialPortScanner] Trying preferred NBM port: ${preferred.nbm550}`)
+      const isNBM = await this.probeNBM(preferred.nbm550)
+      if (isNBM) {
+        nbmPort = preferred.nbm550
+        allProbed.push({ port: preferred.nbm550, type: 'nbm550' })
+        console.log(`[SerialPortScanner] ✓ NBM550 confirmed on preferred port ${preferred.nbm550}`)
+      } else {
+        console.log(
+          `[SerialPortScanner] Preferred NBM port ${preferred.nbm550} did not respond, will scan all`
+        )
+      }
+    }
+
+    // Si ambos ya están resueltos, no hace falta escanear
+    if (nbmPort && gpsPort) {
+      console.log(`[SerialPortScanner] Both devices found via preferred ports. Skipping full scan.`)
+      return { nbmPort, gpsPort, allProbed }
+    }
+
+    // Paso 1: buscar GPS en los puertos restantes (excluir los ya asignados)
+    const remainingPorts = ports.filter((p) => p !== gpsPort && p !== nbmPort)
+
+    if (!gpsPort) {
+      for (const port of remainingPorts) {
+        if (gpsPort) {
+          break
+        }
         const isGPS = await this.probeGPS(port)
         if (isGPS) {
           gpsPort = port
           allProbed.push({ port, type: 'gps' })
+          console.log(`[SerialPortScanner] GPS assigned to ${port}, stopping GPS scan`)
+        }
+      }
+    }
+
+    // Paso 2: buscar NBM550 en los puertos que no fueron tomados por GPS
+    if (!nbmPort) {
+      const portsForNBM = ports.filter((p) => p !== gpsPort && p !== nbmPort)
+      for (const port of portsForNBM) {
+        const isNBM = await this.probeNBM(port)
+        if (isNBM) {
+          nbmPort = port
+          allProbed.push({ port, type: 'nbm550' })
+          console.log(`[SerialPortScanner] NBM550 found on ${port}, stopping scan`)
+          break
         }
       }
     }

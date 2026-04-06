@@ -96,9 +96,45 @@ const api = {
       triggerMode?: 'distance' | 'time'
       minDistanceMeters?: number
       intervalMs?: number
+      testMode?: boolean
     }): Promise<string> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_START, payload),
 
     stop: (): Promise<SessionSummary> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_STOP),
+
+    list: (): Promise<SessionSummary[]> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_LIST_PERSISTED),
+
+    get: (sessionId: string): Promise<{ success: boolean; session?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SESSION_GET, sessionId),
+
+    delete: (sessionId: string): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SESSION_DELETE, sessionId),
+
+    exportGeoJSON: (
+      sessionId: string
+    ): Promise<{ success: boolean; data?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_GEOJSON, sessionId),
+
+    exportCSV: (sessionId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_CSV, sessionId),
+
+    getStats: (sessionId: string): Promise<{ success: boolean; stats?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SESSION_STATS, sessionId),
+
+    getPointsInBounds: (
+      sessionId: string,
+      north: number,
+      south: number,
+      east: number,
+      west: number
+    ): Promise<{ success: boolean; points?: any; error?: string }> =>
+      ipcRenderer.invoke(
+        IPC_HANDLERS.SESSION_POINTS_IN_BOUNDS,
+        sessionId,
+        north,
+        south,
+        east,
+        west
+      ),
 
     onSample: (cb: (point: GeoTimestamp) => void) => {
       const handler = (_: any, point: any) => cb(point)

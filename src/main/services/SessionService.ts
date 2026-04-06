@@ -5,6 +5,7 @@ import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { GPSDriver } from '../devices/gps/GPSDriver'
 import type { SessionSummary } from '../../shared/ipc.types'
+import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -14,19 +15,51 @@ export class SessionService extends EventEmitter {
   private startedAt: number = 0
   private pointCount: number = 0
   private label: string = ''
+  private accumulatedPoints: GeoTimestamp[] = []
 
   private fusion: GeoFusionService
   private nbm: NBM550Driver | null = null
   private gps: GPSDriver | null = null
+  private repository: ISessionRepository | null = null
 
-  constructor(fusion: GeoFusionService) {
+  constructor(fusion: GeoFusionService, repository?: ISessionRepository) {
     super()
     this.fusion = fusion
+    this.repository = repository || null
 
     this.fusion.on('point', (point: GeoTimestamp) => {
       this.pointCount++
+      this.accumulatedPoints.push(point)
+      console.log(
+        `[SessionService] Point captured! Count: ${this.pointCount}, timestamp: ${point.timestamp}`
+      )
       this.emit('point', point)
+
+      // Guardar incrementalmente en la BD de forma asincrónica (no bloquea)
+      if (this.state === 'running' && this.repository && this.currentSessionId) {
+        console.log(`[SessionService] Saving point async...`)
+        this.savePointAsync(point).catch((err) => {
+          console.error('[SessionService] Failed to save point:', err)
+        })
+      }
     })
+  }
+
+  private async savePointAsync(point: GeoTimestamp): Promise<void> {
+    if (!this.repository || !this.currentSessionId) return
+
+    try {
+      // Obtener la sesión actual para actualizarla con el nuevo punto
+      const existing = await this.repository.getSession(this.currentSessionId)
+      if (existing) {
+        // Actualizar sesión existente con el punto nuevo
+        const updatedPoints = [...existing.points, point]
+        await this.repository.saveSession(this.currentSessionId, existing.metadata, updatedPoints)
+      }
+    } catch (err) {
+      console.error('[SessionService] Error saving point:', err)
+      // No throw - continuar capturando aunque falle la persistencia
+    }
   }
 
   // ── Registro de devices ───────────────────────────────────
@@ -62,15 +95,39 @@ export class SessionService extends EventEmitter {
     this.startedAt = Date.now()
     this.pointCount = 0
     this.label = label || `Recorrido ${new Date().toLocaleDateString('es-AR')}`
+    this.accumulatedPoints = []
 
+    console.log(`[SessionService] Starting session: ${this.currentSessionId}, label: ${this.label}`)
+    console.log(`[SessionService] fusionConfig:`, fusionConfig)
+
+    // En modo test, usar trigger por tiempo para capturar cada varios segundos
+    if (fusionConfig?.testMode) {
+      console.log(
+        `[SessionService] testMode detected - converting to time-based trigger (5s intervals)`
+      )
+      fusionConfig = {
+        ...fusionConfig,
+        triggerMode: 'time',
+        intervalMs: fusionConfig.intervalMs || 5000
+      }
+    }
+
+    console.log(`[SessionService] final fusionConfig:`, fusionConfig)
     if (fusionConfig) this.fusion.updateConfig(fusionConfig)
 
-    // Descarta todo lo acumulado durante conexión y configuración
-    await this.nbm.resetMaxHold()
+    console.log(`[SessionService] Resetting NBM max hold...`)
+    try {
+      await this.nbm.resetMaxHold()
+    } catch (err) {
+      // Error 100 en RESET_MAX es normal en algunos casos - continuar sin bloquear
+      console.warn(`[SessionService] Warning: resetMaxHold failed (this may be normal):`, err)
+    }
 
+    console.log(`[SessionService] Calling fusion.start()...`)
     this.fusion.start(this.currentSessionId)
     this.state = 'running'
 
+    console.log(`[SessionService] Session started successfully, state: running`)
     this.emit('started', {
       sessionId: this.currentSessionId,
       startedAt: this.startedAt,
@@ -85,6 +142,7 @@ export class SessionService extends EventEmitter {
       throw new Error('No hay sesión en curso')
     }
 
+    console.log(`[SessionService] Stopping session, total points: ${this.pointCount}`)
     this.fusion.stop()
     this.state = 'stopped'
 
@@ -94,6 +152,20 @@ export class SessionService extends EventEmitter {
       startedAt: this.startedAt,
       stoppedAt: Date.now(),
       sampleCount: this.pointCount
+    }
+
+    // Persistir sesión si el repositorio está disponible
+    if (this.repository && this.currentSessionId) {
+      try {
+        console.log(`[SessionService] Persisting ${this.accumulatedPoints.length} points to DB...`)
+        await this.repository.saveSession(this.currentSessionId, summary, this.accumulatedPoints)
+        console.log(
+          `[SessionService] Session ${this.currentSessionId} persisted successfully with ${this.accumulatedPoints.length} points`
+        )
+      } catch (err) {
+        console.error(`[SessionService] Failed to persist session: ${err}`)
+        // No throw - sesión termina pero sin persistencia
+      }
     }
 
     this.emit('stopped', summary)
@@ -120,5 +192,15 @@ export class SessionService extends EventEmitter {
       stoppedAt: this.state === 'stopped' ? Date.now() : null,
       sampleCount: this.pointCount
     }
+  }
+
+  // ── Repositorio ───────────────────────────────────────────
+
+  getRepository(): ISessionRepository | null {
+    return this.repository
+  }
+
+  setRepository(repository: ISessionRepository): void {
+    this.repository = repository
   }
 }

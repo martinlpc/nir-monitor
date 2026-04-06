@@ -67,11 +67,6 @@ export class NBM550Parser {
   parseErrorCode(raw: string): number {
     const clean = this.cleanResponse(raw)
     const code = parseInt(clean)
-    const hex = raw
-      .split('')
-      .map((c) => `${c.charCodeAt(0).toString(16).padStart(2, '0')}`)
-      .join(' ')
-    console.log(`[NBM550Parser] parseErrorCode - hex: ${hex}, clean: "${clean}", code: ${code}`)
     return isNaN(code) ? 0 : code
   }
 }

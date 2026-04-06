@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { useDevices } from '../../hooks/useDevices'
 import type { useSession } from '../../hooks/useSession'
+import { generateSessionName } from '../../utils/geolocation'
+import { formatDurationMs } from '../../utils/formatters'
 import DeviceCard from './DeviceCard'
 import './production.css'
 
@@ -22,6 +24,7 @@ export default function DevicesPanel({
   onSessionStateChange
 }: DevicesPanelProps): React.JSX.Element {
   const [loadingDevice, setLoadingDevice] = useState<string | null>(null)
+  const [testMode, setTestMode] = useState(false)
 
   // Handlers que usan los hooks
   const handleConnect = async (deviceId: string): Promise<void> => {
@@ -58,8 +61,31 @@ export default function DevicesPanel({
   const handleStartSession = async (): Promise<void> => {
     try {
       onSessionStateChange?.('starting')
+      
+      // Obtener posición actual del GPS para generar nombre con ubicación
+      let sessionLabel = await generateSessionName()
+      
+      // Capturar posición GPS si está disponible
+      let currentPosition: { lat: number; lon: number; alt?: number } | null = null
+      const unsubscribe = window.api.gps.onPosition((data) => {
+        if (data.valid) {
+          currentPosition = data.coords
+          unsubscribe()
+        }
+      })
+      
+      // Esperar un poco a que llegue la posición o timeout
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      unsubscribe()
+      
+      // Si se obtuvo posición, regenerar nombre con ubicación
+      if (currentPosition) {
+        sessionLabel = await generateSessionName(currentPosition)
+      }
+      
       await session.start({
-        label: `Sesión ${new Date().toLocaleTimeString()}`
+        label: sessionLabel,
+        testMode
       })
       onSessionStateChange?.('active')
     } catch (err) {
@@ -124,6 +150,17 @@ export default function DevicesPanel({
       )}
 
       <div className="panel-footer">
+        <label className="test-mode-checkbox">
+          <input
+            type="checkbox"
+            checked={testMode}
+            onChange={(e) => setTestMode(e.target.checked)}
+            disabled={session.isRunning}
+            title="Modo test: toma puntos sin umbral de distancia"
+          />
+          <span>Modo Test</span>
+        </label>
+
         <button
           className={`btn-session ${session.isRunning ? 'active' : ''}`}
           onClick={session.isRunning ? handleStopSession : handleStartSession}
@@ -136,7 +173,7 @@ export default function DevicesPanel({
         {session.isRunning && (
           <div className="session-info">
             <span>Puntos: {session.pointCount}</span>
-            <span>Duración: {Math.floor(session.duration / 1000)}s</span>
+            <span>Duración: {formatDurationMs(session.duration)}</span>
           </div>
         )}
       </div>

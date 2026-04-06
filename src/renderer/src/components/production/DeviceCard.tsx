@@ -44,13 +44,17 @@ export default function DeviceCard({
     const unsubscribe = window.api.devices.onStatus((data) => {
       if (data.deviceId === device.id) {
         setStatus(data.status as any)
+        // Limpiar datos del NBM al desconectarse
+        if (device.type === 'emf' && (data.status === 'disconnected' || data.status === 'error')) {
+          setNbmInfo({})
+        }
       }
     })
 
     return () => {
       unsubscribe()
     }
-  }, [device.id])
+  }, [device.id, device.type])
 
   // Escuchar actualizaciones de GPS
   useEffect(() => {

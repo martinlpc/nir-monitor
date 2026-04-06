@@ -2,7 +2,7 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { createServices } from './factories/ServiceFactory'
+import { createServices, setupSessionWiring } from './factories/ServiceFactory'
 import { setupIPC } from './ipc/handlers'
 import type { Services } from './factories/ServiceFactory'
 
@@ -88,9 +88,15 @@ app.whenReady().then(() => {
   const window = createWindow()
   setupIPC(window, services.deviceManager, services.sessionService)
 
-  void services.deviceManager.initialize().catch((error: unknown) => {
-    console.error('No pudo inicializarse DeviceManager', error)
-  })
+  void services.deviceManager
+    .initialize()
+    .then(() => {
+      console.log('[Main] DeviceManager initialized, setting up session wiring...')
+      setupSessionWiring(services!.deviceManager, services!.sessionService)
+    })
+    .catch((error: unknown) => {
+      console.error('[Main] DeviceManager initialization failed:', error)
+    })
 
   app.on('activate', function () {
     // On macOS it's common to re-create a window in the app when the

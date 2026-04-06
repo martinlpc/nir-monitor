@@ -10,12 +10,14 @@ export interface GeoFusionConfig {
   triggerMode: TriggerMode
   minDistanceMeters: number
   intervalMs: number
+  testMode?: boolean
 }
 
 export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = {
   triggerMode: 'distance',
   minDistanceMeters: 10,
-  intervalMs: 5000
+  intervalMs: 5000,
+  testMode: false
 }
 
 export class GeoFusionService extends EventEmitter {
@@ -50,15 +52,38 @@ export class GeoFusionService extends EventEmitter {
     this.lastSavedPosition = null
     this.capturing = false
 
+    console.log(`[GeoFusionService] start() called with sessionId: ${sessionId}`)
+    console.log(
+      `[GeoFusionService] current config triggerMode: ${this.config.triggerMode}, intervalMs: ${this.config.intervalMs}`
+    )
+
     if (this.config.triggerMode === 'time') {
-      this.timeTimer = setInterval(() => this.tryCapture(), this.config.intervalMs)
+      console.log(
+        `[GeoFusionService] Starting time-based trigger every ${this.config.intervalMs}ms`
+      )
+      this.scheduleNextCapture()
+    } else {
+      console.log(`[GeoFusionService] Using distance-based trigger`)
     }
     // modo distancia: trigger via onGPSPosition() - no necesita setup
   }
 
+  private scheduleNextCapture(): void {
+    if (!this.sessionId) return
+    this.timeTimer = setTimeout(async () => {
+      try {
+        await this.tryCapture()
+      } catch (err) {
+        console.error('[GeoFusionService] Error in tryCapture:', err)
+        // Continuar sin importar el error
+      }
+      this.scheduleNextCapture()
+    }, this.config.intervalMs)
+  }
+
   stop(): void {
     if (this.timeTimer) {
-      clearInterval(this.timeTimer)
+      clearTimeout(this.timeTimer)
       this.timeTimer = null
     }
   }
@@ -85,6 +110,12 @@ export class GeoFusionService extends EventEmitter {
     const currentPosition = this._gps.getLastPosition()
     if (!currentPosition) return
 
+    // En modo test, tomar cada punto sin umbral de distancia
+    if (this.config.testMode) {
+      this.capture()
+      return
+    }
+
     if (!this.lastSavedPosition) {
       this.capture()
       return
@@ -96,32 +127,62 @@ export class GeoFusionService extends EventEmitter {
     }
   }
 
-  private tryCapture(): void {
-    if (!this.nbm) return
-    if (!this._gps) return
-    if (!this._gps.isPositionValid) return
+  private async tryCapture(): Promise<void> {
+    if (!this.nbm) {
+      console.warn(`[GeoFusionService] tryCapture(): NBM not available`)
+      return
+    }
+    if (!this._gps) {
+      console.warn(`[GeoFusionService] tryCapture(): GPS not available`)
+      return
+    }
+    if (!this._gps.isPositionValid) {
+      console.warn(`[GeoFusionService] tryCapture(): GPS position not valid`)
+      return
+    }
 
-    this.capture()
+    console.log(`[GeoFusionService] tryCapture(): About to capture...`)
+    await this.capture()
   }
 
   // ── Captura ───────────────────────────────────────────────
 
   private async capture(): Promise<void> {
-    if (this.capturing) return
+    if (this.capturing) {
+      console.log(`[GeoFusionService] capture(): Already capturing, skipping`)
+      return
+    }
     this.capturing = true
+    console.log(`[GeoFusionService] capture(): Starting...`)
 
     try {
-      if (!this._gps || !this.nbm) return
+      if (!this._gps || !this.nbm) {
+        console.warn(`[GeoFusionService] capture(): Missing GPS or NBM`)
+        return
+      }
 
       // Lee posición y validez en el instante exacto del trigger
       const position = this._gps.getLastPosition()
       const valid = this._gps.isPositionValid()
-      if (!position || !valid) return
+      if (!position || !valid) {
+        console.warn(`[GeoFusionService] capture(): No valid position available`)
+        return
+      }
 
       const sample = await this.nbm.readMeasurement()
-      await this.nbm.resetMaxHold()
 
-      if (!sample) return
+      // Intentar resetear max hold sin bloquear la captura
+      try {
+        await this.nbm.resetMaxHold()
+      } catch (err) {
+        console.warn(`[GeoFusionService] capture(): resetMaxHold failed (non-fatal):`, err)
+        // Continuar aunque falle
+      }
+
+      if (!sample) {
+        console.warn(`[GeoFusionService] capture(): NBM sample is null`)
+        return
+      }
 
       const geoTimestamp: GeoTimestamp = {
         id: uuidv4(),
@@ -136,6 +197,9 @@ export class GeoFusionService extends EventEmitter {
         interpolated: false
       }
 
+      console.log(
+        `[GeoFusionService] capture(): Emitting point with lat=${position.lat}, lon=${position.lon}, rss=${sample.rss}`
+      )
       this.lastSavedPosition = { ...position }
       this.emit('point', geoTimestamp)
     } finally {

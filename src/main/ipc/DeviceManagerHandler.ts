@@ -28,6 +28,12 @@ export function registerDeviceManagerHandlers(
     return deviceManager.getState()
   })
 
+  // device:connect - reconecta un dispositivo ya configurado
+  ipcMain.handle(IPC_HANDLERS.DEVICE_CONNECT, async (_, deviceId: string) => {
+    await deviceManager.connectDevice(deviceId as 'nbm550' | 'gps')
+    return deviceManager.getState()
+  })
+
   // device:disconnect - desconecta todos los dispositivos
   ipcMain.handle(IPC_HANDLERS.DEVICE_DISCONNECT, async () => {
     await deviceManager.disconnectAll()

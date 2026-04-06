@@ -1,0 +1,261 @@
+.sessions-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    gap: 16px;
+}
+
+.sessions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.sessions-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    background: #72baff;
+    color: white;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.sessions-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.sessions-list::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 4px;
+}
+
+.sessions-list::-webkit-scrollbar-thumb {
+    background: #d0d0d0;
+    border-radius: 4px;
+}
+
+.sessions-list::-webkit-scrollbar-thumb:hover {
+    background: #b0b0b0;
+}
+
+.session-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.session-item:hover {
+    border-color: #72baff;
+    box-shadow: 0 2px 8px rgba(114, 186, 255, 0.15);
+}
+
+.session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    min-width: 150px;
+}
+
+.session-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.session-label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.session-date {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.session-stats {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #666;
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stat strong {
+    color: #333;
+}
+
+.session-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.btn-primary {
+    background: #72baff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5fa5e8;
+    box-shadow: 0 2px 6px rgba(114, 186, 255, 0.3);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-secondary {
+    background: white;
+    color: #72baff;
+    border: 1px solid #72baff;
+}
+
+.btn-secondary:hover {
+    background: #f0f7ff;
+}
+
+.btn-secondary:active {
+    transform: scale(0.98);
+}
+
+.btn-danger {
+    background: white;
+    color: #ff5252;
+    border: 1px solid #ff5252;
+}
+
+.btn-danger:hover {
+    background: #fff5f5;
+}
+
+.btn-danger:active {
+    transform: scale(0.98);
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    color: #999;
+    font-size: 14px;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 150px;
+    gap: 8px;
+    color: #999;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.empty-state small {
+    font-size: 12px;
+    color: #bbb;
+}
+
+.error-message {
+    padding: 12px;
+    background: #fff5f5;
+    border: 1px solid #ffcc00;
+    border-radius: 4px;
+    color: #d32f2f;
+    font-size: 12px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .sessions-panel {
+        padding: 12px;
+    }
+
+    .session-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .session-actions {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 8px;
+    }
+
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+        flex: 1;
+        text-align: center;
+    }
+}

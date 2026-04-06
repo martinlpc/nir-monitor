@@ -8,9 +8,10 @@ export interface ISerialPortScanner {
   listAvailablePorts(): Promise<string[]>
 
   /**
-   * Escanea todos los puertos y retorna dispositivos detectados
+   * Escanea todos los puertos y retorna dispositivos detectados.
+   * Si se proveen puertos preferidos, se prueban primero antes del escaneo completo.
    */
-  scanAndProbeAll(): Promise<{
+  scanAndProbeAll(preferred?: { gps?: string; nbm550?: string }): Promise<{
     nbmPort: string | null
     gpsPort: string | null
     allProbed: ProbedDeviceInfo[]

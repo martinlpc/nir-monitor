@@ -10,13 +10,13 @@ const DEFAULT_ZOOM = 13
 function SyncMapView({
   geoData,
   followPosition = false,
-  currentGpsPosition = null,
+  livePosition = null,
   isSessionActive = false,
   onFollowPositionChange
 }: {
   geoData: MapState
   followPosition?: boolean
-  currentGpsPosition?: { lat: number; lon: number; valid: boolean } | null
+  livePosition?: { lat: number; lon: number } | null
   isSessionActive?: boolean
   onFollowPositionChange?: (value: boolean) => void
 }): null {
@@ -48,10 +48,10 @@ function SyncMapView({
       return
     }
 
-    if (currentGpsPosition?.valid && currentGpsPosition.lat !== 0) {
-      map.setView([currentGpsPosition.lat, currentGpsPosition.lon], 17)
+    if (livePosition && livePosition.lat !== 0) {
+      map.setView([livePosition.lat, livePosition.lon], 17)
     }
-  }, [followPosition, currentGpsPosition, map])
+  }, [followPosition, livePosition, map])
 
   useEffect(() => {
     map.invalidateSize()
@@ -66,32 +66,44 @@ interface MapViewProps {
 }
 
 export default function MapView({ geoData, isSessionActive = false }: MapViewProps): React.JSX.Element {
-  const [currentGpsPosition, setCurrentGpsPosition] = useState<{
-    lat: number
-    lon: number
-    alt: number
-    valid: boolean
-  } | null>(null)
+  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; alt: number } | null>(null)
+  const [lastKnownPosition, setLastKnownPosition] = useState<{ lat: number; lon: number; alt: number } | null>(null)
 
   const [followPosition, setFollowPosition] = useState(true)
 
   // Escuchar posición GPS en tiempo real
   useEffect(() => {
-    const unsubscribe = window.api.gps.onPosition((data) => {
-      setCurrentGpsPosition({
-        lat: data.coords.lat,
-        lon: data.coords.lon,
-        alt: data.coords.alt || 0,
-        valid: data.valid
+    const clearLive = () => {
+      setLivePosition((prev) => {
+        if (prev !== null) setLastKnownPosition(prev)
+        return null
       })
+    }
+
+    const unsubPosition = window.api.gps.onPosition((data) => {
+      if (data.valid) {
+        setLivePosition({ lat: data.coords.lat, lon: data.coords.lon, alt: data.coords.alt || 0 })
+        setLastKnownPosition(null)
+      } else {
+        clearLive()
+      }
+    })
+
+    const unsubFixLost = window.api.gps.onFixLost(clearLive)
+
+    const unsubStatus = window.api.devices.onStatus((data) => {
+      if (data.deviceId === 'gps' && data.status !== 'connected') {
+        clearLive()
+      }
     })
 
     return () => {
-      unsubscribe()
+      unsubPosition()
+      unsubFixLost()
+      unsubStatus()
     }
   }, [])
 
-  const gpsFix = currentGpsPosition?.valid ?? false
   const lastPoint = geoData.allPoints.at(-1) ?? null
   const trackPoints = geoData.trackPoints
 
@@ -106,10 +118,12 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
         <div>
           <h2>Mapa de recorrido</h2>
           <p className="map-view__caption">
-            {gpsFix
-              ? 'Centrado en la posicion GPS actual.'
+            {followPosition
+              ? livePosition
+                ? 'Centrado en la posición GPS actual.'
+                : 'Esperando GPS fix...'
               : geoData.allPoints.length === 0
-                ? 'Esperando posicion GPS o muestras georreferenciadas.'
+                ? 'Habilita "Seguir mi posición" o espera muestras georreferenciadas.'
                 : `${geoData.trackPoints.length} muestras registradas`}
           </p>
         </div>
@@ -122,7 +136,6 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
             />
             <span>Seguir mi posición</span>
           </label>
-          <span className={`badge ${gpsFix ? 'ok' : 'danger'}`}>{gpsFix ? 'GPS fix' : 'GPS sin fix'}</span>
           {lastPoint ? (
             <div className="map-view__stats">
               <span>{lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}</span>
@@ -141,14 +154,14 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
           <SyncMapView 
             geoData={geoData} 
             followPosition={followPosition}
-            currentGpsPosition={currentGpsPosition}
+            livePosition={livePosition}
             isSessionActive={isSessionActive}
             onFollowPositionChange={setFollowPosition}
           />
           {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
-          {currentGpsPosition?.valid && currentGpsPosition.lat !== 0 ? (
+          {livePosition ? (
             <CircleMarker
-              center={[currentGpsPosition.lat, currentGpsPosition.lon]}
+              center={[livePosition.lat, livePosition.lon]}
               radius={10}
               pathOptions={{
                 color: '#72baff',
@@ -158,11 +171,32 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
               }}
             >
               <Popup>
-                Posicion GPS actual
+                Posición GPS actual
                 <br />
-                {currentGpsPosition.lat.toFixed(6)}, {currentGpsPosition.lon.toFixed(6)}
+                {livePosition.lat.toFixed(6)}, {livePosition.lon.toFixed(6)}
                 <br />
-                alt {currentGpsPosition.alt.toFixed(1)} m
+                alt {livePosition.alt.toFixed(1)} m
+              </Popup>
+            </CircleMarker>
+          ) : null}
+          {lastKnownPosition && !livePosition ? (
+            <CircleMarker
+              center={[lastKnownPosition.lat, lastKnownPosition.lon]}
+              radius={9}
+              pathOptions={{
+                color: '#888888',
+                fillColor: '#cccccc',
+                fillOpacity: 0.55,
+                weight: 2,
+                dashArray: '5 4'
+              }}
+            >
+              <Popup>
+                Última posición conocida
+                <br />
+                {lastKnownPosition.lat.toFixed(6)}, {lastKnownPosition.lon.toFixed(6)}
+                <br />
+                alt {lastKnownPosition.alt.toFixed(1)} m
               </Popup>
             </CircleMarker>
           ) : null}
