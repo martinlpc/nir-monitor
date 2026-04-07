@@ -1,4 +1,4 @@
-import type { DeviceManagerState } from '../../../../main/services/DeviceManager'
+import type { DeviceManagerStateDTO } from '../../../../shared/dto'
 import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../../../shared/ipc.types'
 
@@ -22,7 +22,7 @@ export interface NmeaEntry {
 
 export interface DebugPanelState {
   ports: PortInfo[]
-  deviceState: DeviceManagerState
+  deviceState: DeviceManagerStateDTO
   selectedPorts: Record<DeviceId, string>
   sessionLabel: string
   triggerMode: TriggerMode
@@ -37,4 +37,3 @@ export interface DebugPanelState {
   busyAction: string | null
   logs: LogEntry[]
 }
-

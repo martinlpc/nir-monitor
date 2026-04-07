@@ -1,64 +1,13 @@
 import 'leaflet/dist/leaflet.css'
-import { LatLngBounds, type LatLngExpression } from 'leaflet'
-import { useEffect, useMemo, useState, useRef } from 'react'
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
+import { type LatLngExpression } from 'leaflet'
+import { useEffect, useMemo, useState } from 'react'
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet'
 import type { MapState } from '../../hooks/useGeoData'
+import { formatTime } from '../../utils/formatters'
+import SyncMapView from './SyncMapView'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
 const DEFAULT_ZOOM = 13
-
-function SyncMapView({
-  geoData,
-  followPosition = false,
-  livePosition = null,
-  isSessionActive = false,
-  onFollowPositionChange
-}: {
-  geoData: MapState
-  followPosition?: boolean
-  livePosition?: { lat: number; lon: number } | null
-  isSessionActive?: boolean
-  onFollowPositionChange?: (value: boolean) => void
-}): null {
-  const map = useMap()
-  const wasSessionActive = useRef(isSessionActive)
-
-  useEffect(() => {
-    // Detectar cuando sesión termina (de true a false)
-    if (wasSessionActive.current === true && isSessionActive === false) {
-      // Sesión acaba de terminar
-      // Desmarcar checkbox
-      onFollowPositionChange?.(false)
-      
-      // Centrar en bounds
-      if (geoData.bounds) {
-        const bounds = new LatLngBounds([
-          [geoData.bounds.south, geoData.bounds.west],
-          [geoData.bounds.north, geoData.bounds.east]
-        ])
-        map.fitBounds(bounds, { padding: [32, 32] })
-      }
-    }
-    wasSessionActive.current = isSessionActive
-  }, [isSessionActive, geoData.bounds, map, onFollowPositionChange])
-
-  useEffect(() => {
-    // Regla simple: si checkbox está marcado, centra en GPS actual
-    if (!followPosition) {
-      return
-    }
-
-    if (livePosition && livePosition.lat !== 0) {
-      map.setView([livePosition.lat, livePosition.lon], 17)
-    }
-  }, [followPosition, livePosition, map])
-
-  useEffect(() => {
-    map.invalidateSize()
-  }, [map])
-
-  return null
-}
 
 interface MapViewProps {
   geoData: MapState
@@ -139,7 +88,7 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
           {lastPoint ? (
             <div className="map-view__stats">
               <span>{lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}</span>
-              <span>{new Date(lastPoint.timestamp).toLocaleTimeString('es-AR', { hour12: false })}</span>
+              <span>{formatTime(lastPoint.timestamp)}</span>
             </div>
           ) : null}
         </div>

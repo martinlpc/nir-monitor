@@ -1,12 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
-import type { DeviceManagerState } from '../../../main/services/DeviceManager'
+import type { DeviceManagerStateDTO } from '../../../shared/dto'
 
 /**
  * Hook para gestión del estado de dispositivos
  * Usa la API de window.api.devices para escaneo, conexión y eventos
  */
 export function useDevices() {
-  const [devices, setDevices] = useState<DeviceManagerState | null>(null)
+  const [devices, setDevices] = useState<DeviceManagerStateDTO | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
 

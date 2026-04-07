@@ -53,9 +53,19 @@ export interface ISessionRepository {
   getSessionPoints(sessionId: string): Promise<GeoTimestamp[]>
 
   /**
-   * Exportar sesión como GeoJSON
+   * Exportar sesión como GeoJSON (con metadata de sesión en propiedades del FeatureCollection)
    */
   exportAsGeoJSON(sessionId: string): Promise<string>
+
+  /**
+   * Exportar sesión como XLSX (reporte con hojas de resumen y datos)
+   */
+  exportAsXLSX(sessionId: string): Promise<Buffer>
+
+  /**
+   * Exportar sesión como KMZ (KML comprimido para Google Earth)
+   */
+  exportAsKMZ(sessionId: string): Promise<Buffer>
 
   /**
    * Exportar sesión como CSV

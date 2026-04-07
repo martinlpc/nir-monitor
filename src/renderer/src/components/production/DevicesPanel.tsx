@@ -9,7 +9,6 @@ import './production.css'
 interface DevicesPanelProps {
   devices: ReturnType<typeof useDevices>
   session: ReturnType<typeof useSession>
-  onSessionStateChange?: (state: 'idle' | 'starting' | 'active' | 'stopping') => void
 }
 
 // Dispositivos conocidos - SIEMPRE mostrados
@@ -20,8 +19,7 @@ const KNOWN_DEVICES: Record<string, { name: string; type: 'emf' | 'gps'; baudRat
 
 export default function DevicesPanel({
   devices,
-  session,
-  onSessionStateChange
+  session
 }: DevicesPanelProps): React.JSX.Element {
   const [loadingDevice, setLoadingDevice] = useState<string | null>(null)
   const [testMode, setTestMode] = useState(false)
@@ -60,48 +58,48 @@ export default function DevicesPanel({
 
   const handleStartSession = async (): Promise<void> => {
     try {
-      onSessionStateChange?.('starting')
-      
-      // Obtener posición actual del GPS para generar nombre con ubicación
-      let sessionLabel = await generateSessionName()
-      
-      // Capturar posición GPS si está disponible
-      let currentPosition: { lat: number; lon: number; alt?: number } | null = null
-      const unsubscribe = window.api.gps.onPosition((data) => {
-        if (data.valid) {
-          currentPosition = data.coords
-          unsubscribe()
-        }
-      })
-      
-      // Esperar un poco a que llegue la posición o timeout
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      unsubscribe()
-      
-      // Si se obtuvo posición, regenerar nombre con ubicación
-      if (currentPosition) {
-        sessionLabel = await generateSessionName(currentPosition)
+      // Intentar obtener posición GPS actual para el nombre
+      const gpsStatus = devices.gps?.status
+      let sessionLabel: string
+
+      if (gpsStatus === 'connected') {
+        // Pedir posición actual una sola vez de forma síncrona
+        sessionLabel = await new Promise<string>((resolve) => {
+          const unsub = window.api.gps.onPosition(async (data) => {
+            unsub()
+            if (data.valid && data.coords) {
+              const name = await generateSessionName(data.coords)
+              resolve(name)
+            } else {
+              const name = await generateSessionName()
+              resolve(name)
+            }
+          })
+          // Si no llega posición en 1s, generar nombre sin ubicación
+          setTimeout(async () => {
+            unsub()
+            const name = await generateSessionName()
+            resolve(name)
+          }, 1000)
+        })
+      } else {
+        sessionLabel = await generateSessionName()
       }
-      
+
       await session.start({
         label: sessionLabel,
         testMode
       })
-      onSessionStateChange?.('active')
     } catch (err) {
       console.error('Error starting session:', err)
-      onSessionStateChange?.('idle')
     }
   }
 
   const handleStopSession = async (): Promise<void> => {
     try {
-      onSessionStateChange?.('stopping')
       await session.stop()
-      onSessionStateChange?.('idle')
     } catch (err) {
       console.error('Error stopping session:', err)
-      onSessionStateChange?.('active')
     }
   }
 
@@ -136,6 +134,9 @@ export default function DevicesPanel({
           <DeviceCard
             key={device.id}
             device={device}
+            status={
+              (device.id === 'nbm550' ? devices.nbm550?.status : devices.gps?.status) ?? 'disconnected'
+            }
             isLoading={loadingDevice === device.id}
             onConnect={() => handleConnect(device.id)}
             onDisconnect={() => handleDisconnect(device.id)}

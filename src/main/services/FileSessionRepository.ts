@@ -193,9 +193,70 @@ export class FileSessionRepository implements ISessionRepository {
   }
 
   async exportAsGeoJSON(sessionId: string): Promise<string> {
-    const points = await this.getSessionPoints(sessionId)
-    const geojson = this.toGeoJSON(points)
+    const session = await this.getSession(sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    const { metadata, points } = session
+    const uncertainty = metadata.uncertainty
+    const instrument = metadata.instrument
+
+    const features = points.map((point) => ({
+      type: 'Feature' as const,
+      geometry: {
+        type: 'Point' as const,
+        coordinates: [point.position.lon, point.position.lat, point.position.alt || 0]
+      },
+      properties: {
+        id: point.id,
+        sessionId: point.sessionId,
+        timestamp: point.timestamp,
+        hdop: point.position.hdop,
+        rss: point.emf.rss,
+        rssWithUncertainty: uncertainty != null ? point.emf.rss + uncertainty : null,
+        unit: point.emf.unit,
+        interpolated: point.interpolated
+      }
+    }))
+
+    const geojson = {
+      type: 'FeatureCollection' as const,
+      properties: {
+        session: {
+          id: metadata.id,
+          label: metadata.label,
+          startedAt: new Date(metadata.startedAt).toISOString(),
+          stoppedAt: metadata.stoppedAt ? new Date(metadata.stoppedAt).toISOString() : null,
+          sampleCount: metadata.sampleCount
+        },
+        instrument: instrument
+          ? {
+              meter: {
+                brand: instrument.meter.brand,
+                model: instrument.meter.model,
+                serial: instrument.meter.serial,
+                lastCalibrationDate: instrument.meter.lastCalibrationDate
+              },
+              probe: {
+                brand: instrument.probe.brand,
+                model: instrument.probe.model,
+                serial: instrument.probe.serial
+              }
+            }
+          : null,
+        uncertainty: uncertainty ?? null
+      },
+      features
+    }
+
     return JSON.stringify(geojson, null, 2)
+  }
+
+  async exportAsXLSX(_sessionId: string): Promise<Buffer> {
+    throw new Error('XLSX export is not supported by FileSessionRepository')
+  }
+
+  async exportAsKMZ(_sessionId: string): Promise<Buffer> {
+    throw new Error('KMZ export is not supported by FileSessionRepository')
   }
 
   async exportAsCSV(sessionId: string): Promise<string> {

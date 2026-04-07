@@ -2,6 +2,9 @@ import initSqlJs, { Database as SqlJsDatabase } from 'sql.js'
 import * as fs from 'fs'
 import * as path from 'path'
 import { app } from 'electron'
+import ExcelJS from 'exceljs'
+import archiver from 'archiver'
+import { PassThrough } from 'stream'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 import type { ISessionRepository, PersistedSession } from '../../shared/services/ISessionRepository'
@@ -364,7 +367,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
         label: metadataMap.label as string,
         startedAt: this.isoToUnix(metadataMap.startedAt as string),
         stoppedAt: metadataMap.stoppedAt ? this.isoToUnix(metadataMap.stoppedAt as string) : null,
-        sampleCount: metadataMap.sampleCount as number
+        sampleCount: metadataMap.sampleCount as number,
+        instrument: null,
+        uncertainty: null
       }
 
       // Obtener puntos
@@ -423,8 +428,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
           label: rowMap.label as string,
           startedAt: this.isoToUnix(rowMap.startedAt as string),
           stoppedAt: rowMap.stoppedAt ? this.isoToUnix(rowMap.stoppedAt as string) : null,
-          sampleCount: rowMap.sampleCount as number
-        }
+          sampleCount: rowMap.sampleCount as number,
+          instrument: null,
+          uncertainty: null
+        } as SessionSummary
       })
     } catch (err) {
       console.error('[SQLiteSessionRepository] Error listing sessions:', err)
@@ -487,6 +494,11 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
   async exportAsGeoJSON(sessionId: string): Promise<string> {
     const points = await this.getSessionPoints(sessionId)
+    const session = await this.getSession(sessionId)
+    const stats = await this.getSessionStats(sessionId)
+
+    const uncertainty = session?.metadata.uncertainty ?? null
+
     const features = points.map((point) => ({
       type: 'Feature' as const,
       geometry: {
@@ -496,14 +508,50 @@ export class SQLiteSessionRepository implements ISessionRepository {
       properties: {
         id: point.id,
         timestamp: point.timestamp,
+        datetime: new Date(point.timestamp).toISOString(),
         hdop: point.position.hdop,
         rss: point.emf.rss,
-        unit: point.emf.unit
+        rssWithUncertainty: uncertainty != null ? point.emf.rss + uncertainty : null,
+        unit: point.emf.unit,
+        interpolated: point.interpolated
       }
     }))
 
+    const instrument = session?.metadata.instrument ?? null
+
     const geojson = {
       type: 'FeatureCollection' as const,
+      properties: {
+        session: {
+          id: session?.metadata.id ?? sessionId,
+          startedAt: session?.metadata.startedAt
+            ? new Date(session.metadata.startedAt).toISOString()
+            : null,
+          sampleCount: session?.metadata.sampleCount ?? points.length
+        },
+        instrument: {
+          meter: {
+            brand: instrument?.meter.brand ?? null,
+            model: instrument?.meter.model ?? null,
+            serial: instrument?.meter.serial ?? null,
+            lastCalibrationDate: instrument?.meter.lastCalibrationDate ?? null
+          },
+          probe: {
+            brand: instrument?.probe.brand ?? null,
+            model: instrument?.probe.model ?? null,
+            serial: instrument?.probe.serial ?? null
+          }
+        },
+        uncertainty: uncertainty,
+        stats: stats
+          ? {
+              avgRss: stats.avgRss,
+              maxRss: stats.maxRss,
+              minRss: stats.minRss,
+              pointCount: stats.pointCount
+            }
+          : null
+      },
       features
     }
 
@@ -535,6 +583,254 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     const csv = [headers, ...rows].map((row) => '"' + row.join('","') + '"').join('\n')
     return csv
+  }
+
+  async exportAsXLSX(sessionId: string): Promise<Buffer> {
+    const session = await this.getSession(sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    const { metadata, points } = session
+    const stats = await this.getSessionStats(sessionId)
+
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = 'NIR Monitor'
+    workbook.created = new Date()
+
+    // ── Hoja 1: Resumen ──
+    const summarySheet = workbook.addWorksheet('Resumen')
+
+    const headerStyle: Partial<ExcelJS.Style> = {
+      font: { bold: true, size: 11 },
+      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
+      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
+      alignment: { horizontal: 'left' }
+    }
+
+    summarySheet.columns = [
+      { header: 'Campo', key: 'field', width: 25 },
+      { header: 'Valor', key: 'value', width: 40 }
+    ]
+    summarySheet.getRow(1).eachCell((cell) => {
+      cell.style = headerStyle
+    })
+
+    const durationMs = metadata.stoppedAt ? metadata.stoppedAt - metadata.startedAt : 0
+    const durationMin = (durationMs / 60000).toFixed(1)
+
+    const instrument = metadata.instrument
+    const uncertainty = metadata.uncertainty
+
+    summarySheet.addRows([
+      { field: 'Etiqueta', value: metadata.label },
+      { field: 'ID de sesión', value: metadata.id },
+      { field: 'Inicio', value: new Date(metadata.startedAt).toLocaleString('es-AR') },
+      {
+        field: 'Fin',
+        value: metadata.stoppedAt ? new Date(metadata.stoppedAt).toLocaleString('es-AR') : 'N/A'
+      },
+      { field: 'Duración (min)', value: durationMin },
+      { field: 'Cantidad de puntos', value: metadata.sampleCount },
+      { field: '', value: '' },
+      { field: 'Medidor - Marca', value: instrument?.meter.brand ?? '' },
+      { field: 'Medidor - Modelo', value: instrument?.meter.model ?? '' },
+      { field: 'Medidor - Nro. de serie', value: instrument?.meter.serial ?? '' },
+      { field: 'Medidor - Última calibración', value: instrument?.meter.lastCalibrationDate ?? '' },
+      { field: '', value: '' },
+      { field: 'Sonda - Marca', value: instrument?.probe.brand ?? '' },
+      { field: 'Sonda - Modelo', value: instrument?.probe.model ?? '' },
+      { field: 'Sonda - Nro. de serie', value: instrument?.probe.serial ?? '' },
+      { field: '', value: '' },
+      { field: 'Incertidumbre aplicada', value: uncertainty != null ? uncertainty : 'N/A' },
+      { field: '', value: '' },
+      { field: 'RSS promedio', value: stats?.avgRss?.toFixed(2) ?? 'N/A' },
+      { field: 'RSS máximo', value: stats?.maxRss?.toFixed(2) ?? 'N/A' },
+      { field: 'RSS mínimo', value: stats?.minRss?.toFixed(2) ?? 'N/A' }
+    ])
+
+    // ── Hoja 2: Datos ──
+    const dataSheet = workbook.addWorksheet('Datos')
+
+    dataSheet.columns = [
+      { header: '#', key: 'index', width: 6 },
+      { header: 'Fecha/Hora', key: 'datetime', width: 22 },
+      { header: 'Latitud', key: 'lat', width: 14 },
+      { header: 'Longitud', key: 'lon', width: 14 },
+      { header: 'Altitud (m)', key: 'alt', width: 12 },
+      { header: 'HDOP', key: 'hdop', width: 8 },
+      { header: 'RSS', key: 'rss', width: 10 },
+      { header: 'RSS + Incertidumbre', key: 'rssWithUncertainty', width: 18 },
+      { header: 'Unidad', key: 'unit', width: 12 },
+      { header: 'Interpolado', key: 'interpolated', width: 12 }
+    ]
+    dataSheet.getRow(1).eachCell((cell) => {
+      cell.style = headerStyle
+    })
+
+    points.forEach((point, i) => {
+      const rssU = uncertainty != null ? point.emf.rss + uncertainty : null
+      dataSheet.addRow({
+        index: i + 1,
+        datetime: new Date(point.timestamp).toLocaleString('es-AR'),
+        lat: point.position.lat,
+        lon: point.position.lon,
+        alt: point.position.alt ?? 0,
+        hdop: point.position.hdop ?? 0,
+        rss: point.emf.rss,
+        rssWithUncertainty: rssU,
+        unit: point.emf.unit,
+        interpolated: point.interpolated ? 'Sí' : 'No'
+      })
+    })
+
+    // Auto-filtro en hoja de datos
+    dataSheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: points.length + 1, column: 10 }
+    }
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    return Buffer.from(buffer)
+  }
+
+  async exportAsKMZ(sessionId: string): Promise<Buffer> {
+    const session = await this.getSession(sessionId)
+    if (!session) throw new Error(`Session ${sessionId} not found`)
+
+    const { metadata, points } = session
+    const stats = await this.getSessionStats(sessionId)
+
+    // Generar KML
+    const kml = this.buildKML(metadata, points, stats)
+
+    // Comprimir a KMZ (ZIP con doc.kml)
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = []
+      const passthrough = new PassThrough()
+      passthrough.on('data', (chunk: Buffer) => chunks.push(chunk))
+      passthrough.on('end', () => resolve(Buffer.concat(chunks)))
+      passthrough.on('error', reject)
+
+      const archive = archiver('zip', { zlib: { level: 9 } })
+      archive.on('error', reject)
+      archive.pipe(passthrough)
+      archive.append(kml, { name: 'doc.kml' })
+      archive.finalize()
+    })
+  }
+
+  private buildKML(
+    metadata: SessionSummary,
+    points: GeoTimestamp[],
+    stats: { avgRss: number; maxRss: number; minRss: number; pointCount: number } | null
+  ): string {
+    const escXml = (s: string): string =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+    // Escala de color según RSS relativo (verde → amarillo → rojo)
+    const rssValues = points.map((p) => p.emf.rss)
+    const minRss = stats?.minRss ?? Math.min(...rssValues)
+    const maxRss = stats?.maxRss ?? Math.max(...rssValues)
+    const range = maxRss - minRss || 1
+
+    const rssToColor = (rss: number): string => {
+      const t = Math.max(0, Math.min(1, (rss - minRss) / range))
+      // KML uses aabbggrr (alpha, blue, green, red)
+      const r = Math.round(255 * t)
+      const g = Math.round(255 * (1 - t))
+      const hex = (n: number) => n.toString(16).padStart(2, '0')
+      return `ff${hex(0)}${hex(g)}${hex(r)}`
+    }
+
+    // Generar estilos únicos
+    const styles = new Map<string, string>()
+    points.forEach((p) => {
+      const color = rssToColor(p.emf.rss)
+      if (!styles.has(color)) {
+        styles.set(color, `style_${styles.size}`)
+      }
+    })
+
+    const stylesKml = Array.from(styles.entries())
+      .map(
+        ([color, id]) => `
+    <Style id="${id}">
+      <IconStyle>
+        <color>${color}</color>
+        <scale>0.6</scale>
+        <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
+      </IconStyle>
+    </Style>`
+      )
+      .join('')
+
+    const placemarks = points
+      .map((p) => {
+        const color = rssToColor(p.emf.rss)
+        const styleId = styles.get(color)!
+        const dt = new Date(p.timestamp).toISOString()
+        const rssU = metadata.uncertainty != null ? p.emf.rss + metadata.uncertainty : ''
+        return `
+    <Placemark>
+      <name>${escXml(p.emf.rss + ' ' + p.emf.unit)}</name>
+      <description>${escXml(dt)}</description>
+      <styleUrl>#${styleId}</styleUrl>
+      <TimeStamp><when>${dt}</when></TimeStamp>
+      <Point><coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0}</coordinates></Point>
+      <ExtendedData>
+        <Data name="rss"><value>${p.emf.rss}</value></Data>
+        <Data name="rssWithUncertainty"><value>${rssU}</value></Data>
+        <Data name="unit"><value>${escXml(p.emf.unit)}</value></Data>
+        <Data name="hdop"><value>${p.position.hdop ?? 0}</value></Data>
+        <Data name="interpolated"><value>${p.interpolated}</value></Data>
+      </ExtendedData>
+    </Placemark>`
+      })
+      .join('')
+
+    // Línea de recorrido
+    const lineCoords = points
+      .map((p) => `${p.position.lon},${p.position.lat},${p.position.alt ?? 0}`)
+      .join(' ')
+
+    const startDate = new Date(metadata.startedAt).toLocaleString('es-AR')
+    const endDate = metadata.stoppedAt
+      ? new Date(metadata.stoppedAt).toLocaleString('es-AR')
+      : 'N/A'
+
+    const inst = metadata.instrument
+    const instrumentDesc = inst
+      ? `\nMedidor: ${inst.meter.brand} ${inst.meter.model} (S/N: ${inst.meter.serial})` +
+        `\nÚltima calibración: ${inst.meter.lastCalibrationDate ?? 'N/A'}` +
+        `\nSonda: ${inst.probe.brand} ${inst.probe.model} (S/N: ${inst.probe.serial})` +
+        `\nIncertidumbre: ${metadata.uncertainty ?? 'N/A'}`
+      : ''
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+<Document>
+  <name>${escXml(metadata.label)}</name>
+  <description>Sesión: ${escXml(metadata.label)}\nInicio: ${startDate}\nFin: ${endDate}\nPuntos: ${metadata.sampleCount}${instrumentDesc}</description>
+  ${stylesKml}
+  <Style id="lineStyle">
+    <LineStyle><color>ff0000ff</color><width>2</width></LineStyle>
+  </Style>
+  <Folder>
+    <name>Recorrido</name>
+    <Placemark>
+      <name>Trayecto</name>
+      <styleUrl>#lineStyle</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>${lineCoords}</coordinates>
+      </LineString>
+    </Placemark>
+  </Folder>
+  <Folder>
+    <name>Puntos de medición</name>
+    ${placemarks}
+  </Folder>
+</Document>
+</kml>`
   }
 
   /**

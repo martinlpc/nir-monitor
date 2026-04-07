@@ -2,7 +2,7 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #f8f9fa;
+    background: transparent;
     border-radius: 8px;
     padding: 16px;
     gap: 16px;
@@ -13,25 +13,25 @@
     align-items: center;
     justify-content: space-between;
     padding-bottom: 12px;
-    border-bottom: 2px solid #e0e0e0;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.15);
 }
 
 .sessions-header h2 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #e0e0e0;
+    color: #edf4ff;
 }
 
-.badge {
+.sessions-panel .sessions-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-width: 24px;
     height: 24px;
     padding: 0 8px;
-    background: #72baff;
-    color: white;
+    background: rgba(114, 186, 255, 0.2);
+    color: #72baff;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
@@ -46,31 +46,31 @@
 }
 
 .sessions-list::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .sessions-list::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 4px;
+    background: transparent;
 }
 
 .sessions-list::-webkit-scrollbar-thumb {
-    background: #d0d0d0;
-    border-radius: 4px;
+    background: rgba(255, 176, 94, 0.2);
+    border-radius: 3px;
 }
 
 .sessions-list::-webkit-scrollbar-thumb:hover {
-    background: #b0b0b0;
+    background: rgba(255, 176, 94, 0.4);
 }
 
 .session-item {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 12px;
-    background: white;
+    background: rgba(23, 34, 75, 0.5);
     border-radius: 6px;
-    border: 1px solid #e0e0e0;
+    border: 1px solid rgba(114, 186, 255, 0.12);
     transition: all 0.2s ease;
     cursor: pointer;
     gap: 12px;
@@ -78,16 +78,53 @@
 }
 
 .session-item:hover {
-    border-color: #72baff;
-    box-shadow: 0 2px 8px rgba(114, 186, 255, 0.15);
+    border-color: rgba(114, 186, 255, 0.3);
+    background: rgba(23, 34, 75, 0.8);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-.session-info {
+.btn-delete-session {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #9ca3af;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
+    opacity: 0;
+}
+
+.session-item:hover .btn-delete-session {
+    opacity: 1;
+}
+
+.btn-delete-session:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #fca5a5;
+}
+
+.btn-delete-session.confirm {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5);
+}
+
+.sessions-panel .session-info {
     display: flex;
     flex-direction: column;
     gap: 8px;
     flex: 1;
-    min-width: 0;
     min-width: 150px;
 }
 
@@ -102,7 +139,7 @@
     margin: 0;
     font-size: 14px;
     font-weight: 600;
-    color: #333;
+    color: #edf4ff;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -110,7 +147,7 @@
 
 .session-date {
     font-size: 12px;
-    color: #999;
+    color: #9ca3af;
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -119,7 +156,7 @@
     display: flex;
     gap: 16px;
     font-size: 12px;
-    color: #666;
+    color: #9ca3af;
 }
 
 .stat {
@@ -129,7 +166,7 @@
 }
 
 .stat strong {
-    color: #333;
+    color: #edf4ff;
 }
 
 .session-actions {
@@ -140,9 +177,9 @@
     justify-content: flex-end;
 }
 
-.btn-primary,
-.btn-secondary,
-.btn-danger {
+.sessions-panel .btn-primary,
+.sessions-panel .btn-secondary,
+.sessions-panel .btn-danger {
     padding: 5px 10px;
     border: none;
     border-radius: 4px;
@@ -154,84 +191,85 @@
     flex-shrink: 0;
 }
 
-.btn-primary {
-    background: #72baff;
-    color: white;
-}
-
-.btn-primary:hover {
-    background: #5fa5e8;
-    box-shadow: 0 2px 6px rgba(114, 186, 255, 0.3);
-}
-
-.btn-primary:active {
-    transform: scale(0.98);
-}
-
-.btn-secondary {
-    background: white;
+.sessions-panel .btn-primary {
+    background: rgba(114, 186, 255, 0.2);
     color: #72baff;
-    border: 1px solid #72baff;
+    border: 1px solid rgba(114, 186, 255, 0.3);
 }
 
-.btn-secondary:hover {
-    background: #f0f7ff;
+.sessions-panel .btn-primary:hover {
+    background: rgba(114, 186, 255, 0.3);
+    box-shadow: 0 2px 6px rgba(114, 186, 255, 0.2);
 }
 
-.btn-secondary:active {
+.sessions-panel .btn-primary:active {
     transform: scale(0.98);
 }
 
-.btn-danger {
-    background: white;
-    color: #ff5252;
-    border: 1px solid #ff5252;
+.sessions-panel .btn-secondary {
+    background: rgba(23, 34, 75, 0.7);
+    color: #72baff;
+    border: 1px solid rgba(114, 186, 255, 0.2);
 }
 
-.btn-danger:hover {
-    background: #fff5f5;
+.sessions-panel .btn-secondary:hover {
+    background: rgba(114, 186, 255, 0.1);
 }
 
-.btn-danger:active {
+.sessions-panel .btn-secondary:active {
     transform: scale(0.98);
 }
 
-.loading {
+.sessions-panel .btn-danger {
+    background: rgba(23, 34, 75, 0.7);
+    color: #fca5a5;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.sessions-panel .btn-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.sessions-panel .btn-danger:active {
+    transform: scale(0.98);
+}
+
+.sessions-panel .loading {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100px;
-    color: #999;
+    color: #9ca3af;
     font-size: 14px;
 }
 
-.empty-state {
+.sessions-panel .sessions-empty-state {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     height: 150px;
     gap: 8px;
-    color: #999;
+    color: #9ca3af;
 }
 
-.empty-state p {
+.sessions-panel .sessions-empty-state p {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
 }
 
-.empty-state small {
+.sessions-panel .sessions-empty-state small {
     font-size: 12px;
-    color: #bbb;
+    color: #6b7280;
 }
 
-.error-message {
+.sessions-panel .error-message {
     padding: 12px;
-    background: #fff5f5;
-    border: 1px solid #ffcc00;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 4px;
-    color: #d32f2f;
+    color: #fca5a5;
     font-size: 12px;
 }
 
@@ -252,9 +290,9 @@
         margin-top: 8px;
     }
 
-    .btn-primary,
-    .btn-secondary,
-    .btn-danger {
+    .sessions-panel .btn-primary,
+    .sessions-panel .btn-secondary,
+    .sessions-panel .btn-danger {
         flex: 1;
         text-align: center;
     }

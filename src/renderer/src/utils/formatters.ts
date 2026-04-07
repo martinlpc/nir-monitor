@@ -20,3 +20,17 @@ export function formatTime(ms: number): string {
     second: '2-digit'
   })
 }
+
+/**
+ * Convierte timestamp Unix a fecha y hora completa DD/MM/YYYY HH:MM:SS
+ */
+export function formatTimestamp(ms: number): string {
+  return new Date(ms).toLocaleString('es-AR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}

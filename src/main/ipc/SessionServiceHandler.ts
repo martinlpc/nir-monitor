@@ -1,6 +1,7 @@
 // Handlers IPC para SessionService - sin lógica de negocio
 // Solo orquesta: SessionService → Renderer
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, dialog } from 'electron'
+import * as fs from 'fs'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
@@ -139,6 +140,53 @@ export function registerSessionServiceHandlers(
       return { success: false, error: (err as Error).message }
     }
   })
+
+  // session:export - exporta con diálogo nativo (GeoJSON, XLSX, KMZ)
+  ipcMain.handle(
+    IPC_HANDLERS.SESSION_EXPORT,
+    async (_, sessionId: string, format: 'geojson' | 'xlsx' | 'kmz', label: string) => {
+      const repository = sessionService.getRepository()
+      if (!repository) {
+        return { success: false, error: 'Repository not available' }
+      }
+
+      const filterMap = {
+        geojson: { name: 'GeoJSON', extensions: ['geojson'] },
+        xlsx: { name: 'Excel', extensions: ['xlsx'] },
+        kmz: { name: 'Google Earth KMZ', extensions: ['kmz'] }
+      }
+
+      const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
+      const defaultName = `${safeLabel}.${format === 'geojson' ? 'geojson' : format}`
+
+      const result = await dialog.showSaveDialog(_window, {
+        title: `Exportar sesión como ${format.toUpperCase()}`,
+        defaultPath: defaultName,
+        filters: [filterMap[format]]
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true }
+      }
+
+      try {
+        if (format === 'geojson') {
+          const data = await repository.exportAsGeoJSON(sessionId)
+          fs.writeFileSync(result.filePath, data, 'utf-8')
+        } else if (format === 'xlsx') {
+          const buffer = await repository.exportAsXLSX(sessionId)
+          fs.writeFileSync(result.filePath, buffer)
+        } else if (format === 'kmz') {
+          const buffer = await repository.exportAsKMZ(sessionId)
+          fs.writeFileSync(result.filePath, buffer)
+        }
+
+        return { success: true, filePath: result.filePath }
+      } catch (err) {
+        return { success: false, error: (err as Error).message }
+      }
+    }
+  )
 
   // session:stats - obtiene estadísticas pre-calculadas
   ipcMain.handle(IPC_HANDLERS.SESSION_STATS, async (_, sessionId: string) => {

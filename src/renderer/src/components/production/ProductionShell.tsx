@@ -18,10 +18,14 @@ export default function ProductionShell(): React.JSX.Element {
       <div className="prod-layout">
         {/* Panel lateral con tabs */}
         <div className="side-panel">
-          <div className="panel-tabs">
+          <div className="panel-tabs" role="tablist" aria-label="Panel de navegación">
             <button
               className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
               onClick={() => setActiveTab('devices')}
+              role="tab"
+              id="tab-devices"
+              aria-selected={activeTab === 'devices'}
+              aria-controls="tabpanel-devices"
               title="Dispositivos y sesión actual"
             >
               Dispositivos
@@ -29,6 +33,10 @@ export default function ProductionShell(): React.JSX.Element {
             <button
               className={`tab-button ${activeTab === 'sessions' ? 'active' : ''}`}
               onClick={() => setActiveTab('sessions')}
+              role="tab"
+              id="tab-sessions"
+              aria-selected={activeTab === 'sessions'}
+              aria-controls="tabpanel-sessions"
               title="Historial de sesiones guardadas"
             >
               Historial
@@ -37,16 +45,23 @@ export default function ProductionShell(): React.JSX.Element {
 
           <div className="panel-content">
             {/* Mantener ambos componentes montados pero solo mostrar uno - preserva estado */}
-            <div style={{ display: activeTab === 'devices' ? 'block' : 'none' }}>
+            <div
+              role="tabpanel"
+              id="tabpanel-devices"
+              aria-labelledby="tab-devices"
+              style={{ display: activeTab === 'devices' ? 'block' : 'none' }}
+            >
               <DevicesPanel
                 devices={devices}
                 session={session}
-                onSessionStateChange={() => {
-                  // Estado sincronizado automáticamente via hooks
-                }}
               />
             </div>
-            <div style={{ display: activeTab === 'sessions' ? 'block' : 'none' }}>
+            <div
+              role="tabpanel"
+              id="tabpanel-sessions"
+              aria-labelledby="tab-sessions"
+              style={{ display: activeTab === 'sessions' ? 'block' : 'none' }}
+            >
               <SessionsPanel session={session} />
             </div>
           </div>

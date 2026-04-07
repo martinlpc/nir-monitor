@@ -1,4 +1,5 @@
 import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
+import { formatTimestamp } from '../../utils/formatters'
 import './PointsTable.css'
 
 interface PointsTableProps {
@@ -6,17 +7,6 @@ interface PointsTableProps {
 }
 
 export default function PointsTable({ points }: PointsTableProps): React.JSX.Element {
-  const formatTimestamp = (ms: number): string => {
-    return new Date(ms).toLocaleString('es-AR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
-  }
-
   return (
     <div className="points-table-container">
       <h3>Puntos capturados ({points.length})</h3>

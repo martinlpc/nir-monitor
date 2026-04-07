@@ -26,7 +26,10 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@types/archiver": "^7.0.0",
+    "archiver": "^7.0.1",
     "electron-updater": "^6.3.9",
+    "exceljs": "^4.4.0",
     "leaflet": "^1.9.4",
     "nmea-simple": "^3.3.0",
     "react-leaflet": "^5.0.0",

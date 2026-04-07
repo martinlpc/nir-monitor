@@ -7,7 +7,6 @@ export interface SessionState {
   status: 'idle' | 'running' | 'stopped'
   startedAt: number | null
   label: string
-  points: GeoTimestamp[]
   summary: SessionSummary | null
 }
 
@@ -21,13 +20,14 @@ export function useSession() {
     status: 'idle',
     startedAt: null,
     label: 'Nueva sesión',
-    points: [],
     summary: null
   })
 
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState(0)
   const unsubscribeRef = useRef<(() => void)[]>([])
+  const pointsRef = useRef<GeoTimestamp[]>([])
+  const [pointCount, setPointCount] = useState(0)
 
   // Iniciar sesión
   const start = useCallback(
@@ -56,9 +56,10 @@ export function useSession() {
           sessionId,
           status: 'running',
           startedAt: Date.now(),
-          label: options?.label || prev.label,
-          points: []
+          label: options?.label || prev.label
         }))
+        pointsRef.current = []
+        setPointCount(0)
 
         return sessionId
       } catch (err) {
@@ -97,9 +98,10 @@ export function useSession() {
       status: 'idle',
       startedAt: null,
       label: 'Nueva sesión',
-      points: [],
       summary: null
     })
+    pointsRef.current = []
+    setPointCount(0)
     setError(null)
   }, [])
 
@@ -109,10 +111,8 @@ export function useSession() {
 
     // Listener para nuevos puntos
     const unsubscribeSample = window.api.session.onSample((point: GeoTimestamp) => {
-      setSession((prev) => ({
-        ...prev,
-        points: [...prev.points, point]
-      }))
+      pointsRef.current.push(point)
+      setPointCount((c) => c + 1)
     })
     listeners.push(unsubscribeSample)
 
@@ -123,9 +123,10 @@ export function useSession() {
         sessionId: data.sessionId,
         status: 'running',
         startedAt: data.startedAt,
-        label: data.label,
-        points: []
+        label: data.label
       }))
+      pointsRef.current = []
+      setPointCount(0)
       setDuration(0)
     })
     listeners.push(unsubscribeStarted)
@@ -167,12 +168,13 @@ export function useSession() {
       summary: SessionSummary
     }) => {
       console.log('[useSession] Loading saved session:', loadedData.sessionId)
+      pointsRef.current = loadedData.points
+      setPointCount(loadedData.points.length)
       setSession({
         sessionId: loadedData.sessionId,
         status: 'stopped',
         startedAt: loadedData.summary.startedAt,
         label: loadedData.label,
-        points: loadedData.points,
         summary: loadedData.summary
       })
       setDuration((loadedData.summary.stoppedAt || Date.now()) - loadedData.summary.startedAt)
@@ -186,7 +188,7 @@ export function useSession() {
     status: session.status,
     label: session.label,
     startedAt: session.startedAt,
-    points: session.points,
+    points: pointsRef.current,
     summary: session.summary,
     error,
 
@@ -200,7 +202,7 @@ export function useSession() {
     isRunning: session.status === 'running',
     isStopped: session.status === 'stopped',
     isIdle: session.status === 'idle',
-    pointCount: session.points.length,
+    pointCount,
     duration
   }
 }

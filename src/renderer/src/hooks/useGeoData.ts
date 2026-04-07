@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useMemo, useCallback } from 'react'
 import type { GeoTimestamp, GeoPosition } from '../../../shared/GeoTimestamp'
 
 export interface MapBounds {
@@ -22,37 +22,16 @@ export interface MapState {
  * - Estado del mapa en tiempo real
  */
 export function useGeoData(geoPoints: GeoTimestamp[]) {
-  const [mapState, setMapState] = useState<MapState>({
-    center: null,
-    bounds: null,
-    allPoints: [],
-    trackPoints: []
-  })
-
-  // Recalcular bounds y center cuando cambian los puntos
-  useEffect(() => {
+  const mapState = useMemo<MapState>(() => {
     if (geoPoints.length === 0) {
-      setMapState({
-        center: null,
-        bounds: null,
-        allPoints: [],
-        trackPoints: []
-      })
-      return
+      return { center: null, bounds: null, allPoints: [], trackPoints: [] }
     }
 
-    // Extraer posiciones válidas
     const validPoints = geoPoints.filter((p) => p.position !== null && p.position !== undefined)
     if (validPoints.length === 0) {
-      setMapState((prev) => ({
-        ...prev,
-        allPoints: geoPoints,
-        trackPoints: []
-      }))
-      return
+      return { center: null, bounds: null, allPoints: geoPoints, trackPoints: [] }
     }
 
-    // Calcular bounds
     const lats = validPoints.map((p) => p.position.lat)
     const lons = validPoints.map((p) => p.position.lon)
 
@@ -63,7 +42,6 @@ export function useGeoData(geoPoints: GeoTimestamp[]) {
       west: Math.min(...lons)
     }
 
-    // Center es el promedio (o el primer punto si solo hay uno)
     const center: GeoPosition =
       validPoints.length === 1
         ? validPoints[0].position
@@ -74,29 +52,10 @@ export function useGeoData(geoPoints: GeoTimestamp[]) {
             hdop: validPoints[validPoints.length - 1].position.hdop
           }
 
-    // Generar puntos de ruta (solo válidos)
     const trackPoints: GeoPosition[] = validPoints.map((p) => p.position)
 
-    setMapState({
-      center,
-      bounds,
-      allPoints: geoPoints,
-      trackPoints
-    })
+    return { center, bounds, allPoints: geoPoints, trackPoints }
   }, [geoPoints])
-
-  // Helpers
-  const getCenter = useCallback((): GeoPosition | null => {
-    return mapState.center
-  }, [mapState.center])
-
-  const getBounds = useCallback((): MapBounds | null => {
-    return mapState.bounds
-  }, [mapState.bounds])
-
-  const getTrackPoints = useCallback((): GeoPosition[] => {
-    return mapState.trackPoints
-  }, [mapState.trackPoints])
 
   const getPointsInBounds = useCallback(
     (testBounds: MapBounds): GeoTimestamp[] => {
@@ -114,8 +73,7 @@ export function useGeoData(geoPoints: GeoTimestamp[]) {
   )
 
   const calculateDistance = useCallback((p1: GeoPosition, p2: GeoPosition): number => {
-    // Haversine formula
-    const R = 6371000 // Earth radius in meters
+    const R = 6371000
     const φ1 = (p1.lat * Math.PI) / 180
     const φ2 = (p2.lat * Math.PI) / 180
     const Δφ = ((p2.lat - p1.lat) * Math.PI) / 180
@@ -137,7 +95,6 @@ export function useGeoData(geoPoints: GeoTimestamp[]) {
     return total
   }, [mapState.trackPoints, calculateDistance])
 
-  // ─── API pública ───
   return {
     // Estado
     center: mapState.center,
@@ -146,9 +103,6 @@ export function useGeoData(geoPoints: GeoTimestamp[]) {
     trackPoints: mapState.trackPoints,
 
     // Métodos
-    getCenter,
-    getBounds,
-    getTrackPoints,
     getPointsInBounds,
     calculateDistance,
     getTotalDistance,

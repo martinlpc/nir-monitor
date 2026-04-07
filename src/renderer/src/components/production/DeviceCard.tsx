@@ -1,17 +1,6 @@
-import { useEffect, useState, useRef } from 'react'
+import type { DeviceStatus } from '../../../../shared/device.types'
+import { useGpsCardInfo, useNbmCardInfo } from './useDeviceCardState'
 import './production.css'
-
-type GpsInfo = {
-  lat?: number
-  lon?: number
-  alt?: number
-}
-
-type NBMInfo = {
-  rss?: number
-  unit?: string
-  battery?: number
-}
 
 interface DeviceInfo {
   id: string
@@ -23,6 +12,7 @@ interface DeviceInfo {
 
 interface DeviceCardProps {
   device: DeviceInfo
+  status: DeviceStatus
   isLoading?: boolean
   onConnect?: () => void
   onDisconnect?: () => void
@@ -30,94 +20,13 @@ interface DeviceCardProps {
 
 export default function DeviceCard({
   device,
+  status,
   isLoading = false,
   onConnect,
   onDisconnect
 }: DeviceCardProps): React.JSX.Element {
-  const [status, setStatus] = useState<'connected' | 'connecting' | 'error' | 'disconnected'>('disconnected')
-  const [gpsInfo, setGpsInfo] = useState<GpsInfo>({})
-  const [nbmInfo, setNbmInfo] = useState<NBMInfo>({})
-  const fixTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  // Escuchar cambios de estado del dispositivo
-  useEffect(() => {
-    const unsubscribe = window.api.devices.onStatus((data) => {
-      if (data.deviceId === device.id) {
-        setStatus(data.status as any)
-        // Limpiar datos del NBM al desconectarse
-        if (device.type === 'emf' && (data.status === 'disconnected' || data.status === 'error')) {
-          setNbmInfo({})
-        }
-      }
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [device.id, device.type])
-
-  // Escuchar actualizaciones de GPS
-  useEffect(() => {
-    if (device.type !== 'gps') return
-
-    const unsubscribePosition = window.api.gps.onPosition((data) => {
-      if (data.coords) {
-        if (fixTimeoutRef.current) {
-          clearTimeout(fixTimeoutRef.current)
-          fixTimeoutRef.current = null
-        }
-
-        setGpsInfo({
-          lat: data.coords.lat,
-          lon: data.coords.lon,
-          alt: data.coords.alt
-        })
-
-        // Timeout para limpiar si no hay más posiciones
-        fixTimeoutRef.current = setTimeout(() => {
-          setGpsInfo({})
-          fixTimeoutRef.current = null
-        }, 5000)
-      }
-    })
-
-    // Listen for GPS fix lost events
-    const unsubscribeFixLost = window.api.gps.onPosition((data) => {
-      if (!data.valid) {
-        if (fixTimeoutRef.current) {
-          clearTimeout(fixTimeoutRef.current)
-          fixTimeoutRef.current = null
-        }
-        setGpsInfo({})
-      }
-    })
-
-    return () => {
-      unsubscribePosition()
-      unsubscribeFixLost()
-      if (fixTimeoutRef.current) {
-        clearTimeout(fixTimeoutRef.current)
-        fixTimeoutRef.current = null
-      }
-    }
-  }, [device.type])
-
-  // Escuchar actualizaciones del NBM550
-  useEffect(() => {
-    if (device.type !== 'emf') return
-
-    const unsubscribe = window.api.nbm.onSample((data) => {
-      setNbmInfo({
-        rss: data.rss,
-        unit: data.unit,
-        battery: data.battery
-      })
-    })
-
-    return () => {
-      unsubscribe()
-    }
-  }, [device.type])
+  const gpsInfo = useGpsCardInfo(device.type === 'gps')
+  const nbmInfo = useNbmCardInfo(device.type === 'emf', status)
 
   const statusColor = {
     connected: '#4ade80',
@@ -151,7 +60,8 @@ export default function DeviceCard({
           <div
             className="status-dot"
             style={{ backgroundColor: displayStatusColor }}
-            title={statusLabel}
+            role="status"
+            aria-label={`Estado: ${statusLabel}`}
           />
           <div>
             <h3 className="device-name">

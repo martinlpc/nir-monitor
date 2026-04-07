@@ -28,6 +28,7 @@ export const IPC_HANDLERS = {
   SESSION_DELETE: 'session:delete',
   SESSION_EXPORT_GEOJSON: 'session:export-geojson',
   SESSION_EXPORT_CSV: 'session:export-csv',
+  SESSION_EXPORT: 'session:export',
   SESSION_POINTS_IN_BOUNDS: 'session:points-in-bounds',
   EXPORT_GEOJSON: 'export:geojson',
   EXPORT_KML: 'export:kml',

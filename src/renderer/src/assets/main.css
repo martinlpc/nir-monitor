@@ -60,7 +60,6 @@ select {
   width: 100%;
 }
 
-.prod-shell,
 .debug-shell {
   width: min(1220px, calc(100vw - 32px));
   margin: 0 auto;
@@ -76,11 +75,6 @@ select {
   box-shadow: 0 16px 50px rgba(0, 0, 0, 0.28);
 }
 
-.prod-shell {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-}
 
 .prod-card {
   width: min(720px, 100%);
@@ -411,7 +405,6 @@ select {
 
 @media (max-width: 720px) {
 
-  .prod-shell,
   .debug-shell {
     width: min(100vw - 20px, 100%);
     padding-top: 14px;

@@ -113,7 +113,9 @@ export class SessionService extends EventEmitter {
           label: this.label,
           startedAt: this.startedAt,
           stoppedAt: null,
-          sampleCount: 0
+          sampleCount: 0,
+          instrument: null,
+          uncertainty: null
         })
       } catch (err) {
         console.error('[SessionService] Failed to init session in repository:', err)
@@ -148,7 +150,9 @@ export class SessionService extends EventEmitter {
       label: this.label,
       startedAt: this.startedAt,
       stoppedAt: Date.now(),
-      sampleCount: this.pointCount
+      sampleCount: this.pointCount,
+      instrument: null,
+      uncertainty: null
     }
 
     // Finalizar sesión en el repositorio (actualizar metadatos + computar stats + flush a disco)
@@ -187,7 +191,9 @@ export class SessionService extends EventEmitter {
       label: this.label,
       startedAt: this.startedAt,
       stoppedAt: this.state === 'stopped' ? Date.now() : null,
-      sampleCount: this.pointCount
+      sampleCount: this.pointCount,
+      instrument: null,
+      uncertainty: null
     }
   }
 

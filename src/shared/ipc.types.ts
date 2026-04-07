@@ -21,10 +21,26 @@ export interface IPCHandlers {
   'export:geojson': { request: { sessionId: string }; response: string } // filepath
 }
 
+export interface InstrumentInfo {
+  meter: {
+    brand: string | null
+    model: string | null
+    serial: string | null
+    lastCalibrationDate: string | null // ISO 8601
+  }
+  probe: {
+    brand: string | null
+    model: string | null
+    serial: string | null
+  }
+}
+
 export interface SessionSummary {
   id: string
   label: string
   startedAt: number
   stoppedAt: number | null
   sampleCount: number
+  instrument: InstrumentInfo | null
+  uncertainty: number | null // valor de incertidumbre aplicado a las mediciones
 }

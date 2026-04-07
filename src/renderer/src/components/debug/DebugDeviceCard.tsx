@@ -1,9 +1,9 @@
-import type { DeviceManagerState } from '../../../../main/services/DeviceManager'
+import type { DeviceManagerStateDTO } from '../../../../shared/dto'
 import type { PortInfo } from './types'
 
 interface DebugDeviceCardProps {
   title: string
-  state: DeviceManagerState['nbm550']
+  state: DeviceManagerStateDTO['nbm550']
   selectedPort: string
   ports: PortInfo[]
   onPortChange: (port: string) => void

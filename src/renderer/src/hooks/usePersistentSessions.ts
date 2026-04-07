@@ -1,5 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { SessionSummary } from '../../../shared/ipc.types'
+import type { GeoTimestamp } from '../../../shared/GeoTimestamp'
+import type { PersistedSession } from '../../../shared/services/ISessionRepository'
 
 export interface SessionItem extends SessionSummary {
   // Extiende SessionSummary para agregar información de presentación si es necesario
@@ -52,7 +54,7 @@ export function usePersistentSessions() {
   }, [loadSessions])
 
   // Obtener sesión completa (con puntos)
-  const getSession = useCallback(async (sessionId: string) => {
+  const getSession = useCallback(async (sessionId: string): Promise<PersistedSession> => {
     try {
       const result = await window.api.session.get(sessionId)
       if (result.success && result.session) {
@@ -113,6 +115,30 @@ export function usePersistentSessions() {
     }
   }, [])
 
+  // Exportar con diálogo nativo (GeoJSON, XLSX, KMZ)
+  const exportSession = useCallback(
+    async (
+      sessionId: string,
+      format: 'geojson' | 'xlsx' | 'kmz',
+      label: string
+    ): Promise<{ filePath?: string; canceled?: boolean }> => {
+      try {
+        const result = await window.api.session.export(sessionId, format, label)
+        if (result.canceled) {
+          return { canceled: true }
+        }
+        if (result.success && result.filePath) {
+          return { filePath: result.filePath }
+        }
+        throw new Error(result.error || `Failed to export as ${format}`)
+      } catch (err) {
+        console.error(`[usePersistentSessions] Error exporting ${format}:`, err)
+        throw err
+      }
+    },
+    []
+  )
+
   // Obtener estadísticas pre-calculadas
   const getStats = useCallback(
     async (
@@ -147,7 +173,7 @@ export function usePersistentSessions() {
       south: number,
       east: number,
       west: number
-    ): Promise<any[]> => {
+    ): Promise<GeoTimestamp[]> => {
       try {
         const result = await window.api.session.getPointsInBounds(
           sessionId,
@@ -182,6 +208,7 @@ export function usePersistentSessions() {
     deleteSession,
     exportGeoJSON,
     exportCSV,
+    exportSession,
     getStats,
     getPointsInBounds,
 
