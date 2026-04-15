@@ -79,13 +79,35 @@ declare global {
           filePath?: string
           headers?: string[]
           records?: Array<{
-            frequency: string
-            value: number
-            unit: string
-            [key: string]: string | number
+            name: string
+            fMin: number
+            fMax: number
+            uncertainty: number
+            factor: number
           }>
           error?: string
           canceled?: boolean
+        }>
+        getProbeInfo: () => Promise<{
+          success: boolean
+          probeInfo?: {
+            model: string | null
+            serial: string | null
+            calibrationDate: string | null
+          }
+          error?: string
+        }>
+        getActiveUncertainty: () => Promise<{
+          success: boolean
+          factor: number | null
+          matchedRecord: {
+            name: string
+            fMin: number
+            fMax: number
+            uncertainty: number
+            factor: number
+          } | null
+          probeModel: string | null
         }>
       }
     }

@@ -25,7 +25,7 @@ export function setupIPC(
   // Registrar handlers (Renderer -> Main request/response)
   registerDeviceManagerHandlers(window, deviceManager)
   registerSessionServiceHandlers(window, deviceManager, sessionService)
-  registerSettingsHandlers(window)
+  registerSettingsHandlers(window, deviceManager)
 
   // Vincular eventos (Main -> Renderer push)
   bindDeviceManagerEvents(window, deviceManager)

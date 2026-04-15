@@ -186,14 +186,34 @@ const api = {
       filePath?: string
       headers?: string[]
       records?: Array<{
-        frequency: string
-        value: number
-        unit: string
-        [key: string]: string | number
+        name: string
+        fMin: number
+        fMax: number
+        uncertainty: number
+        factor: number
       }>
       error?: string
       canceled?: boolean
-    }> => ipcRenderer.invoke(IPC_HANDLERS.OPEN_UNCERTAINTY_FILE)
+    }> => ipcRenderer.invoke(IPC_HANDLERS.OPEN_UNCERTAINTY_FILE),
+
+    getProbeInfo: (): Promise<{
+      success: boolean
+      probeInfo?: { model: string | null; serial: string | null; calibrationDate: string | null }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_PROBE_INFO),
+
+    getActiveUncertainty: (): Promise<{
+      success: boolean
+      factor: number | null
+      matchedRecord: {
+        name: string
+        fMin: number
+        fMax: number
+        uncertainty: number
+        factor: number
+      } | null
+      probeModel: string | null
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY)
   }
 }
 

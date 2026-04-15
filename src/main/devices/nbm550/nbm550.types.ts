@@ -5,6 +5,12 @@ export interface NBM550Sample {
   battery: number // % 0-100
 }
 
+export interface NBM550ProbeInfo {
+  model: string | null
+  serial: string | null
+  calibrationDate: string | null // ISO 8601 o formato crudo del dispositivo
+}
+
 export interface NBM550Config {
   port: string // 'COM3'
   baudRate: 460800

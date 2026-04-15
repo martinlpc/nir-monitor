@@ -33,5 +33,7 @@ export const IPC_HANDLERS = {
   EXPORT_GEOJSON: 'export:geojson',
   EXPORT_KML: 'export:kml',
   PORTS_LIST: 'ports:list',
-  OPEN_UNCERTAINTY_FILE: 'settings:open-uncertainty-file'
+  OPEN_UNCERTAINTY_FILE: 'settings:open-uncertainty-file',
+  GET_PROBE_INFO: 'settings:get-probe-info',
+  GET_ACTIVE_UNCERTAINTY: 'settings:get-active-uncertainty'
 } as const

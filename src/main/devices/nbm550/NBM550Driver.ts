@@ -1,7 +1,7 @@
 import { SerialPort } from 'serialport'
 import { EventEmitter } from 'events'
 import { NBM550Parser } from './NBM550Parser'
-import type { NBM550Config, NBM550Sample } from './nbm550.types'
+import type { NBM550Config, NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
 
 const RESPONSE_TIMEOUT_MS = 5000 // Aumentado de 3s a 5s para mayor tiempo de respuesta
@@ -18,6 +18,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private pendingResolve: ((val: string) => void) | null = null
   private pendingTimeout: NodeJS.Timeout | null = null
   private currentBattery: number = 100
+  private probeInfo: NBM550ProbeInfo | null = null
 
   constructor(config: NBM550Config) {
     super()
@@ -117,6 +118,18 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
         this.parser.setUnit(unit)
       }
 
+      // Leer info de la sonda conectada
+      try {
+        console.log(`[NBM550Driver] Querying PROBE_INFO?...`)
+        const probeRaw = await this.query('PROBE_INFO?')
+        console.log(`[NBM550Driver] PROBE_INFO? response:`, probeRaw)
+        this.probeInfo = this.parser.parseProbeInfo(probeRaw)
+        console.log(`[NBM550Driver] Probe info:`, this.probeInfo)
+      } catch (err) {
+        console.warn(`[NBM550Driver] Could not read probe info:`, err)
+        this.probeInfo = null
+      }
+
       console.log(`[NBM550Driver] Connection successful, setting status to connected`)
       this.setStatus('connected')
     } catch (err) {
@@ -177,6 +190,10 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
       console.error(`[NBM550Driver] readBattery error:`, err)
       return null
     }
+  }
+
+  getProbeInfo(): NBM550ProbeInfo | null {
+    return this.probeInfo
   }
 
   // ── Serial I/O ───────────────────────────────────────────

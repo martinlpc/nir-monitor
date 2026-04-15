@@ -32,7 +32,22 @@ export interface InstrumentInfo {
     brand: string | null
     model: string | null
     serial: string | null
+    calibrationDate: string | null
   }
+}
+
+export interface UncertaintyRecord {
+  name: string // modelo de la sonda (ej: "EF0391")
+  fMin: number // frecuencia mínima (MHz)
+  fMax: number // frecuencia máxima (MHz)
+  uncertainty: number // incertidumbre (dB o %)
+  factor: number // factor multiplicativo para aplicar al RSS
+}
+
+export interface UncertaintyData {
+  filePath: string
+  headers: string[]
+  records: UncertaintyRecord[]
 }
 
 export interface SessionSummary {

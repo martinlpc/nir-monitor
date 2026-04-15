@@ -113,6 +113,24 @@
     background: rgba(114, 186, 255, 0.04);
 }
 
+.settings-table tbody tr.row-active {
+    background: rgba(114, 186, 255, 0.12);
+    border-left: 2px solid var(--nir-blue);
+}
+
+.settings-table tbody tr.row-active td {
+    color: var(--nir-blue);
+    font-weight: 500;
+}
+
+/* === Active uncertainty highlight === */
+.settings-option__highlight {
+    color: var(--nir-accent) !important;
+    font-weight: 600;
+    font-family: monospace;
+    font-size: 0.82rem;
+}
+
 /* === Options (toggle/select rows) === */
 .settings-option {
     display: flex;

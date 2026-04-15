@@ -1,13 +1,8 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { readFile } from 'fs/promises'
 import { IPC_HANDLERS } from './channels'
-
-export interface UncertaintyRecord {
-  frequency: string
-  value: number
-  unit: string
-  [key: string]: string | number
-}
+import type { UncertaintyRecord, UncertaintyData } from '../../shared/ipc.types'
+import type { DeviceManager } from '../services/DeviceManager'
 
 export interface UncertaintyFileResult {
   success: boolean
@@ -18,7 +13,17 @@ export interface UncertaintyFileResult {
   canceled?: boolean
 }
 
-export function registerSettingsHandlers(window: BrowserWindow): void {
+// Estado global de la incertidumbre cargada (accesible desde otros módulos)
+let loadedUncertainty: UncertaintyData | null = null
+
+export function getLoadedUncertainty(): UncertaintyData | null {
+  return loadedUncertainty
+}
+
+export function registerSettingsHandlers(
+  window: BrowserWindow,
+  deviceManager: DeviceManager
+): void {
   ipcMain.handle(IPC_HANDLERS.OPEN_UNCERTAINTY_FILE, async (): Promise<UncertaintyFileResult> => {
     const result = await dialog.showOpenDialog(window, {
       title: 'Cargar archivo de incertidumbres',
@@ -49,27 +54,52 @@ export function registerSettingsHandlers(window: BrowserWindow): void {
 
       const records: UncertaintyRecord[] = lines.slice(1).map((line) => {
         const cols = line.split(sep).map((c) => c.trim())
-        const record: UncertaintyRecord = {
-          frequency: cols[0] || '',
-          value: parseFloat(cols[1]) || 0,
-          unit: cols[2] || ''
+        return {
+          name: cols[0] || '',
+          fMin: parseFloat(cols[1]) || 0,
+          fMax: parseFloat(cols[2]) || 0,
+          uncertainty: parseFloat(cols[3]) || 0,
+          factor: parseFloat(cols[4]) || 1
         }
-        // Campos adicionales
-        headers.forEach((h, i) => {
-          if (i >= 3 && cols[i] !== undefined) {
-            const num = parseFloat(cols[i])
-            record[h] = isNaN(num) ? cols[i] : num
-          }
-        })
-        return record
       })
 
+      loadedUncertainty = { filePath, headers, records }
       return { success: true, filePath, headers, records }
     } catch (err) {
       return {
         success: false,
         error: `Error leyendo archivo: ${err instanceof Error ? err.message : 'desconocido'}`
       }
+    }
+  })
+
+  ipcMain.handle(IPC_HANDLERS.GET_PROBE_INFO, async () => {
+    const nbm = deviceManager.getNBM()
+    if (!nbm || !nbm.isConnected()) {
+      return { success: false, error: 'NBM-550 no conectado' }
+    }
+    const probeInfo = nbm.getProbeInfo()
+    return { success: true, probeInfo }
+  })
+
+  ipcMain.handle(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY, async () => {
+    const nbm = deviceManager.getNBM()
+    const probeInfo = nbm?.getProbeInfo() ?? null
+    const probeModel = probeInfo?.model ?? null
+
+    if (!loadedUncertainty || !probeModel) {
+      return { success: true, factor: null, matchedRecord: null, probeModel }
+    }
+
+    const matched = loadedUncertainty.records.find(
+      (r) => r.name.toUpperCase() === probeModel.toUpperCase()
+    )
+
+    return {
+      success: true,
+      factor: matched?.factor ?? null,
+      matchedRecord: matched ?? null,
+      probeModel
     }
   })
 }

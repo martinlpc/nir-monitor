@@ -29,6 +29,7 @@ export class GeoFusionService extends EventEmitter {
   private lastSavedPosition: GeoPosition | null = null
   private timeTimer: NodeJS.Timeout | null = null
   private capturing: boolean = false
+  private uncertaintyFactor: number = 1
 
   constructor(config: GeoFusionConfig = DEFAULT_FUSION_CONFIG) {
     super()
@@ -43,6 +44,10 @@ export class GeoFusionService extends EventEmitter {
 
   setGPS(driver: GPSDriver): void {
     this._gps = driver
+  }
+
+  setUncertaintyFactor(factor: number): void {
+    this.uncertaintyFactor = factor
   }
 
   // ── API pública ───────────────────────────────────────────
@@ -191,14 +196,14 @@ export class GeoFusionService extends EventEmitter {
         position: { ...position },
         emf: {
           deviceId: 'nbm550',
-          rss: sample.rss,
+          rss: sample.rss * this.uncertaintyFactor,
           unit: sample.unit as EMFSample['unit']
         },
         interpolated: false
       }
 
       console.log(
-        `[GeoFusionService] capture(): Emitting point with lat=${position.lat}, lon=${position.lon}, rss=${sample.rss}`
+        `[GeoFusionService] capture(): Emitting point with lat=${position.lat}, lon=${position.lon}, rss=${sample.rss} (factor=${this.uncertaintyFactor}, adjusted=${sample.rss * this.uncertaintyFactor})`
       )
       this.lastSavedPosition = { ...position }
       this.emit('point', geoTimestamp)

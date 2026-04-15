@@ -4,7 +4,7 @@ import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { GPSDriver } from '../devices/gps/GPSDriver'
-import type { SessionSummary } from '../../shared/ipc.types'
+import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
@@ -107,6 +107,22 @@ export class SessionService extends EventEmitter {
 
     // Inicializar sesión en el repositorio antes de empezar a capturar
     if (this.repository) {
+      const probeInfo = this.nbm.getProbeInfo()
+      const instrument: InstrumentInfo = {
+        meter: {
+          brand: 'Narda',
+          model: 'NBM-550',
+          serial: null,
+          lastCalibrationDate: null
+        },
+        probe: {
+          brand: 'Narda',
+          model: probeInfo?.model ?? null,
+          serial: probeInfo?.serial ?? null,
+          calibrationDate: probeInfo?.calibrationDate ?? null
+        }
+      }
+
       try {
         await this.repository.initSession(this.currentSessionId, {
           id: this.currentSessionId,
@@ -114,7 +130,7 @@ export class SessionService extends EventEmitter {
           startedAt: this.startedAt,
           stoppedAt: null,
           sampleCount: 0,
-          instrument: null,
+          instrument,
           uncertainty: null
         })
       } catch (err) {

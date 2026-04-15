@@ -1,4 +1,4 @@
-import type { NBM550Sample } from './nbm550.types'
+import type { NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
 
 export class NBM550Parser {
   private unit: string = 'V/m'
@@ -79,5 +79,17 @@ export class NBM550Parser {
     const clean = this.cleanResponse(raw)
     const code = parseInt(clean)
     return isNaN(code) ? 0 : code
+  }
+
+  // Parsea respuesta de PROBE_INFO?;
+  // Formato esperado: "modelo,valorNoRelevado,numeroDeSerie,fechaCal;"
+  parseProbeInfo(raw: string): NBM550ProbeInfo {
+    const clean = this.cleanResponse(raw)
+    const parts = clean.split(',').map((p) => p.trim())
+    return {
+      model: parts[0] || null,
+      serial: parts[2] || null,
+      calibrationDate: parts[3] || null
+    }
   }
 }
