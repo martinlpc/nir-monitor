@@ -5,6 +5,8 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-le
 import type { MapState } from '../../hooks/useGeoData'
 import { useGpsPosition } from '../../hooks/useGpsPosition'
 import SyncMapView from './SyncMapView'
+import PanControl from './PanControl'
+import MaximizeControl from './MaximizeControl'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
 const DEFAULT_ZOOM = 13
@@ -45,16 +47,6 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           </p>
         </div>
         <div className="map-view__meta">
-          {onToggleMaximize && (
-            <button
-              className="btn-map-maximize"
-              onClick={onToggleMaximize}
-              title={maximized ? 'Restaurar vista' : 'Maximizar mapa'}
-              aria-label={maximized ? 'Restaurar vista' : 'Maximizar mapa'}
-            >
-              {maximized ? '⊡' : '⊞'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -72,6 +64,10 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
             onFollowPositionChange={onFollowPositionChange}
             maximized={maximized}
           />
+          <PanControl />
+          {onToggleMaximize && (
+            <MaximizeControl maximized={maximized} onToggle={onToggleMaximize} />
+          )}
           {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
           {livePosition ? (
             <CircleMarker
