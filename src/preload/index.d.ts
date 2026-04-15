@@ -109,6 +109,18 @@ declare global {
           } | null
           probeModel: string | null
         }>
+        getLoadedUncertainty: () => Promise<{
+          success: boolean
+          filePath?: string
+          headers?: string[]
+          records?: Array<{
+            name: string
+            fMin: number
+            fMax: number
+            uncertainty: number
+            factor: number
+          }>
+        }>
       }
     }
   }

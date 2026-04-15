@@ -1,25 +1,26 @@
 .settings-panel {
-    padding: 16px;
+    padding: 12px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 16px;
     height: 100%;
     overflow-y: auto;
+    font-size: 0.78rem;
 }
 
 /* === Sections === */
 .settings-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
 }
 
 .settings-section__title {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 600;
     color: var(--nir-text);
-    padding-bottom: 6px;
+    padding-bottom: 4px;
     border-bottom: 1px solid rgba(114, 186, 255, 0.1);
 }
 
@@ -89,12 +90,12 @@
 .settings-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
 }
 
 .settings-table th {
     text-align: left;
-    padding: 6px 8px;
+    padding: 4px 6px;
     background: rgba(114, 186, 255, 0.08);
     color: var(--nir-blue);
     font-weight: 600;
@@ -103,7 +104,7 @@
 }
 
 .settings-table td {
-    padding: 5px 8px;
+    padding: 3px 6px;
     color: var(--nir-text);
     border-bottom: 1px solid rgba(114, 186, 255, 0.05);
     white-space: nowrap;
@@ -128,7 +129,7 @@
     color: var(--nir-accent) !important;
     font-weight: 600;
     font-family: monospace;
-    font-size: 0.82rem;
+    font-size: 0.75rem;
 }
 
 /* === Options (toggle/select rows) === */
@@ -136,16 +137,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 0;
+    padding: 4px 0;
 }
 
 .settings-option__label {
-    font-size: 0.82rem;
+    font-size: 0.75rem;
     color: var(--nir-text);
 }
 
 .settings-option__value {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: var(--nir-text-muted);
 }
 

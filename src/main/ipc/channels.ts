@@ -35,5 +35,6 @@ export const IPC_HANDLERS = {
   PORTS_LIST: 'ports:list',
   OPEN_UNCERTAINTY_FILE: 'settings:open-uncertainty-file',
   GET_PROBE_INFO: 'settings:get-probe-info',
-  GET_ACTIVE_UNCERTAINTY: 'settings:get-active-uncertainty'
+  GET_ACTIVE_UNCERTAINTY: 'settings:get-active-uncertainty',
+  GET_LOADED_UNCERTAINTY: 'settings:get-loaded-uncertainty'
 } as const

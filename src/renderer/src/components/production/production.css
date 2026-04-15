@@ -285,6 +285,16 @@
     background: rgba(15, 26, 46, 0.8);
 }
 
+.uncertainty-warning {
+    font-size: 0.78rem;
+    color: var(--nir-accent);
+    padding: 8px 10px;
+    background: rgba(240, 166, 70, 0.1);
+    border: 1px solid rgba(240, 166, 70, 0.25);
+    border-radius: 6px;
+    line-height: 1.4;
+}
+
 .test-mode-checkbox {
     display: flex;
     align-items: center;

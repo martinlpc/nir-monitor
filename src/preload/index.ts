@@ -213,7 +213,20 @@ const api = {
         factor: number
       } | null
       probeModel: string | null
-    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY)
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY),
+
+    getLoadedUncertainty: (): Promise<{
+      success: boolean
+      filePath?: string
+      headers?: string[]
+      records?: Array<{
+        name: string
+        fMin: number
+        fMax: number
+        uncertainty: number
+        factor: number
+      }>
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_LOADED_UNCERTAINTY)
   }
 }
 

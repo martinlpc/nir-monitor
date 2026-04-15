@@ -114,6 +114,18 @@ export default function DeviceCard({
               <span className="info-label">Batería:</span>
               <span className="info-value">{nbmInfo.battery ?? 0}%</span>
             </div>
+            {nbmInfo.probeModel && (
+              <div className="info-row">
+                <span className="info-label">Sonda:</span>
+                <span className="info-value">{nbmInfo.probeModel}{nbmInfo.probeSerial ? ` (${nbmInfo.probeSerial})` : ''}</span>
+              </div>
+            )}
+            {nbmInfo.calibrationDate && (
+              <div className="info-row">
+                <span className="info-label">Calibración:</span>
+                <span className="info-value">{nbmInfo.calibrationDate}</span>
+              </div>
+            )}
             <div className="info-row">
               <span className="info-label">Puerto:</span>
               <span className={`info-value ${!hasPort ? 'no-port' : ''}`}>{device.port}</span>

@@ -34,14 +34,38 @@ export default function SettingsPanel(): React.JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Cargar info de sonda y incertidumbre activa al montar
+  // Cargar info de sonda, incertidumbre activa y archivo persistido al montar
   useEffect(() => {
-    window.api.settings.getProbeInfo().then((res) => {
-      if (res.success && res.probeInfo) setProbeInfo(res.probeInfo)
+    const fetchProbeAndActive = (): void => {
+      window.api.settings.getProbeInfo().then((res) => {
+        if (res.success && res.probeInfo) setProbeInfo(res.probeInfo)
+      })
+      window.api.settings.getActiveUncertainty().then((res) => {
+        if (res.success) setActiveUncertainty(res)
+      })
+    }
+
+    fetchProbeAndActive()
+
+    window.api.settings.getLoadedUncertainty().then((res) => {
+      if (res.success && res.records) {
+        setUncertainty({
+          filePath: res.filePath!,
+          headers: res.headers!,
+          records: res.records
+        })
+      }
     })
-    window.api.settings.getActiveUncertainty().then((res) => {
-      if (res.success) setActiveUncertainty(res)
+
+    // Re-fetch probe info cuando el NBM se conecta
+    const unsubscribe = window.api.devices.onStatus((data) => {
+      if (data.deviceId === 'nbm550' && data.status === 'connected') {
+        // Pequeño delay para que el driver tenga la info de sonda lista
+        setTimeout(fetchProbeAndActive, 500)
+      }
     })
+
+    return unsubscribe
   }, [])
 
   const handleLoadFile = async (): Promise<void> => {
@@ -61,9 +85,13 @@ export default function SettingsPanel(): React.JSX.Element {
           headers: result.headers!,
           records: result.records!
         })
-        // Refrescar incertidumbre activa tras cargar archivo nuevo
-        const active = await window.api.settings.getActiveUncertainty()
+        // Refrescar incertidumbre activa y probe info tras cargar archivo nuevo
+        const [active, probe] = await Promise.all([
+          window.api.settings.getActiveUncertainty(),
+          window.api.settings.getProbeInfo()
+        ])
         if (active.success) setActiveUncertainty(active)
+        if (probe.success && probe.probeInfo) setProbeInfo(probe.probeInfo)
       }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Error al abrir archivo')
@@ -74,70 +102,28 @@ export default function SettingsPanel(): React.JSX.Element {
 
   return (
     <div className="settings-panel">
-      {/* === Sección: Sonda === */}
-      {probeInfo && (
+      {/* === Sección: Sonda + Factor === */}
+      {probeInfo?.model && (
         <section className="settings-section">
           <h3 className="settings-section__title">Sonda detectada</h3>
-          <div className="settings-probe-info">
-            {probeInfo.model && (
-              <div className="settings-option">
-                <span className="settings-option__label">Modelo</span>
-                <span className="settings-option__value">{probeInfo.model}</span>
-              </div>
-            )}
-            {probeInfo.serial && (
-              <div className="settings-option">
-                <span className="settings-option__label">Serie</span>
-                <span className="settings-option__value">{probeInfo.serial}</span>
-              </div>
-            )}
-            {probeInfo.calibrationDate && (
-              <div className="settings-option">
-                <span className="settings-option__label">Calibración</span>
-                <span className="settings-option__value">{probeInfo.calibrationDate}</span>
-              </div>
-            )}
+          <div className="settings-option">
+            <span className="settings-option__label">Modelo</span>
+            <span className="settings-option__value">{probeInfo.model}</span>
           </div>
-        </section>
-      )}
-
-      {/* === Sección: Incertidumbre activa === */}
-      {activeUncertainty?.matchedRecord && (
-        <section className="settings-section">
-          <h3 className="settings-section__title">Incertidumbre aplicada</h3>
-          <div className="settings-active-uncertainty">
+          {activeUncertainty?.matchedRecord && (
             <div className="settings-option">
-              <span className="settings-option__label">Sonda</span>
-              <span className="settings-option__value">{activeUncertainty.probeModel ?? '—'}</span>
-            </div>
-            <div className="settings-option">
-              <span className="settings-option__label">Rango</span>
-              <span className="settings-option__value">
-                {activeUncertainty.matchedRecord.fMin}–{activeUncertainty.matchedRecord.fMax} MHz
-              </span>
-            </div>
-            <div className="settings-option">
-              <span className="settings-option__label">Incertidumbre</span>
-              <span className="settings-option__value settings-option__highlight">
-                {activeUncertainty.matchedRecord.uncertainty}
-              </span>
-            </div>
-            <div className="settings-option">
-              <span className="settings-option__label">Factor</span>
+              <span className="settings-option__label">Factor aplicado</span>
               <span className="settings-option__value settings-option__highlight">
                 ×{activeUncertainty.matchedRecord.factor}
               </span>
             </div>
-          </div>
+          )}
         </section>
       )}
 
       {/* === Sección: Tabla de incertidumbres === */}
       <section className="settings-section">
         <h3 className="settings-section__title">Tabla de incertidumbres</h3>
-        <p className="settings-section__desc">
-          Archivo con factores de incertidumbre por rango de frecuencia.
-        </p>
 
         <button
           className="settings-btn"
@@ -172,8 +158,10 @@ export default function SettingsPanel(): React.JSX.Element {
                     <tr
                       key={i}
                       className={
-                        activeUncertainty?.matchedRecord?.name === rec.name &&
-                        activeUncertainty?.matchedRecord?.fMin === rec.fMin
+                        activeUncertainty?.matchedRecord &&
+                        rec.name === activeUncertainty.matchedRecord.name &&
+                        rec.fMin === activeUncertainty.matchedRecord.fMin &&
+                        rec.fMax === activeUncertainty.matchedRecord.fMax
                           ? 'row-active'
                           : ''
                       }
