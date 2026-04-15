@@ -32,5 +32,6 @@ export const IPC_HANDLERS = {
   SESSION_POINTS_IN_BOUNDS: 'session:points-in-bounds',
   EXPORT_GEOJSON: 'export:geojson',
   EXPORT_KML: 'export:kml',
-  PORTS_LIST: 'ports:list'
+  PORTS_LIST: 'ports:list',
+  OPEN_UNCERTAINTY_FILE: 'settings:open-uncertainty-file'
 } as const

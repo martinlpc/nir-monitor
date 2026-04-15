@@ -176,6 +176,24 @@ const api = {
       ipcRenderer.on(IPC_EVENTS.SESSION_STOPPED, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STOPPED, handler)
     }
+  },
+
+  // -- Settings ---------------------------------------------------------------
+
+  settings: {
+    openUncertaintyFile: (): Promise<{
+      success: boolean
+      filePath?: string
+      headers?: string[]
+      records?: Array<{
+        frequency: string
+        value: number
+        unit: string
+        [key: string]: string | number
+      }>
+      error?: string
+      canceled?: boolean
+    }> => ipcRenderer.invoke(IPC_HANDLERS.OPEN_UNCERTAINTY_FILE)
   }
 }
 

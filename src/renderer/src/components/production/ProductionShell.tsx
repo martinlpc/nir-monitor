@@ -5,6 +5,7 @@ import MapView from '../map/MapView'
 import PointsTable from './PointsTable'
 import DevicesPanel from './DevicesPanel'
 import SessionsPanel from './SessionsPanel'
+import SettingsPanel from './SettingsPanel'
 import './production.css'
 
 export default function ProductionShell(): React.JSX.Element {
@@ -12,7 +13,7 @@ export default function ProductionShell(): React.JSX.Element {
   const devices = useDevices()
   const session = useSession()
   const geoData = useGeoData(session.points, session.pointCount)
-  const [activeTab, setActiveTab] = useState<'devices' | 'sessions'>('devices')
+  const [activeTab, setActiveTab] = useState<'devices' | 'sessions' | 'settings'>('devices')
   const [followPosition, setFollowPosition] = useState(true)
   const [mapMaximized, setMapMaximized] = useState(false)
 
@@ -20,7 +21,11 @@ export default function ProductionShell(): React.JSX.Element {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
       e.preventDefault()
       setActiveTab((prev) => {
-        const next = prev === 'devices' ? 'sessions' : 'devices'
+        const tabs: Array<'devices' | 'sessions' | 'settings'> = ['devices', 'sessions', 'settings']
+        const idx = tabs.indexOf(prev)
+        const next = e.key === 'ArrowRight'
+          ? tabs[(idx + 1) % tabs.length]
+          : tabs[(idx - 1 + tabs.length) % tabs.length]
         const btn = document.getElementById(`tab-${next}`)
         btn?.focus()
         return next
@@ -59,6 +64,18 @@ export default function ProductionShell(): React.JSX.Element {
             >
               Historial
             </button>
+            <button
+              className={`tab-button tab-button--icon ${activeTab === 'settings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('settings')}
+              role="tab"
+              id="tab-settings"
+              aria-selected={activeTab === 'settings'}
+              aria-controls="tabpanel-settings"
+              tabIndex={activeTab === 'settings' ? 0 : -1}
+              title="Configuración"
+            >
+              ⚙
+            </button>
           </div>
 
           <div className="panel-content">
@@ -83,6 +100,14 @@ export default function ProductionShell(): React.JSX.Element {
               style={{ display: activeTab === 'sessions' ? 'block' : 'none' }}
             >
               <SessionsPanel session={session} />
+            </div>
+            <div
+              role="tabpanel"
+              id="tabpanel-settings"
+              aria-labelledby="tab-settings"
+              style={{ display: activeTab === 'settings' ? 'block' : 'none' }}
+            >
+              <SettingsPanel />
             </div>
           </div>
         </div>

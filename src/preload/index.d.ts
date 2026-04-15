@@ -73,6 +73,21 @@ declare global {
         ) => () => void
         onStopped: (cb: (data: SessionSummary) => void) => () => void
       }
+      settings: {
+        openUncertaintyFile: () => Promise<{
+          success: boolean
+          filePath?: string
+          headers?: string[]
+          records?: Array<{
+            frequency: string
+            value: number
+            unit: string
+            [key: string]: string | number
+          }>
+          error?: string
+          canceled?: boolean
+        }>
+      }
     }
   }
 }

@@ -1,0 +1,146 @@
+.settings-panel {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* === Sections === */
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.settings-section__title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--nir-text);
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.1);
+}
+
+.settings-section__desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--nir-text-muted);
+    line-height: 1.4;
+}
+
+/* === Load button === */
+.settings-btn {
+    align-self: flex-start;
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--nir-border-blue);
+    background: rgba(114, 186, 255, 0.08);
+    color: var(--nir-blue);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 150ms ease;
+}
+
+.settings-btn:hover {
+    background: rgba(114, 186, 255, 0.16);
+    border-color: var(--nir-border-blue-hover);
+}
+
+.settings-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* === Error message === */
+.settings-error {
+    font-size: 0.78rem;
+    color: var(--nir-danger);
+    padding: 6px 10px;
+    background: rgba(252, 165, 165, 0.08);
+    border-radius: 4px;
+    border: 1px solid rgba(252, 165, 165, 0.15);
+}
+
+/* === Uncertainty data === */
+.settings-uncertainty {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.settings-filepath {
+    font-size: 0.72rem;
+    color: var(--nir-text-muted);
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.settings-table-wrapper {
+    overflow-x: auto;
+    border-radius: 6px;
+    border: 1px solid rgba(114, 186, 255, 0.1);
+}
+
+.settings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.settings-table th {
+    text-align: left;
+    padding: 6px 8px;
+    background: rgba(114, 186, 255, 0.08);
+    color: var(--nir-blue);
+    font-weight: 600;
+    white-space: nowrap;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.15);
+}
+
+.settings-table td {
+    padding: 5px 8px;
+    color: var(--nir-text);
+    border-bottom: 1px solid rgba(114, 186, 255, 0.05);
+    white-space: nowrap;
+}
+
+.settings-table tbody tr:hover {
+    background: rgba(114, 186, 255, 0.04);
+}
+
+/* === Options (toggle/select rows) === */
+.settings-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+}
+
+.settings-option__label {
+    font-size: 0.82rem;
+    color: var(--nir-text);
+}
+
+.settings-option__value {
+    font-size: 0.78rem;
+    color: var(--nir-text-muted);
+}
+
+.settings-option__coming-soon {
+    font-style: italic;
+    opacity: 0.6;
+}
+
+/* === Settings tab icon button === */
+.tab-button--icon {
+    flex: 0 0 auto;
+    width: 44px;
+    font-size: 1.1rem;
+    padding: 12px 0;
+    text-align: center;
+}

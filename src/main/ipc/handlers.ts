@@ -1,6 +1,7 @@
 import { BrowserWindow } from 'electron'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
 import { registerSessionServiceHandlers, bindSessionServiceEvents } from './SessionServiceHandler'
+import { registerSettingsHandlers } from './SettingsHandler'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 
@@ -24,6 +25,7 @@ export function setupIPC(
   // Registrar handlers (Renderer -> Main request/response)
   registerDeviceManagerHandlers(window, deviceManager)
   registerSessionServiceHandlers(window, deviceManager, sessionService)
+  registerSettingsHandlers(window)
 
   // Vincular eventos (Main -> Renderer push)
   bindDeviceManagerEvents(window, deviceManager)
