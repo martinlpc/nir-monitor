@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useDevices, useSession, useGeoData } from '../../hooks'
 import MapView from '../map/MapView'
 import PointsTable from './PointsTable'
@@ -10,15 +10,28 @@ export default function ProductionShell(): React.JSX.Element {
   // Inicializar hooks principales
   const devices = useDevices()
   const session = useSession()
-  const geoData = useGeoData(session.points)
+  const geoData = useGeoData(session.points, session.pointCount)
   const [activeTab, setActiveTab] = useState<'devices' | 'sessions'>('devices')
+  const [followPosition, setFollowPosition] = useState(true)
+
+  const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault()
+      setActiveTab((prev) => {
+        const next = prev === 'devices' ? 'sessions' : 'devices'
+        const btn = document.getElementById(`tab-${next}`)
+        btn?.focus()
+        return next
+      })
+    }
+  }, [])
 
   return (
     <main className="prod-shell">
       <div className="prod-layout">
         {/* Panel lateral con tabs */}
         <div className="side-panel">
-          <div className="panel-tabs" role="tablist" aria-label="Panel de navegación">
+          <div className="panel-tabs" role="tablist" aria-label="Panel de navegación" onKeyDown={handleTabKeyDown}>
             <button
               className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
               onClick={() => setActiveTab('devices')}
@@ -26,6 +39,7 @@ export default function ProductionShell(): React.JSX.Element {
               id="tab-devices"
               aria-selected={activeTab === 'devices'}
               aria-controls="tabpanel-devices"
+              tabIndex={activeTab === 'devices' ? 0 : -1}
               title="Dispositivos y sesión actual"
             >
               Dispositivos
@@ -37,6 +51,7 @@ export default function ProductionShell(): React.JSX.Element {
               id="tab-sessions"
               aria-selected={activeTab === 'sessions'}
               aria-controls="tabpanel-sessions"
+              tabIndex={activeTab === 'sessions' ? 0 : -1}
               title="Historial de sesiones guardadas"
             >
               Historial
@@ -54,6 +69,8 @@ export default function ProductionShell(): React.JSX.Element {
               <DevicesPanel
                 devices={devices}
                 session={session}
+                followPosition={followPosition}
+                onFollowPositionChange={setFollowPosition}
               />
             </div>
             <div
@@ -70,7 +87,12 @@ export default function ProductionShell(): React.JSX.Element {
         <div className="prod-main">
           <div className="map-container" style={{ position: 'relative' }}>
             {/* Mapa con datos geoespaciales */}
-            <MapView geoData={geoData} isSessionActive={session.status === 'running'} />
+            <MapView
+              geoData={geoData}
+              isSessionActive={session.status === 'running'}
+              followPosition={followPosition}
+              onFollowPositionChange={setFollowPosition}
+            />
           </div>
           {/* Tabla de puntos */}
           <PointsTable points={session.points} />

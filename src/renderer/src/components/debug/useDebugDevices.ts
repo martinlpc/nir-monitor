@@ -39,7 +39,7 @@ export function useDebugDevices(appendLog: (type: string, message: string) => vo
     void (async () => {
       await refreshPorts()
       await refreshDevices()
-    })()
+    })().catch((err) => appendLog('error', err instanceof Error ? err.message : String(err)))
 
     const offStatus = window.api.devices.onStatus((data) => {
       setDeviceState((current) => ({

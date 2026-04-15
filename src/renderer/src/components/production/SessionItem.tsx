@@ -37,6 +37,7 @@ export default function SessionItem({ session, onLoad, onDelete, onExport }: Ses
   return (
     <div
       className="session-item"
+      tabIndex={0}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => { setShowActions(false); setConfirmDelete(false) }}
       onFocus={() => setShowActions(true)}

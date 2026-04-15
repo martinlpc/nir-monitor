@@ -165,8 +165,8 @@ select {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.device-card,
-.stat-card {
+.debug-shell .device-card,
+.debug-shell .stat-card {
   border-radius: 20px;
   border: 1px solid rgba(180, 203, 232, 0.1);
   background: rgba(17, 28, 46, 0.86);

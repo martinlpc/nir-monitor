@@ -65,10 +65,10 @@ export default function SessionsPanel({
 
   const handleExport = async (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => {
     try {
-      const session = sessions.find((s) => s.id === sessionId)
-      if (!session) return
+      const found = sessions.find((s) => s.id === sessionId)
+      if (!found) return
 
-      const result = await exportSession(sessionId, format, session.label)
+      const result = await exportSession(sessionId, format, found.label)
       if (result.canceled) return
 
       setLoadStatus({
@@ -94,7 +94,7 @@ export default function SessionsPanel({
       {error && <div className="error-message">Error: {error}</div>}
       
       {loadStatus && (
-        <div style={{
+        <div role="status" aria-live="polite" style={{
           padding: '8px 12px',
           background: loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.1)' : 'rgba(239, 68, 68, 0.1)',
           border: `1px solid ${loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,

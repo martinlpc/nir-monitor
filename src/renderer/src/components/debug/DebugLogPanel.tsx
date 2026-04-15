@@ -1,12 +1,13 @@
 import type { LogEntry, NmeaEntry } from './types'
 
+type DebugLogEntry = LogEntry | NmeaEntry
+
 interface DebugLogPanelProps {
   title: string
-  entries: LogEntry[] | NmeaEntry[]
+  entries: DebugLogEntry[]
   emptyMessage: string
   onClear: () => void
   compact?: boolean
-  nmea?: boolean
 }
 
 export default function DebugLogPanel({
@@ -14,8 +15,7 @@ export default function DebugLogPanel({
   entries,
   emptyMessage,
   onClear,
-  compact = false,
-  nmea = false
+  compact = false
 }: DebugLogPanelProps): React.JSX.Element {
   return (
     <section className={`panel ${compact ? 'panel-compact' : ''}`.trim()}>
@@ -28,15 +28,18 @@ export default function DebugLogPanel({
         {entries.length === 0 ? (
           <p className="empty-state">{emptyMessage}</p>
         ) : (
-          entries.map((entry) => (
-            <div key={entry.id} className={`log-entry ${nmea ? 'nmea-entry' : ''}`.trim()}>
-              <span className="log-time">{entry.timestamp}</span>
-              <span className="log-type">{nmea ? (entry as NmeaEntry).port : (entry as LogEntry).type}</span>
-              <span className={`log-message ${nmea ? 'nmea-line' : ''}`.trim()}>
-                {nmea ? (entry as NmeaEntry).line : (entry as LogEntry).message}
-              </span>
-            </div>
-          ))
+          entries.map((entry) => {
+            const isNmea = entry.kind === 'nmea'
+            return (
+              <div key={entry.id} className={`log-entry ${isNmea ? 'nmea-entry' : ''}`.trim()}>
+                <span className="log-time">{entry.timestamp}</span>
+                <span className="log-type">{isNmea ? entry.port : entry.type}</span>
+                <span className={`log-message ${isNmea ? 'nmea-line' : ''}`.trim()}>
+                  {isNmea ? entry.line : entry.message}
+                </span>
+              </div>
+            )
+          })
         )}
       </div>
     </section>

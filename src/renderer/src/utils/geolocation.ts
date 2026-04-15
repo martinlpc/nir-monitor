@@ -6,6 +6,19 @@ export interface LocationInfo {
   country?: string
 }
 
+interface NominatimAddress {
+  suburb?: string
+  city?: string
+  town?: string
+  village?: string
+  county?: string
+  country?: string
+}
+
+interface NominatimResponse {
+  address?: NominatimAddress
+}
+
 /**
  * Obtiene información de ubicación (nombre de lugar) desde coordenadas usando Nominatim
  * Esta es una llamada a OpenStreetMap API, debería ser usada con moderación
@@ -17,7 +30,8 @@ export async function reverseGeocode(position: GeoPosition): Promise<LocationInf
       {
         headers: {
           'Accept-Language': 'es'
-        }
+        },
+        signal: AbortSignal.timeout(5000)
       }
     )
 
@@ -26,8 +40,8 @@ export async function reverseGeocode(position: GeoPosition): Promise<LocationInf
       return null
     }
 
-    const data = await response.json()
-    const address = data.address || {}
+    const data: NominatimResponse = await response.json()
+    const address = data.address ?? {}
 
     // Prioridad: barrio -> ciudad -> pueblo -> región
     const name =

@@ -21,7 +21,7 @@ export interface MapState {
  * - Cálculo de bounds y center
  * - Estado del mapa en tiempo real
  */
-export function useGeoData(geoPoints: GeoTimestamp[]) {
+export function useGeoData(geoPoints: GeoTimestamp[], pointCount?: number) {
   const mapState = useMemo<MapState>(() => {
     if (geoPoints.length === 0) {
       return { center: null, bounds: null, allPoints: [], trackPoints: [] }
@@ -55,7 +55,9 @@ export function useGeoData(geoPoints: GeoTimestamp[]) {
     const trackPoints: GeoPosition[] = validPoints.map((p) => p.position)
 
     return { center, bounds, allPoints: geoPoints, trackPoints }
-  }, [geoPoints])
+    // pointCount forces recompute when points are added via mutable ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geoPoints, pointCount])
 
   const getPointsInBounds = useCallback(
     (testBounds: MapBounds): GeoTimestamp[] => {

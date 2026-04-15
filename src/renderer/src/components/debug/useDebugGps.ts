@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { NmeaEntry } from './types'
 
-export function useDebugGps(_appendLog: (type: string, message: string) => void) {
+export function useDebugGps() {
   const [gpsFix, setGpsFix] = useState(false)
   const [gpsText, setGpsText] = useState('Sin datos')
   const [nmeaLines, setNmeaLines] = useState<NmeaEntry[]>([])
@@ -24,6 +24,7 @@ export function useDebugGps(_appendLog: (type: string, message: string) => void)
       setNmeaLines((current) =>
         [
           {
+            kind: 'nmea',
             id: Date.now() + Math.random(),
             timestamp: new Date().toLocaleTimeString('es-AR', { hour12: false }),
             port: data.port,

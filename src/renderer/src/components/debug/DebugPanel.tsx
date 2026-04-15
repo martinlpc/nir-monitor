@@ -53,7 +53,6 @@ export default function DebugPanel(): React.JSX.Element {
         emptyMessage="Todavia no llegaron sentencias NMEA."
         onClear={actions.clearNmeaLines}
         compact
-        nmea
       />
 
       <section className="panel">

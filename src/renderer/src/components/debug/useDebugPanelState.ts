@@ -36,7 +36,7 @@ export function useDebugPanelState(): { state: DebugPanelState; actions: DebugPa
     refreshPorts,
     refreshDevices
   } = useDebugDevices(appendLog)
-  const { gpsFix, gpsText, nmeaLines, clearNmeaLines } = useDebugGps(appendLog)
+  const { gpsFix, gpsText, nmeaLines, clearNmeaLines } = useDebugGps()
 
   const [sessionLabel, setSessionLabel] = useState('Prueba de campo')
   const [triggerMode, setTriggerMode] = useState<TriggerMode>('distance')

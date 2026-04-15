@@ -366,20 +366,33 @@
     background: linear-gradient(135deg, #10b981, #059669);
     color: white;
     border: none;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.8rem;
+    letter-spacing: 0.3px;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
 }
 
 .btn-start:hover:not(:disabled) {
-    filter: brightness(1.1);
+    filter: brightness(1.15);
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.5);
+    transform: translateY(-1px);
 }
 
 .btn-pause {
     background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
     border: none;
+    font-size: 0.95rem;
+    font-weight: 700;
+    padding: 0.8rem;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35);
 }
 
 .btn-pause:hover:not(:disabled) {
-    filter: brightness(1.1);
+    filter: brightness(1.15);
+    box-shadow: 0 6px 24px rgba(239, 68, 68, 0.5);
+    transform: translateY(-1px);
 }
 
 .session-status {

@@ -21,6 +21,20 @@
   --ev-button-alt-hover-border: transparent;
   --ev-button-alt-hover-text: var(--ev-c-text-1);
   --ev-button-alt-hover-bg: var(--ev-c-gray-2);
+
+  /* App-wide design tokens */
+  --nir-blue: #72baff;
+  --nir-accent: #f0a646;
+  --nir-accent-warm: #ffb05e;
+  --nir-text: #edf4ff;
+  --nir-text-muted: #9ca3af;
+  --nir-danger: #fca5a5;
+  --nir-card-bg: rgba(23, 34, 75, 0.5);
+  --nir-card-bg-hover: rgba(23, 34, 75, 0.8);
+  --nir-border-blue: rgba(114, 186, 255, 0.15);
+  --nir-border-blue-hover: rgba(114, 186, 255, 0.3);
+  --nir-panel-start: #0f1a2e;
+  --nir-panel-end: #1a2544;
 }
 
 :root {

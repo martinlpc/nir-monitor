@@ -3,7 +3,6 @@ import { type LatLngExpression } from 'leaflet'
 import { useEffect, useMemo, useState } from 'react'
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet'
 import type { MapState } from '../../hooks/useGeoData'
-import { formatTime } from '../../utils/formatters'
 import SyncMapView from './SyncMapView'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
@@ -12,13 +11,13 @@ const DEFAULT_ZOOM = 13
 interface MapViewProps {
   geoData: MapState
   isSessionActive?: boolean
+  followPosition?: boolean
+  onFollowPositionChange?: (value: boolean) => void
 }
 
-export default function MapView({ geoData, isSessionActive = false }: MapViewProps): React.JSX.Element {
+export default function MapView({ geoData, isSessionActive = false, followPosition = true, onFollowPositionChange }: MapViewProps): React.JSX.Element {
   const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; alt: number } | null>(null)
   const [lastKnownPosition, setLastKnownPosition] = useState<{ lat: number; lon: number; alt: number } | null>(null)
-
-  const [followPosition, setFollowPosition] = useState(true)
 
   // Escuchar posición GPS en tiempo real
   useEffect(() => {
@@ -77,20 +76,6 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
           </p>
         </div>
         <div className="map-view__meta">
-          <label className="map-view__follow-checkbox">
-            <input
-              type="checkbox"
-              checked={followPosition}
-              onChange={(e) => setFollowPosition(e.target.checked)}
-            />
-            <span>Seguir mi posición</span>
-          </label>
-          {lastPoint ? (
-            <div className="map-view__stats">
-              <span>{lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}</span>
-              <span>{formatTime(lastPoint.timestamp)}</span>
-            </div>
-          ) : null}
         </div>
       </div>
 
@@ -105,7 +90,7 @@ export default function MapView({ geoData, isSessionActive = false }: MapViewPro
             followPosition={followPosition}
             livePosition={livePosition}
             isSessionActive={isSessionActive}
-            onFollowPositionChange={setFollowPosition}
+            onFollowPositionChange={onFollowPositionChange}
           />
           {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
           {livePosition ? (

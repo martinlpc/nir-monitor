@@ -9,6 +9,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "chat.tools.terminal.autoApprove": {
-    "npm run type-check": true
+    "npm run type-check": true,
+    "npx vitest": true
   }
 }

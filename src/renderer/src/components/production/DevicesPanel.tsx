@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { useDevices } from '../../hooks/useDevices'
 import type { useSession } from '../../hooks/useSession'
 import { generateSessionName } from '../../utils/geolocation'
@@ -9,30 +9,49 @@ import './production.css'
 interface DevicesPanelProps {
   devices: ReturnType<typeof useDevices>
   session: ReturnType<typeof useSession>
+  followPosition: boolean
+  onFollowPositionChange: (value: boolean) => void
 }
 
 // Dispositivos conocidos - SIEMPRE mostrados
-const KNOWN_DEVICES: Record<string, { name: string; type: 'emf' | 'gps'; baudRate: number }> = {
+const KNOWN_DEVICE_IDS = ['nbm550', 'gps'] as const
+type KnownDeviceId = (typeof KNOWN_DEVICE_IDS)[number]
+
+const KNOWN_DEVICES: Record<KnownDeviceId, { name: string; type: 'emf' | 'gps'; baudRate: number }> = {
   nbm550: { name: 'NBM-550', type: 'emf', baudRate: 460800 },
   gps: { name: 'GPS (Primary)', type: 'gps', baudRate: 4800 }
 }
 
 export default function DevicesPanel({
   devices,
-  session
+  session,
+  followPosition,
+  onFollowPositionChange
 }: DevicesPanelProps): React.JSX.Element {
   const [loadingDevice, setLoadingDevice] = useState<string | null>(null)
   const [testMode, setTestMode] = useState(false)
+  const [showTestMode, setShowTestMode] = useState(false)
+
+  // Ctrl+Alt+D togglea visibilidad del modo test
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'd') {
+        e.preventDefault()
+        setShowTestMode((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   // Handlers que usan los hooks
-  const handleConnect = async (deviceId: string): Promise<void> => {
+  const handleConnect = async (deviceId: KnownDeviceId): Promise<void> => {
     setLoadingDevice(deviceId)
     try {
-      const deviceType = deviceId as 'nbm550' | 'gps'
-      const device = deviceType === 'nbm550' ? devices.nbm550 : devices.gps
+      const device = deviceId === 'nbm550' ? devices.nbm550 : devices.gps
       if (device?.port) {
         // Ya tiene puerto, solo conectar
-        await devices.connect(deviceType)
+        await devices.connect(deviceId)
       } else {
         // Necesita escanear primero
         throw new Error(`${deviceId} no tiene puerto configurado`)
@@ -44,11 +63,10 @@ export default function DevicesPanel({
     }
   }
 
-  const handleDisconnect = async (deviceId: string): Promise<void> => {
+  const handleDisconnect = async (deviceId: KnownDeviceId): Promise<void> => {
     setLoadingDevice(deviceId)
     try {
-      const deviceType = deviceId as 'nbm550' | 'gps'
-      await devices.disconnect(deviceType)
+      await devices.disconnect(deviceId)
     } catch (err) {
       console.error(`Error desconectando ${deviceId}:`, err)
     } finally {
@@ -104,12 +122,12 @@ export default function DevicesPanel({
   }
 
   // Construir lista de dispositivos para mostrar
-  const devicesList = Object.entries(KNOWN_DEVICES).map(([id, meta]) => ({
+  const devicesList = KNOWN_DEVICE_IDS.map((id) => ({
     id,
-    name: meta.name,
-    type: meta.type,
+    name: KNOWN_DEVICES[id].name,
+    type: KNOWN_DEVICES[id].type,
     port: (id === 'nbm550' ? devices.nbm550?.port : devices.gps?.port) || 'No detectado',
-    baudRate: meta.baudRate
+    baudRate: KNOWN_DEVICES[id].baudRate
   }))
 
   const allConnected =
@@ -144,6 +162,17 @@ export default function DevicesPanel({
         ))}
       </div>
 
+      <div className="follow-position-toggle">
+        <label className="test-mode-checkbox">
+          <input
+            type="checkbox"
+            checked={followPosition}
+            onChange={(e) => onFollowPositionChange(e.target.checked)}
+          />
+          <span>Seguir mi posición</span>
+        </label>
+      </div>
+
       {devices.error && (
         <div className="error-banner">
           <strong>Error:</strong> {devices.error}
@@ -151,24 +180,26 @@ export default function DevicesPanel({
       )}
 
       <div className="panel-footer">
-        <label className="test-mode-checkbox">
-          <input
-            type="checkbox"
-            checked={testMode}
-            onChange={(e) => setTestMode(e.target.checked)}
-            disabled={session.isRunning}
-            title="Modo test: toma puntos sin umbral de distancia"
-          />
-          <span>Modo Test</span>
-        </label>
+        {showTestMode && (
+          <label className="test-mode-checkbox">
+            <input
+              type="checkbox"
+              checked={testMode}
+              onChange={(e) => setTestMode(e.target.checked)}
+              disabled={session.isRunning}
+              title="Modo test: toma puntos sin umbral de distancia"
+            />
+            <span>Modo Test</span>
+          </label>
+        )}
 
         <button
-          className={`btn-session ${session.isRunning ? 'active' : ''}`}
+          className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
           onClick={session.isRunning ? handleStopSession : handleStartSession}
           disabled={!allConnected}
           title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
         >
-          {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión'}
+          {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
         </button>
 
         {session.isRunning && (

@@ -7,6 +7,7 @@ export type DeviceId = 'nbm550' | 'gps'
 export type TriggerMode = 'distance' | 'time'
 
 export interface LogEntry {
+  kind: 'log'
   id: number
   timestamp: string
   type: string
@@ -14,6 +15,7 @@ export interface LogEntry {
 }
 
 export interface NmeaEntry {
+  kind: 'nmea'
   id: number
   timestamp: string
   port: string
