@@ -72,7 +72,7 @@ export default function DeviceCard({
                 </span>
               )}
             </h3>
-            <p className="device-type">{device.type.toUpperCase()}</p>
+            <p className="device-type">{device.type === 'emf' ? 'Medidor de RNI' : device.type.toUpperCase()}</p>
           </div>
         </div>
         <span className="device-status">{statusLabel}</span>
