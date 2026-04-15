@@ -17,14 +17,25 @@ export class NBM550Parser {
       .trim()
   }
 
+  // Detecta si la respuesta es un código de error del NBM (número solo, sin comas)
+  isErrorResponse(raw: string): boolean {
+    const clean = this.cleanResponse(raw)
+    if (clean.includes(',')) return false
+    const code = parseInt(clean)
+    return !isNaN(code) && code > 0
+  }
+
   // Parsea respuesta cruda de MEAS?; con SAMPLE_RATE 50 y MEAS_VIEW X-Y-Z
   // Formato esperado: "X, Y, Z, ZeroingFlag, Battery;\r"
+  // Respuestas válidas siempre tienen al menos 3 campos (X, Y, Z)
   parseMeasurement(raw: string): NBM550Sample | null {
     try {
       const clean = this.cleanResponse(raw)
       const parts = clean.split(',').map((p) => p.trim())
 
-      if (parts.length < 1) return null
+      // Respuestas válidas de MEAS? tienen mínimo 3 campos (X, Y, Z)
+      // Un solo campo numérico es un código de error (ej: "412;")
+      if (parts.length < 3) return null
 
       const rss = parseFloat(parts[0])
       if (isNaN(rss)) return null

@@ -147,6 +147,16 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
   async readMeasurement(): Promise<NBM550Sample | null> {
     const raw = await this.query('MEAS?')
+
+    // Detectar código de error del NBM (ej: "412;" cuando el dispositivo falla)
+    if (this.parser.isErrorResponse(raw)) {
+      const code = this.parser.parseErrorCode(raw)
+      console.error(`[NBM550Driver] readMeasurement: device returned error code ${code}`)
+      this.setStatus('error')
+      this.emit('error', new Error(`NBM-550 error code ${code}`))
+      return null
+    }
+
     const sample = this.parser.parseMeasurement(raw)
     if (sample) {
       // Usar la batería actualizada más recientemente

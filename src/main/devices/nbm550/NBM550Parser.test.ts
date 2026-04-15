@@ -15,10 +15,46 @@ describe('NBM550Parser', () => {
     })
   })
 
+  it('parses a full 5-field measurement response', () => {
+    const parser = new NBM550Parser()
+
+    const sample = parser.parseMeasurement('3.14, 1.2, 0.8, 0, 87;\r')
+
+    expect(sample).toMatchObject({
+      rss: 3.14,
+      unit: 'V/m',
+      battery: 87
+    })
+  })
+
+  it('returns null for single-value responses (error codes)', () => {
+    const parser = new NBM550Parser()
+
+    expect(parser.parseMeasurement('412;\r')).toBeNull()
+    expect(parser.parseMeasurement('5;\r')).toBeNull()
+    expect(parser.parseMeasurement('0;\r')).toBeNull()
+  })
+
+  it('returns null for two-field responses', () => {
+    const parser = new NBM550Parser()
+
+    expect(parser.parseMeasurement('412, 0;\r')).toBeNull()
+  })
+
   it('returns null for invalid measurements', () => {
     const parser = new NBM550Parser()
 
     expect(parser.parseMeasurement('ERR;\r')).toBeNull()
+  })
+
+  it('detects error responses (single numeric value, no commas)', () => {
+    const parser = new NBM550Parser()
+
+    expect(parser.isErrorResponse('412;\r')).toBe(true)
+    expect(parser.isErrorResponse('5;\r')).toBe(true)
+    expect(parser.isErrorResponse('0;\r')).toBe(false) // 0 = no error
+    expect(parser.isErrorResponse('ERR;\r')).toBe(false) // no es numérico
+    expect(parser.isErrorResponse('12.5, 0, 0;\r')).toBe(false) // tiene comas
   })
 
   it('accepts only supported result units', () => {

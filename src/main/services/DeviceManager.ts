@@ -27,9 +27,11 @@ export class DeviceManager extends EventEmitter {
   private nbmSampleCount: number = 0
   private scanner: ISerialPortScanner
   private nbmIntentionalDisconnect: boolean = false
+  private nbmReconnecting: boolean = false
   private nbmReconnectInterval: NodeJS.Timeout | null = null
   private nbmReconnectDeadline: NodeJS.Timeout | null = null
   private gpsIntentionalDisconnect: boolean = false
+  private gpsReconnecting: boolean = false
   private gpsReconnectInterval: NodeJS.Timeout | null = null
   private gpsReconnectDeadline: NodeJS.Timeout | null = null
 
@@ -111,6 +113,7 @@ export class DeviceManager extends EventEmitter {
   async setPortManual(device: 'nbm550' | 'gps', port: string): Promise<void> {
     if (device === 'nbm550') {
       this.nbmIntentionalDisconnect = true
+      this.nbmReconnecting = false
       this.stopNBMReconnect()
       this.stopNBMPolling()
       if (this.nbm) await this.nbm.disconnect()
@@ -118,6 +121,7 @@ export class DeviceManager extends EventEmitter {
       this.portConfig.nbm550 = port
     } else {
       this.gpsIntentionalDisconnect = true
+      this.gpsReconnecting = false
       this.stopGPSReconnect()
       if (this.gps) await this.gps.disconnect()
       await this.initGPS(port)
@@ -131,18 +135,26 @@ export class DeviceManager extends EventEmitter {
   async disconnectAll(): Promise<void> {
     this.nbmIntentionalDisconnect = true
     this.gpsIntentionalDisconnect = true
+    this.nbmReconnecting = false
+    this.gpsReconnecting = false
     this.stopNBMReconnect()
     this.stopGPSReconnect()
     this.stopNBMPolling()
-    if (this.nbm?.isConnected()) await this.nbm.disconnect().catch(() => {})
-    if (this.gps?.isConnected()) await this.gps.disconnect().catch(() => {})
+    if (this.nbm) {
+      this.nbm.removeAllListeners()
+      await this.nbm.disconnect().catch(() => {})
+    }
+    if (this.gps) {
+      this.gps.removeAllListeners()
+      await this.gps.disconnect().catch(() => {})
+    }
     this.nbm = null
     this.gps = null
   }
 
   private stopNBMReconnect(): void {
     if (this.nbmReconnectInterval) {
-      clearInterval(this.nbmReconnectInterval)
+      clearTimeout(this.nbmReconnectInterval)
       this.nbmReconnectInterval = null
     }
     if (this.nbmReconnectDeadline) {
@@ -152,17 +164,22 @@ export class DeviceManager extends EventEmitter {
   }
 
   private startNBMReconnect(port: string): void {
+    if (this.nbmReconnecting) return // Ya hay un ciclo de reconexión activo
+    this.nbmReconnecting = true
     this.stopNBMReconnect()
     console.log(
       `[DeviceManager] NBM unexpected disconnect — retrying for ${NBM_RECONNECT_TIMEOUT_MS / 1000}s...`
     )
     this.emit('device:status', { deviceId: 'nbm550', status: 'connecting' })
 
-    this.nbmReconnectInterval = setInterval(async () => {
+    const attemptReconnect = async (): Promise<void> => {
+      if (!this.nbmReconnecting) return
+
       console.log(`[DeviceManager] NBM reconnect attempt on ${port}...`)
       try {
         this.stopNBMPolling()
         if (this.nbm) {
+          this.nbm.removeAllListeners()
           await this.nbm.disconnect().catch(() => {})
           this.nbm = null
         }
@@ -171,23 +188,39 @@ export class DeviceManager extends EventEmitter {
         await this.initNBM(port)
         if (this.nbm?.isConnected()) {
           console.log(`[DeviceManager] NBM reconnected successfully`)
+          this.nbmReconnecting = false
           this.stopNBMReconnect()
+          return
         }
       } catch {
-        // silenciar — se reintenta en el próximo tick
+        // silenciar — se reintenta en el próximo ciclo
       }
-    }, NBM_RECONNECT_INTERVAL_MS)
+
+      // Siguiente intento DESPUÉS de que este termine (serializado)
+      if (this.nbmReconnecting) {
+        this.nbmReconnectInterval = setTimeout(attemptReconnect, NBM_RECONNECT_INTERVAL_MS)
+      }
+    }
+
+    // Primer intento tras el delay
+    this.nbmReconnectInterval = setTimeout(attemptReconnect, NBM_RECONNECT_INTERVAL_MS)
 
     this.nbmReconnectDeadline = setTimeout(() => {
       console.log(`[DeviceManager] NBM reconnect timeout — giving up`)
-      this.stopNBMReconnect()
+      this.nbmReconnecting = false
+      this.stopNBMReconnect() // Liberar el puerto si qued\u00f3 abierto del \u00faltimo intento
+      if (this.nbm) {
+        this.nbm.removeAllListeners()
+        this.nbm.disconnect().catch(() => {})
+        this.nbm = null
+      }
       this.emit('device:status', { deviceId: 'nbm550', status: 'disconnected' })
     }, NBM_RECONNECT_TIMEOUT_MS)
   }
 
   private stopGPSReconnect(): void {
     if (this.gpsReconnectInterval) {
-      clearInterval(this.gpsReconnectInterval)
+      clearTimeout(this.gpsReconnectInterval)
       this.gpsReconnectInterval = null
     }
     if (this.gpsReconnectDeadline) {
@@ -197,16 +230,21 @@ export class DeviceManager extends EventEmitter {
   }
 
   private startGPSReconnect(port: string): void {
+    if (this.gpsReconnecting) return // Ya hay un ciclo de reconexión activo
+    this.gpsReconnecting = true
     this.stopGPSReconnect()
     console.log(
       `[DeviceManager] GPS unexpected disconnect — retrying for ${GPS_RECONNECT_TIMEOUT_MS / 1000}s...`
     )
     this.emit('device:status', { deviceId: 'gps', status: 'connecting' })
 
-    this.gpsReconnectInterval = setInterval(async () => {
+    const attemptReconnect = async (): Promise<void> => {
+      if (!this.gpsReconnecting) return
+
       console.log(`[DeviceManager] GPS reconnect attempt on ${port}...`)
       try {
         if (this.gps) {
+          this.gps.removeAllListeners()
           await this.gps.disconnect().catch(() => {})
           this.gps = null
         }
@@ -215,16 +253,32 @@ export class DeviceManager extends EventEmitter {
         await this.initGPS(port)
         if (this.gps?.isConnected()) {
           console.log(`[DeviceManager] GPS reconnected successfully`)
+          this.gpsReconnecting = false
           this.stopGPSReconnect()
+          return
         }
       } catch {
-        // silenciar — se reintenta en el próximo tick
+        // silenciar — se reintenta en el próximo ciclo
       }
-    }, GPS_RECONNECT_INTERVAL_MS)
+
+      // Siguiente intento DESPUÉS de que este termine (serializado)
+      if (this.gpsReconnecting) {
+        this.gpsReconnectInterval = setTimeout(attemptReconnect, GPS_RECONNECT_INTERVAL_MS)
+      }
+    }
+
+    // Primer intento tras el delay
+    this.gpsReconnectInterval = setTimeout(attemptReconnect, GPS_RECONNECT_INTERVAL_MS)
 
     this.gpsReconnectDeadline = setTimeout(() => {
       console.log(`[DeviceManager] GPS reconnect timeout — giving up`)
-      this.stopGPSReconnect()
+      this.gpsReconnecting = false
+      this.stopGPSReconnect() // Liberar el puerto si qued\u00f3 abierto del \u00faltimo intento
+      if (this.gps) {
+        this.gps.removeAllListeners()
+        this.gps.disconnect().catch(() => {})
+        this.gps = null
+      }
       this.emit('device:status', { deviceId: 'gps', status: 'disconnected' })
     }, GPS_RECONNECT_TIMEOUT_MS)
   }
