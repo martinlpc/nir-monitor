@@ -34,14 +34,33 @@ export default function SettingsPanel(): React.JSX.Element {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Cargar info de sonda y incertidumbre activa al montar
-  useEffect(() => {
+  const refreshProbeAndMatch = (): void => {
     window.api.settings.getProbeInfo().then((res) => {
       if (res.success && res.probeInfo) setProbeInfo(res.probeInfo)
     })
     window.api.settings.getActiveUncertainty().then((res) => {
       if (res.success) setActiveUncertainty(res)
     })
+  }
+
+  // Cargar info de sonda, tabla persistida e incertidumbre activa al montar
+  useEffect(() => {
+    refreshProbeAndMatch()
+    window.api.settings.getLoadedUncertainty().then((res) => {
+      if (res.success && res.filePath && res.headers && res.records) {
+        setUncertainty({ filePath: res.filePath, headers: res.headers, records: res.records })
+      }
+    })
+  }, [])
+
+  // Refrescar sonda e incertidumbre activa cuando el NBM se conecta
+  useEffect(() => {
+    const unsub = window.api.devices.onStatus((data) => {
+      if (data.deviceId === 'nbm550' && data.status === 'connected') {
+        refreshProbeAndMatch()
+      }
+    })
+    return unsub
   }, [])
 
   const handleLoadFile = async (): Promise<void> => {
@@ -74,61 +93,22 @@ export default function SettingsPanel(): React.JSX.Element {
 
   return (
     <div className="settings-panel">
-      {/* === Sección: Sonda === */}
+      {/* === Sonda detectada + factor === */}
       {probeInfo && (
         <section className="settings-section">
           <h3 className="settings-section__title">Sonda detectada</h3>
-          <div className="settings-probe-info">
-            {probeInfo.model && (
-              <div className="settings-option">
-                <span className="settings-option__label">Modelo</span>
-                <span className="settings-option__value">{probeInfo.model}</span>
-              </div>
-            )}
-            {probeInfo.serial && (
-              <div className="settings-option">
-                <span className="settings-option__label">Serie</span>
-                <span className="settings-option__value">{probeInfo.serial}</span>
-              </div>
-            )}
-            {probeInfo.calibrationDate && (
-              <div className="settings-option">
-                <span className="settings-option__label">Calibración</span>
-                <span className="settings-option__value">{probeInfo.calibrationDate}</span>
-              </div>
-            )}
+          <div className="settings-option">
+            <span className="settings-option__label">Modelo</span>
+            <span className="settings-option__value">{probeInfo.model ?? '—'}</span>
           </div>
-        </section>
-      )}
-
-      {/* === Sección: Incertidumbre activa === */}
-      {activeUncertainty?.matchedRecord && (
-        <section className="settings-section">
-          <h3 className="settings-section__title">Incertidumbre aplicada</h3>
-          <div className="settings-active-uncertainty">
+          {activeUncertainty?.matchedRecord && (
             <div className="settings-option">
-              <span className="settings-option__label">Sonda</span>
-              <span className="settings-option__value">{activeUncertainty.probeModel ?? '—'}</span>
-            </div>
-            <div className="settings-option">
-              <span className="settings-option__label">Rango</span>
-              <span className="settings-option__value">
-                {activeUncertainty.matchedRecord.fMin}–{activeUncertainty.matchedRecord.fMax} MHz
-              </span>
-            </div>
-            <div className="settings-option">
-              <span className="settings-option__label">Incertidumbre</span>
-              <span className="settings-option__value settings-option__highlight">
-                {activeUncertainty.matchedRecord.uncertainty}
-              </span>
-            </div>
-            <div className="settings-option">
-              <span className="settings-option__label">Factor</span>
+              <span className="settings-option__label">Factor a aplicar</span>
               <span className="settings-option__value settings-option__highlight">
                 ×{activeUncertainty.matchedRecord.factor}
               </span>
             </div>
-          </div>
+          )}
         </section>
       )}
 
