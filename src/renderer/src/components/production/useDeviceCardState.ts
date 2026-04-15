@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { DeviceStatus } from '../../../../shared/device.types'
+import { useGpsPosition } from '../../hooks/useGpsPosition'
 
 type GpsInfo = {
   lat?: number
@@ -14,48 +15,15 @@ type NBMInfo = {
 }
 
 export function useGpsCardInfo(enabled: boolean): GpsInfo {
-  const [gpsInfo, setGpsInfo] = useState<GpsInfo>({})
-  const fixTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const { position } = useGpsPosition()
 
-  useEffect(() => {
-    if (!enabled) return
+  if (!enabled || !position) return {}
 
-    const unsubscribePosition = window.api.gps.onPosition((data) => {
-      if (data.valid && data.coords) {
-        if (fixTimeoutRef.current) {
-          clearTimeout(fixTimeoutRef.current)
-          fixTimeoutRef.current = null
-        }
-
-        setGpsInfo({
-          lat: data.coords.lat,
-          lon: data.coords.lon,
-          alt: data.coords.alt
-        })
-
-        fixTimeoutRef.current = setTimeout(() => {
-          setGpsInfo({})
-          fixTimeoutRef.current = null
-        }, 5000)
-      } else {
-        if (fixTimeoutRef.current) {
-          clearTimeout(fixTimeoutRef.current)
-          fixTimeoutRef.current = null
-        }
-        setGpsInfo({})
-      }
-    })
-
-    return () => {
-      unsubscribePosition()
-      if (fixTimeoutRef.current) {
-        clearTimeout(fixTimeoutRef.current)
-        fixTimeoutRef.current = null
-      }
-    }
-  }, [enabled])
-
-  return gpsInfo
+  return {
+    lat: position.lat,
+    lon: position.lon,
+    alt: position.alt
+  }
 }
 
 export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo {

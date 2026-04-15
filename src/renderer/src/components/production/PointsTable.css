@@ -13,14 +13,14 @@
     margin: 0 0 12px 0;
     font-size: 14px;
     font-weight: 600;
-    color: #edf4ff;
+    color: var(--nir-text);
 }
 
 .table-wrapper {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    border: 1px solid rgba(114, 186, 255, 0.15);
+    border: 1px solid var(--nir-border-blue);
     border-radius: 4px;
 }
 
@@ -42,8 +42,8 @@
     text-align: left;
     padding: 8px;
     font-weight: 600;
-    border-bottom: 1px solid rgba(114, 186, 255, 0.15);
-    color: #edf4ff;
+    border-bottom: 1px solid var(--nir-border-blue);
+    color: var(--nir-text);
 }
 
 .points-table td {

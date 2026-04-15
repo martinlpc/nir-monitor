@@ -9,6 +9,7 @@ interface SyncMapViewProps {
   livePosition?: { lat: number; lon: number } | null
   isSessionActive?: boolean
   onFollowPositionChange?: (value: boolean) => void
+  maximized?: boolean
 }
 
 export default function SyncMapView({
@@ -16,7 +17,8 @@ export default function SyncMapView({
   followPosition = false,
   livePosition = null,
   isSessionActive = false,
-  onFollowPositionChange
+  onFollowPositionChange,
+  maximized = false
 }: SyncMapViewProps): null {
   const map = useMap()
   const wasSessionActive = useRef(isSessionActive)
@@ -52,8 +54,10 @@ export default function SyncMapView({
   }, [followPosition, livePosition, map])
 
   useEffect(() => {
-    map.invalidateSize()
-  }, [map])
+    // Pequeño delay para que el DOM termine la transición de tamaño
+    const timer = setTimeout(() => map.invalidateSize(), 50)
+    return () => clearTimeout(timer)
+  }, [map, maximized])
 
   return null
 }

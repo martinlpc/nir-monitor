@@ -24,7 +24,7 @@ export function useDebugGps() {
       setNmeaLines((current) =>
         [
           {
-            kind: 'nmea',
+            kind: 'nmea' as const,
             id: Date.now() + Math.random(),
             timestamp: new Date().toLocaleTimeString('es-AR', { hour12: false }),
             port: data.port,

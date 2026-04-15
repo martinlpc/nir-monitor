@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useDevices, useSession, useGeoData } from '../../hooks'
+import { GpsPositionProvider } from '../../hooks/useGpsPosition'
 import MapView from '../map/MapView'
 import PointsTable from './PointsTable'
 import DevicesPanel from './DevicesPanel'
@@ -13,6 +14,7 @@ export default function ProductionShell(): React.JSX.Element {
   const geoData = useGeoData(session.points, session.pointCount)
   const [activeTab, setActiveTab] = useState<'devices' | 'sessions'>('devices')
   const [followPosition, setFollowPosition] = useState(true)
+  const [mapMaximized, setMapMaximized] = useState(false)
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -27,6 +29,7 @@ export default function ProductionShell(): React.JSX.Element {
   }, [])
 
   return (
+    <GpsPositionProvider>
     <main className="prod-shell">
       <div className="prod-layout">
         {/* Panel lateral con tabs */}
@@ -85,19 +88,22 @@ export default function ProductionShell(): React.JSX.Element {
         </div>
 
         <div className="prod-main">
-          <div className="map-container" style={{ position: 'relative' }}>
+          <div className={`map-container ${mapMaximized ? 'map-maximized' : ''}`} style={{ position: 'relative' }}>
             {/* Mapa con datos geoespaciales */}
             <MapView
               geoData={geoData}
               isSessionActive={session.status === 'running'}
               followPosition={followPosition}
               onFollowPositionChange={setFollowPosition}
+              maximized={mapMaximized}
+              onToggleMaximize={() => setMapMaximized((prev) => !prev)}
             />
           </div>
           {/* Tabla de puntos */}
-          <PointsTable points={session.points} />
+          {!mapMaximized && <PointsTable points={session.points} />}
         </div>
       </div>
     </main>
+    </GpsPositionProvider>
   )
 }

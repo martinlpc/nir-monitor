@@ -13,14 +13,14 @@
     align-items: center;
     justify-content: space-between;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(114, 186, 255, 0.15);
+    border-bottom: 1px solid var(--nir-border-blue);
 }
 
 .sessions-header h2 {
     margin: 0;
     font-size: 18px;
     font-weight: 600;
-    color: #edf4ff;
+    color: var(--nir-text);
 }
 
 .sessions-panel .sessions-badge {
@@ -31,7 +31,7 @@
     height: 24px;
     padding: 0 8px;
     background: rgba(114, 186, 255, 0.2);
-    color: #72baff;
+    color: var(--nir-blue);
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
@@ -68,7 +68,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 12px;
-    background: rgba(23, 34, 75, 0.5);
+    background: var(--nir-card-bg);
     border-radius: 6px;
     border: 1px solid rgba(114, 186, 255, 0.12);
     transition: all 0.2s ease;
@@ -78,8 +78,8 @@
 }
 
 .session-item:hover {
-    border-color: rgba(114, 186, 255, 0.3);
-    background: rgba(23, 34, 75, 0.8);
+    border-color: var(--nir-border-blue-hover);
+    background: var(--nir-card-bg-hover);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
@@ -93,7 +93,7 @@
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #9ca3af;
+    color: var(--nir-text-muted);
     font-size: 18px;
     line-height: 1;
     cursor: pointer;
@@ -110,13 +110,13 @@
 
 .btn-delete-session:hover {
     background: rgba(239, 68, 68, 0.15);
-    color: #fca5a5;
+    color: var(--nir-danger);
 }
 
 .btn-delete-session.confirm {
     opacity: 1;
     background: rgba(239, 68, 68, 0.3);
-    color: #fca5a5;
+    color: var(--nir-danger);
     box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.5);
 }
 
@@ -139,7 +139,7 @@
     margin: 0;
     font-size: 14px;
     font-weight: 600;
-    color: #edf4ff;
+    color: var(--nir-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -147,7 +147,7 @@
 
 .session-date {
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--nir-text-muted);
     white-space: nowrap;
     flex-shrink: 0;
 }
@@ -156,7 +156,7 @@
     display: flex;
     gap: 16px;
     font-size: 12px;
-    color: #9ca3af;
+    color: var(--nir-text-muted);
 }
 
 .stat {
@@ -166,7 +166,7 @@
 }
 
 .stat strong {
-    color: #edf4ff;
+    color: var(--nir-text);
 }
 
 .session-actions {
@@ -193,8 +193,8 @@
 
 .sessions-panel .btn-primary {
     background: rgba(114, 186, 255, 0.2);
-    color: #72baff;
-    border: 1px solid rgba(114, 186, 255, 0.3);
+    color: var(--nir-blue);
+    border: 1px solid var(--nir-border-blue-hover);
 }
 
 .sessions-panel .btn-primary:hover {
@@ -208,7 +208,7 @@
 
 .sessions-panel .btn-secondary {
     background: rgba(23, 34, 75, 0.7);
-    color: #72baff;
+    color: var(--nir-blue);
     border: 1px solid rgba(114, 186, 255, 0.2);
 }
 
@@ -222,7 +222,7 @@
 
 .sessions-panel .btn-danger {
     background: rgba(23, 34, 75, 0.7);
-    color: #fca5a5;
+    color: var(--nir-danger);
     border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -239,7 +239,7 @@
     align-items: center;
     justify-content: center;
     height: 100px;
-    color: #9ca3af;
+    color: var(--nir-text-muted);
     font-size: 14px;
 }
 
@@ -250,7 +250,7 @@
     justify-content: center;
     height: 150px;
     gap: 8px;
-    color: #9ca3af;
+    color: var(--nir-text-muted);
 }
 
 .sessions-panel .sessions-empty-state p {
@@ -269,7 +269,7 @@
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.3);
     border-radius: 4px;
-    color: #fca5a5;
+    color: var(--nir-danger);
     font-size: 12px;
 }
 

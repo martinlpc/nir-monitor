@@ -1,8 +1,9 @@
 import 'leaflet/dist/leaflet.css'
 import { type LatLngExpression } from 'leaflet'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet'
 import type { MapState } from '../../hooks/useGeoData'
+import { useGpsPosition } from '../../hooks/useGpsPosition'
 import SyncMapView from './SyncMapView'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
@@ -13,44 +14,12 @@ interface MapViewProps {
   isSessionActive?: boolean
   followPosition?: boolean
   onFollowPositionChange?: (value: boolean) => void
+  maximized?: boolean
+  onToggleMaximize?: () => void
 }
 
-export default function MapView({ geoData, isSessionActive = false, followPosition = true, onFollowPositionChange }: MapViewProps): React.JSX.Element {
-  const [livePosition, setLivePosition] = useState<{ lat: number; lon: number; alt: number } | null>(null)
-  const [lastKnownPosition, setLastKnownPosition] = useState<{ lat: number; lon: number; alt: number } | null>(null)
-
-  // Escuchar posición GPS en tiempo real
-  useEffect(() => {
-    const clearLive = () => {
-      setLivePosition((prev) => {
-        if (prev !== null) setLastKnownPosition(prev)
-        return null
-      })
-    }
-
-    const unsubPosition = window.api.gps.onPosition((data) => {
-      if (data.valid) {
-        setLivePosition({ lat: data.coords.lat, lon: data.coords.lon, alt: data.coords.alt || 0 })
-        setLastKnownPosition(null)
-      } else {
-        clearLive()
-      }
-    })
-
-    const unsubFixLost = window.api.gps.onFixLost(clearLive)
-
-    const unsubStatus = window.api.devices.onStatus((data) => {
-      if (data.deviceId === 'gps' && data.status !== 'connected') {
-        clearLive()
-      }
-    })
-
-    return () => {
-      unsubPosition()
-      unsubFixLost()
-      unsubStatus()
-    }
-  }, [])
+export default function MapView({ geoData, isSessionActive = false, followPosition = true, onFollowPositionChange, maximized = false, onToggleMaximize }: MapViewProps): React.JSX.Element {
+  const { position: livePosition, lastKnownPosition } = useGpsPosition()
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
   const trackPoints = geoData.trackPoints
@@ -76,6 +45,16 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           </p>
         </div>
         <div className="map-view__meta">
+          {onToggleMaximize && (
+            <button
+              className="btn-map-maximize"
+              onClick={onToggleMaximize}
+              title={maximized ? 'Restaurar vista' : 'Maximizar mapa'}
+              aria-label={maximized ? 'Restaurar vista' : 'Maximizar mapa'}
+            >
+              {maximized ? '⊡' : '⊞'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -91,6 +70,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
             livePosition={livePosition}
             isSessionActive={isSessionActive}
             onFollowPositionChange={onFollowPositionChange}
+            maximized={maximized}
           />
           {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
           {livePosition ? (

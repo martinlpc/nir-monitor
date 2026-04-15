@@ -8,7 +8,7 @@ export function useDebugLogs() {
     setLogs((current) =>
       [
         {
-          kind: 'log',
+          kind: 'log' as const,
           id: Date.now() + Math.random(),
           timestamp: new Date().toLocaleTimeString('es-AR', { hour12: false }),
           type,
