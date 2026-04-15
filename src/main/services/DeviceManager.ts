@@ -132,6 +132,30 @@ export class DeviceManager extends EventEmitter {
     this.emit('state', this.getState())
   }
 
+  async disconnectDevice(device: 'nbm550' | 'gps'): Promise<void> {
+    if (device === 'nbm550') {
+      this.nbmIntentionalDisconnect = true
+      this.nbmReconnecting = false
+      this.stopNBMReconnect()
+      this.stopNBMPolling()
+      if (this.nbm) {
+        this.nbm.removeAllListeners()
+        await this.nbm.disconnect().catch(() => {})
+      }
+      this.nbm = null
+    } else {
+      this.gpsIntentionalDisconnect = true
+      this.gpsReconnecting = false
+      this.stopGPSReconnect()
+      if (this.gps) {
+        this.gps.removeAllListeners()
+        await this.gps.disconnect().catch(() => {})
+      }
+      this.gps = null
+    }
+    this.emit('state', this.getState())
+  }
+
   async disconnectAll(): Promise<void> {
     this.nbmIntentionalDisconnect = true
     this.gpsIntentionalDisconnect = true

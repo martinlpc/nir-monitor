@@ -17,6 +17,7 @@ export interface IDeviceManager {
   initialize(): Promise<void>
   scan(): Promise<any>
   setPortManual(device: 'nbm550' | 'gps', port: string): Promise<void>
+  disconnectDevice(device: 'nbm550' | 'gps'): Promise<void>
   disconnectAll(): Promise<void>
 
   // Cleanup

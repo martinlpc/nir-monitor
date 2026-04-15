@@ -34,9 +34,9 @@ export function registerDeviceManagerHandlers(
     return deviceManager.getState()
   })
 
-  // device:disconnect - desconecta todos los dispositivos
-  ipcMain.handle(IPC_HANDLERS.DEVICE_DISCONNECT, async () => {
-    await deviceManager.disconnectAll()
+  // device:disconnect - desconecta un dispositivo específico
+  ipcMain.handle(IPC_HANDLERS.DEVICE_DISCONNECT, async (_, deviceId: string) => {
+    await deviceManager.disconnectDevice(deviceId as 'nbm550' | 'gps')
     return deviceManager.getState()
   })
 }
