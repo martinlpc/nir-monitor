@@ -5,6 +5,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-le
 import type { MapState } from '../../hooks/useGeoData'
 import type { LoadedSession } from '../../hooks/useMultipleSessions'
 import { useGpsPosition } from '../../hooks/useGpsPosition'
+import { getIntensityColor } from '../../utils/intensityPalette'
 import SyncMapView from './SyncMapView'
 import PanControl from './PanControl'
 import MaximizeControl from './MaximizeControl'
@@ -27,22 +28,42 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
   const { position: livePosition, lastKnownPosition } = useGpsPosition()
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
-  const trackPoints = geoData.trackPoints
 
-  const path = useMemo<LatLngExpression[]>(
-    () => trackPoints.map((p) => [p.lat, p.lon]),
-    [trackPoints]
-  )
+  // Generar segmentos coloreados por intensidad del punto de origen
+  const activeSegments = useMemo(() => {
+    const pts = geoData.allPoints.filter((p) => p.position !== null && p.position !== undefined)
+    const segments: { key: string; positions: LatLngExpression[]; color: string }[] = []
+    for (let i = 0; i < pts.length - 1; i++) {
+      segments.push({
+        key: `seg-${pts[i].id}`,
+        positions: [
+          [pts[i].position.lat, pts[i].position.lon],
+          [pts[i + 1].position.lat, pts[i + 1].position.lon]
+        ],
+        color: getIntensityColor(pts[i].rssWithUncertainty)
+      })
+    }
+    return segments
+  }, [geoData.allPoints])
 
-  // Renderizar polylines para sesiones cargadas
-  const additionalPaths = useMemo(() => {
+  // Generar segmentos coloreados para sesiones cargadas
+  const loadedSegments = useMemo(() => {
     return loadedSessions
       .filter((session) => session.visible && session.points.length > 0)
       .map((session) => {
-        const sessionPath = session.points
-          .filter((p) => p.position !== null && p.position !== undefined)
-          .map((p) => [p.position.lat, p.position.lon] as LatLngExpression)
-        return { sessionId: session.id, path: sessionPath, color: session.color, label: session.label }
+        const pts = session.points.filter((p) => p.position !== null && p.position !== undefined)
+        const segments: { key: string; positions: LatLngExpression[]; color: string }[] = []
+        for (let i = 0; i < pts.length - 1; i++) {
+          segments.push({
+            key: `${session.id}-seg-${i}`,
+            positions: [
+              [pts[i].position.lat, pts[i].position.lon],
+              [pts[i + 1].position.lat, pts[i + 1].position.lon]
+            ],
+            color: getIntensityColor(pts[i].rssWithUncertainty)
+          })
+        }
+        return { sessionId: session.id, segments }
       })
   }, [loadedSessions])
 
@@ -84,43 +105,45 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           {onToggleMaximize && (
             <MaximizeControl maximized={maximized} onToggle={onToggleMaximize} />
           )}
-          {path.length > 1 ? <Polyline positions={path} color="#f0a646" weight={4} /> : null}
-          {additionalPaths.map((item) => (
-            <Polyline
-              key={item.sessionId}
-              positions={item.path}
-              color={item.color}
-              weight={3}
-              opacity={0.7}
-              dashArray="5 5"
-            />
+          {activeSegments.map((seg) => (
+            <Polyline key={seg.key} positions={seg.positions} color={seg.color} weight={4} />
           ))}
+          {loadedSegments.map((session) =>
+            session.segments.map((seg) => (
+              <Polyline key={seg.key} positions={seg.positions} color={seg.color} weight={3} opacity={0.85} />
+            ))
+          )}
           {/* Renderizar todos los puntos de medición como marcadores */}
-          {geoData.allPoints.map((point) => (
-            <CircleMarker
-              key={point.id}
-              center={[point.position.lat, point.position.lon]}
-              radius={6}
-              pathOptions={{
-                color: '#f0a646',
-                fillColor: '#ffd494',
-                fillOpacity: 0.8,
-                weight: 2
-              }}
-            >
-              <Popup>
-                Medición: {point.emf.rss.toFixed(2)} {point.emf.unit}
-                <br />
-                Lat: {point.position.lat.toFixed(6)}
-                <br />
-                Lon: {point.position.lon.toFixed(6)}
-                <br />
-                Alt: {point.position.alt.toFixed(1)} m
-                <br />
-                {new Date(point.timestamp).toLocaleTimeString()}
-              </Popup>
-            </CircleMarker>
-          ))}
+          {geoData.allPoints.map((point) => {
+            const pointColor = getIntensityColor(point.rssWithUncertainty)
+            return (
+              <CircleMarker
+                key={point.id}
+                center={[point.position.lat, point.position.lon]}
+                radius={6}
+                pathOptions={{
+                  color: pointColor,
+                  fillColor: pointColor,
+                  fillOpacity: 0.8,
+                  weight: 2
+                }}
+              >
+                <Popup>
+                  Valor final: {point.rssWithUncertainty.toFixed(2)} {point.emf.unit}
+                  <br />
+                  Medido: {point.emf.rss.toFixed(2)} {point.emf.unit}
+                  <br />
+                  Lat: {point.position.lat.toFixed(6)}
+                  <br />
+                  Lon: {point.position.lon.toFixed(6)}
+                  <br />
+                  Alt: {point.position.alt.toFixed(1)} m
+                  <br />
+                  {new Date(point.timestamp).toLocaleTimeString()}
+                </Popup>
+              </CircleMarker>
+            )
+          })}
           {livePosition ? (
             <CircleMarker
               center={[livePosition.lat, livePosition.lon]}

@@ -1,5 +1,6 @@
 import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
 import { formatTimestamp } from '../../utils/formatters'
+import { getIntensityColor, exceedsSafetyThreshold, sessionExceedsThreshold, valueToPercent } from '../../utils/intensityPalette'
 import './PointsTable.css'
 
 interface PointsTableProps {
@@ -9,11 +10,20 @@ interface PointsTableProps {
 }
 
 export default function PointsTable({ points, sessionId, sessionLabel }: PointsTableProps): React.JSX.Element {
+  const thresholdExceeded = sessionExceedsThreshold(points.map((p) => p.rssWithUncertainty))
+
   return (
     <div className="points-table-container">
       <div className="points-table-header">
         <div className="points-table-title">
-          <h3>Puntos capturados ({points.length})</h3>
+          <h3>
+            Puntos capturados ({points.length})
+            {thresholdExceeded && (
+              <span className="threshold-badge" title="Se superó el umbral de seguridad del 50% (19.44 V/m) en al menos un punto">
+                ⚠ UMBRAL 50% SUPERADO
+              </span>
+            )}
+          </h3>
           {sessionLabel && (
             <div className="session-info">
               <span className="session-name">{sessionLabel}</span>
@@ -49,7 +59,13 @@ export default function PointsTable({ points, sessionId, sessionLabel }: PointsT
                 <td className="cell-coord">{point.position.lon.toFixed(6)}</td>
                 <td className="cell-number">{point.position.alt.toFixed(1)}</td>
                 <td className="cell-emf">{point.emf.rss.toFixed(2)}</td>
-                <td className="cell-emf-unc">{point.rssWithUncertainty.toFixed(2)}</td>
+                <td
+                  className={`cell-emf-unc${exceedsSafetyThreshold(point.rssWithUncertainty) ? ' cell-emf-unc--threshold' : ''}`}
+                  style={{ color: getIntensityColor(point.rssWithUncertainty) }}
+                  title={`${valueToPercent(point.rssWithUncertainty).toFixed(1)}% del nivel de referencia`}
+                >
+                  {point.rssWithUncertainty.toFixed(2)}
+                </td>
                 <td className="cell-unit">{point.emf.unit}</td>
               </tr>
             ))}

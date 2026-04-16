@@ -53,36 +53,29 @@ export default function ProductionShell(): React.JSX.Element {
     [multipleSessions]
   )
 
-  // Calcular bounds cuando se cargan nuevas sesiones para centrar el mapa
+  // Calcular bounds cuando se cargan/quitan sesiones para centrar el mapa en todo lo visible
   useEffect(() => {
-    if (multipleSessions.loadedSessions.length === 0) {
+    // Recolectar todos los puntos de todas las sesiones cargadas
+    const allPoints = multipleSessions.loadedSessions
+      .flatMap((s) => s.points)
+      .filter((p) => p.position !== null && p.position !== undefined)
+
+    // También incluir puntos de la sesión activa/cargada
+    const activePoints = session.points.filter((p) => p.position !== null && p.position !== undefined)
+    const combined = [...allPoints, ...activePoints]
+
+    if (combined.length === 0) {
       setFocusSessionBounds(null)
       return
     }
 
-    // Tomar la primera sesión cargada para centrar
-    const firstSession = multipleSessions.loadedSessions[0]
-    if (!firstSession.points || firstSession.points.length === 0) {
-      return
+    // Desactivar seguimiento GPS al cargar sesiones
+    if (multipleSessions.loadedSessions.length > 0) {
+      setFollowPosition(false)
     }
 
-    const validPoints = firstSession.points.filter((p) => p.position !== null && p.position !== undefined)
-    if (validPoints.length === 0) {
-      // Si no hay puntos válidos, al menos ir al primer punto
-      const firstPoint = firstSession.points[0]
-      if (firstPoint?.position) {
-        setFocusSessionBounds({
-          north: firstPoint.position.lat,
-          south: firstPoint.position.lat,
-          east: firstPoint.position.lon,
-          west: firstPoint.position.lon
-        })
-      }
-      return
-    }
-
-    const lats = validPoints.map((p) => p.position.lat)
-    const lons = validPoints.map((p) => p.position.lon)
+    const lats = combined.map((p) => p.position.lat)
+    const lons = combined.map((p) => p.position.lon)
 
     setFocusSessionBounds({
       north: Math.max(...lats),
@@ -90,7 +83,7 @@ export default function ProductionShell(): React.JSX.Element {
       east: Math.max(...lons),
       west: Math.min(...lons)
     })
-  }, [multipleSessions.loadedSessions])
+  }, [multipleSessions.loadedSessions, session.points])
 
   return (
     <GpsPositionProvider>
@@ -163,7 +156,10 @@ export default function ProductionShell(): React.JSX.Element {
                 onOpenAllSessions={() => setAllSessionsDrawerOpen(true)}
                 onAddSessionToMap={multipleSessions.addSession}
                 loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
-                onSessionLoaded={setFocusSessionBounds}
+                onSessionLoaded={(bounds) => {
+                  setFollowPosition(false)
+                  setFocusSessionBounds(bounds)
+                }}
               />
             </div>
             <div
@@ -232,6 +228,7 @@ export default function ProductionShell(): React.JSX.Element {
         }}
         onLoadSession={(sessionId) => {
           // Cargar como sesión principal
+          setFollowPosition(false)
           persistedSessions
             .getSession(sessionId)
             .then((result) => {

@@ -3,7 +3,8 @@ import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 
 /**
- * Script para generar 6 sesiones mock alrededor de Neuquén, Argentina
+ * Script para generar 16 sesiones mock alrededor de Neuquén, Argentina
+ * 6 sesiones normales + 10 sesiones con valores EMF altos (>19.44 y >27.5 V/m)
  * para testing de la UI
  */
 
@@ -15,6 +16,7 @@ const NEUQUEN_CENTER: GeoPosition = {
 }
 
 const ROUTES = [
+  // ── Sesiones normales (6) ──
   {
     name: 'Recorrido Ruta 9 Norte',
     startOffset: { lat: 0.05, lon: -0.02 },
@@ -59,9 +61,90 @@ const ROUTES = [
     name: 'Circuito urbano general',
     startOffset: { lat: 0.04, lon: -0.04 },
     endOffset: { lat: -0.04, lon: 0.04 },
-    daysAgo: 0.5, // hace 12 horas
+    daysAgo: 0.5,
     minRss: 3.0,
     maxRss: 7.5
+  },
+  // ── Sesiones con EMF ALTO (>19.44 y >27.5 V/m) ──
+  {
+    name: 'Torre de celular - Sector Norte',
+    startOffset: { lat: 0.08, lon: -0.03 },
+    endOffset: { lat: 0.12, lon: 0.02 },
+    daysAgo: 6.5,
+    minRss: 15.2,
+    maxRss: 28.7 // supera 27.5
+  },
+  {
+    name: 'Subestación eléctrica Este',
+    startOffset: { lat: -0.04, lon: 0.07 },
+    endOffset: { lat: -0.01, lon: 0.11 },
+    daysAgo: 6,
+    minRss: 18.5,
+    maxRss: 32.1 // supera 27.5
+  },
+  {
+    name: 'Transmisores Radio FM - Centro',
+    startOffset: { lat: 0.02, lon: -0.02 },
+    endOffset: { lat: 0.05, lon: 0.01 },
+    daysAgo: 5.5,
+    minRss: 20.3,
+    maxRss: 35.8 // muy alto
+  },
+  {
+    name: 'Repetidor de Telecomunicaciones Sur',
+    startOffset: { lat: -0.07, lon: -0.04 },
+    endOffset: { lat: -0.05, lon: 0 },
+    daysAgo: 4.5,
+    minRss: 16.8,
+    maxRss: 29.4 // supera 27.5
+  },
+  {
+    name: 'Instalación Militar - Acceso Oeste',
+    startOffset: { lat: -0.03, lon: -0.1 },
+    endOffset: { lat: 0.01, lon: -0.15 },
+    daysAgo: 4,
+    minRss: 19.5,
+    maxRss: 31.2 // supera 27.5
+  },
+  {
+    name: 'Radar Meteorológico Loma Alta',
+    startOffset: { lat: 0.06, lon: 0.08 },
+    endOffset: { lat: 0.09, lon: 0.12 },
+    daysAgo: 3.5,
+    minRss: 22.1,
+    maxRss: 38.5 // muy alto
+  },
+  {
+    name: 'Estación base 5G - Centéllez',
+    startOffset: { lat: 0.03, lon: -0.08 },
+    endOffset: { lat: 0.07, lon: -0.12 },
+    daysAgo: 2.5,
+    minRss: 17.6,
+    maxRss: 30.9 // supera 27.5
+  },
+  {
+    name: 'Antena de TV analógica - Cerro',
+    startOffset: { lat: -0.02, lon: 0.04 },
+    endOffset: { lat: 0.02, lon: 0.08 },
+    daysAgo: 1.5,
+    minRss: 21.4,
+    maxRss: 36.2 // muy alto
+  },
+  {
+    name: 'Transmisión de Radiodifusión AM',
+    startOffset: { lat: 0.04, lon: 0.03 },
+    endOffset: { lat: 0.08, lon: 0.07 },
+    daysAgo: 1,
+    minRss: 19.8,
+    maxRss: 33.7 // muy alto
+  },
+  {
+    name: 'Centro de enlace de datos - Industrial',
+    startOffset: { lat: -0.05, lon: -0.02 },
+    endOffset: { lat: -0.02, lon: 0.02 },
+    daysAgo: 0.25,
+    minRss: 20.6,
+    maxRss: 34.5 // muy alto
   }
 ]
 
