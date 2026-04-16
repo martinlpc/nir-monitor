@@ -185,7 +185,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
               </Popup>
             </CircleMarker>
           ) : null}
-          {lastPoint ? (
+          {lastPoint && isSessionActive ? (
             <CircleMarker
               center={[lastPoint.position.lat, lastPoint.position.lon]}
               radius={8}
