@@ -12,8 +12,16 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--nir-border-blue);
+}
+
+.sessions-header>div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
 }
 
 .sessions-header h2 {
@@ -21,6 +29,29 @@
     font-size: 18px;
     font-weight: 600;
     color: var(--nir-text);
+}
+
+.sessions-view-all-btn {
+    background: rgba(114, 186, 255, 0.15);
+    border: 1px solid rgba(114, 186, 255, 0.3);
+    color: #72baff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.sessions-view-all-btn:hover {
+    background: rgba(114, 186, 255, 0.25);
+    border-color: rgba(114, 186, 255, 0.5);
+}
+
+.sessions-view-all-btn:active {
+    background: rgba(114, 186, 255, 0.35);
 }
 
 .sessions-panel .sessions-badge {

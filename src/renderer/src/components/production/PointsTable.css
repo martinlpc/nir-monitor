@@ -9,11 +9,50 @@
     flex-direction: column;
 }
 
+.points-table-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.2);
+}
+
+.points-table-title {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .points-table-container h3 {
-    margin: 0 0 12px 0;
+    margin: 0;
     font-size: 14px;
     font-weight: 600;
     color: var(--nir-text);
+}
+
+.session-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.session-name {
+    color: #72baff;
+    font-weight: 500;
+}
+
+.session-id {
+    color: rgba(114, 186, 255, 0.6);
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    padding: 2px 6px;
+    background: rgba(114, 186, 255, 0.1);
+    border-radius: 3px;
+    cursor: help;
+}
+
+.session-id:hover {
+    background: rgba(114, 186, 255, 0.15);
+    color: rgba(114, 186, 255, 0.8);
 }
 
 .table-wrapper {

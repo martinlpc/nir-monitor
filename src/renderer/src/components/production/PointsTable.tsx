@@ -4,12 +4,28 @@ import './PointsTable.css'
 
 interface PointsTableProps {
   points: GeoTimestamp[]
+  sessionId?: string | null
+  sessionLabel?: string
 }
 
-export default function PointsTable({ points }: PointsTableProps): React.JSX.Element {
+export default function PointsTable({ points, sessionId, sessionLabel }: PointsTableProps): React.JSX.Element {
   return (
     <div className="points-table-container">
-      <h3>Puntos capturados ({points.length})</h3>
+      <div className="points-table-header">
+        <div className="points-table-title">
+          <h3>Puntos capturados ({points.length})</h3>
+          {sessionLabel && (
+            <div className="session-info">
+              <span className="session-name">{sessionLabel}</span>
+              {sessionId && (
+                <span className="session-id" title={sessionId}>
+                  {sessionId.substring(0, 8)}...
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
       <div className="table-wrapper">
         <table className="points-table">
           <thead>

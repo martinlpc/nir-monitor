@@ -121,9 +121,17 @@ export class SerialPortScanner implements ISerialPortScanner {
       return false
     } finally {
       // Asegurar que el puerto se cierra aunque falle la conexión
-      // Esperar un poco para permitir que las escrituras finales se completen
+      // Esperar un bit para permitir que las escrituras finales se completen
       await new Promise((r) => setTimeout(r, 200))
-      await driver.disconnect().catch(() => {})
+      // Silenciar errores EPIPE durante desconexión (puerto ya cerrado)
+      try {
+        await driver.disconnect()
+      } catch (err) {
+        // Ignorar errores de disconnection (EPIPE, EBADF, etc.)
+        if (!(err instanceof Error && /EPIPE|EBADF|closed/.test(err.message))) {
+          console.log(`[SerialPortScanner] Cleanup error on ${port}:`, err)
+        }
+      }
     }
   }
 

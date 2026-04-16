@@ -10,6 +10,7 @@ interface SyncMapViewProps {
   isSessionActive?: boolean
   onFollowPositionChange?: (value: boolean) => void
   maximized?: boolean
+  focusSessionBounds?: { north: number; south: number; east: number; west: number } | null
 }
 
 export default function SyncMapView({
@@ -18,7 +19,8 @@ export default function SyncMapView({
   livePosition = null,
   isSessionActive = false,
   onFollowPositionChange,
-  maximized = false
+  maximized = false,
+  focusSessionBounds = null
 }: SyncMapViewProps): null {
   const map = useMap()
   const wasSessionActive = useRef(isSessionActive)
@@ -41,6 +43,17 @@ export default function SyncMapView({
     }
     wasSessionActive.current = isSessionActive
   }, [isSessionActive, geoData.bounds, map, onFollowPositionChange])
+
+  useEffect(() => {
+    // Centrar en una sesión cargada desde el drawer
+    if (focusSessionBounds) {
+      const bounds = new LatLngBounds([
+        [focusSessionBounds.south, focusSessionBounds.west],
+        [focusSessionBounds.north, focusSessionBounds.east]
+      ])
+      map.fitBounds(bounds, { padding: [32, 32] })
+    }
+  }, [focusSessionBounds, map])
 
   useEffect(() => {
     // Regla simple: si checkbox está marcado, centra en GPS actual

@@ -1,7 +1,19 @@
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js'
 import * as fs from 'fs'
 import * as path from 'path'
-import { app } from 'electron'
+let app: any
+try {
+  app = require('electron').app
+} catch (e) {
+  app = {
+    getPath: (type: string) => {
+      if (type === 'userData') {
+        return path.join(process.cwd(), '.data')
+      }
+      return process.cwd()
+    }
+  }
+}
 import ExcelJS from 'exceljs'
 import archiver from 'archiver'
 import { PassThrough } from 'stream'
@@ -25,20 +37,14 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private readonly FLUSH_EVERY_N_POINTS = 10
   private readonly FLUSH_INTERVAL_MS = 30_000
 
-  constructor() {
-    try {
+  constructor(customDbPath?: string) {
+    if (customDbPath) {
+      this.dbPath = customDbPath
+    } else {
       const dataPath = app.getPath('userData')
       this.dbPath = path.join(dataPath, 'sessions.db')
-    } catch (err) {
-      // Fallback cuando no hay Electron (p.ej. en scripts standalone)
-      // En Windows, usa AppData\Roaming; en Unix, usa .config
-      const os = require('os')
-      const dataPath =
-        process.platform === 'win32'
-          ? path.join(process.env.APPDATA || os.homedir(), 'nir-monitor')
-          : path.join(os.homedir(), '.config', 'nir-monitor')
-      this.dbPath = path.join(dataPath, 'sessions.db')
     }
+  }
   }
 
   /**
@@ -571,16 +577,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
   async exportAsCSV(sessionId: string): Promise<string> {
     const points = await this.getSessionPoints(sessionId)
 
-    const headers = [
-      'Timestamp',
-      'Sequence#',
-      'Latitude',
-      'Longitude',
-      'Altitude (m)',
-      'RSS (medido)',
-      'RSS (corregido)',
-      'Unit'
-    ]
+    const headers = ['Timestamp', 'Sequence#', 'Latitude', 'Longitude', 'Altitude (m)', 'RSS (medido)', 'RSS (corregido)', 'Unit']
 
     const rows = points.map((point) => [
       new Date(point.timestamp).toISOString(),

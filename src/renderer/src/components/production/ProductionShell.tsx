@@ -1,11 +1,14 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useEffect } from 'react'
 import { useDevices, useSession, useGeoData } from '../../hooks'
+import { useMultipleSessions } from '../../hooks/useMultipleSessions'
+import { usePersistentSessions } from '../../hooks/usePersistentSessions'
 import { GpsPositionProvider } from '../../hooks/useGpsPosition'
 import MapView from '../map/MapView'
 import PointsTable from './PointsTable'
 import DevicesPanel from './DevicesPanel'
 import SessionsPanel from './SessionsPanel'
 import SettingsPanel from './SettingsPanel'
+import AllSessionsDrawer from './AllSessionsDrawer'
 import './production.css'
 
 export default function ProductionShell(): React.JSX.Element {
@@ -13,9 +16,13 @@ export default function ProductionShell(): React.JSX.Element {
   const devices = useDevices()
   const session = useSession()
   const geoData = useGeoData(session.points, session.pointCount)
+  const multipleSessions = useMultipleSessions()
+  const persistedSessions = usePersistentSessions()
   const [activeTab, setActiveTab] = useState<'devices' | 'sessions' | 'settings'>('devices')
   const [followPosition, setFollowPosition] = useState(true)
   const [mapMaximized, setMapMaximized] = useState(false)
+  const [allSessionsDrawerOpen, setAllSessionsDrawerOpen] = useState(false)
+  const [focusSessionBounds, setFocusSessionBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null)
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -32,6 +39,58 @@ export default function ProductionShell(): React.JSX.Element {
       })
     }
   }, [])
+
+  // Manejar toggle de sesión en drawer
+  const handleToggleSessionInDrawer = useCallback(
+    (sessionId: string, checked: boolean) => {
+      if (checked) {
+        // Cargar sesión y agregarla a múltiples
+        // Esto se hace desde SessionsPanel pasando callback
+      } else {
+        multipleSessions.removeSession(sessionId)
+      }
+    },
+    [multipleSessions]
+  )
+
+  // Calcular bounds cuando se cargan nuevas sesiones para centrar el mapa
+  useEffect(() => {
+    if (multipleSessions.loadedSessions.length === 0) {
+      setFocusSessionBounds(null)
+      return
+    }
+
+    // Tomar la primera sesión cargada para centrar
+    const firstSession = multipleSessions.loadedSessions[0]
+    if (!firstSession.points || firstSession.points.length === 0) {
+      return
+    }
+
+    const validPoints = firstSession.points.filter((p) => p.position !== null && p.position !== undefined)
+    if (validPoints.length === 0) {
+      // Si no hay puntos válidos, al menos ir al primer punto
+      const firstPoint = firstSession.points[0]
+      if (firstPoint?.position) {
+        setFocusSessionBounds({
+          north: firstPoint.position.lat,
+          south: firstPoint.position.lat,
+          east: firstPoint.position.lon,
+          west: firstPoint.position.lon
+        })
+      }
+      return
+    }
+
+    const lats = validPoints.map((p) => p.position.lat)
+    const lons = validPoints.map((p) => p.position.lon)
+
+    setFocusSessionBounds({
+      north: Math.max(...lats),
+      south: Math.min(...lats),
+      east: Math.max(...lons),
+      west: Math.min(...lons)
+    })
+  }, [multipleSessions.loadedSessions])
 
   return (
     <GpsPositionProvider>
@@ -99,7 +158,13 @@ export default function ProductionShell(): React.JSX.Element {
               aria-labelledby="tab-sessions"
               style={{ display: activeTab === 'sessions' ? 'block' : 'none' }}
             >
-              <SessionsPanel session={session} />
+              <SessionsPanel 
+                session={session}
+                onOpenAllSessions={() => setAllSessionsDrawerOpen(true)}
+                onAddSessionToMap={multipleSessions.addSession}
+                loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
+                onSessionLoaded={setFocusSessionBounds}
+              />
             </div>
             <div
               role="tabpanel"
@@ -122,12 +187,82 @@ export default function ProductionShell(): React.JSX.Element {
               onFollowPositionChange={setFollowPosition}
               maximized={mapMaximized}
               onToggleMaximize={() => setMapMaximized((prev) => !prev)}
+              loadedSessions={multipleSessions.loadedSessions}
+              focusSessionBounds={focusSessionBounds}
             />
           </div>
           {/* Tabla de puntos */}
-          {!mapMaximized && <PointsTable points={session.points} />}
+          {!mapMaximized && (
+            <PointsTable 
+              points={session.points}
+              sessionId={session.sessionId}
+              sessionLabel={session.label}
+            />
+          )}
         </div>
       </div>
+
+      {/* All Sessions Drawer */}
+      <AllSessionsDrawer
+        isOpen={allSessionsDrawerOpen}
+        onClose={() => setAllSessionsDrawerOpen(false)}
+        sessions={persistedSessions.sessions}
+        isLoading={persistedSessions.isLoading}
+        loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
+        onToggleSession={(sessionId, checked) => {
+          if (checked) {
+            // Cargar sesión completa
+            persistedSessions
+              .getSession(sessionId)
+              .then((fullSession) => {
+                const sessionInfo = persistedSessions.sessions.find((s) => s.id === sessionId)
+                multipleSessions.addSession(
+                  sessionId,
+                  fullSession.metadata.label || `Session ${fullSession.metadata.startedAt}`,
+                  fullSession.points,
+                  sessionInfo
+                )
+              })
+              .catch((err) => {
+                console.error('[ProductionShell] Error loading session for drawer:', err)
+              })
+          } else {
+            multipleSessions.removeSession(sessionId)
+          }
+        }}
+        onLoadSession={(sessionId) => {
+          // Cargar como sesión principal
+          persistedSessions
+            .getSession(sessionId)
+            .then((result) => {
+              session.setLoadedSession({
+                sessionId: result.metadata.id,
+                label: result.metadata.label || `Session ${result.metadata.startedAt}`,
+                points: result.points,
+                summary: result.metadata
+              })
+              setAllSessionsDrawerOpen(false)
+            })
+            .catch((err) => {
+              console.error('[ProductionShell] Error loading session as primary:', err)
+            })
+        }}
+        onExport={(sessionId, format) => {
+          const found = persistedSessions.sessions.find((s) => s.id === sessionId)
+          if (!found) return
+
+          persistedSessions
+            .exportSession(sessionId, format, found.label)
+            .then((result) => {
+              if (!result.canceled) {
+                console.log(`[ProductionShell] Exported to: ${result.filePath}`)
+              }
+            })
+            .catch((err) => {
+              console.error(`[ProductionShell] Error exporting to ${format}:`, err)
+            })
+        }}
+      />
     </main>
     </GpsPositionProvider>
   )

@@ -1,0 +1,323 @@
+.drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 9998;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.all-sessions-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100vh;
+    width: 420px;
+    background: rgba(15, 26, 46, 0.95);
+    border-left: 1px solid rgba(114, 186, 255, 0.2);
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
+}
+
+.all-sessions-drawer.open {
+    transform: translateX(0);
+}
+
+/* Header */
+.drawer-header {
+    padding: 16px;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.drawer-header h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--nir-text);
+}
+
+.drawer-close-btn {
+    background: none;
+    border: none;
+    color: var(--nir-text);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background-color 0.15s ease;
+}
+
+.drawer-close-btn:hover {
+    background-color: rgba(114, 186, 255, 0.1);
+}
+
+/* Controles */
+.drawer-controls {
+    padding: 12px;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.1);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.drawer-search {
+    flex: 1;
+    background: rgba(23, 34, 75, 0.5);
+    border: 1px solid rgba(114, 186, 255, 0.2);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: var(--nir-text);
+    font-size: 12px;
+    font-family: inherit;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.drawer-search::placeholder {
+    color: rgba(180, 203, 232, 0.5);
+}
+
+.drawer-search:focus {
+    outline: none;
+    border-color: rgba(114, 186, 255, 0.5);
+    background: rgba(23, 34, 75, 0.7);
+}
+
+.drawer-sort {
+    background: rgba(23, 34, 75, 0.5);
+    border: 1px solid rgba(114, 186, 255, 0.2);
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: var(--nir-text);
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.drawer-sort:hover {
+    border-color: rgba(114, 186, 255, 0.4);
+}
+
+.drawer-sort:focus {
+    outline: none;
+    border-color: rgba(114, 186, 255, 0.6);
+    background: rgba(23, 34, 75, 0.7);
+}
+
+/* Contenido principal */
+.drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.drawer-loading,
+.drawer-empty {
+    padding: 24px 16px;
+    text-align: center;
+    color: rgba(180, 203, 232, 0.6);
+    font-size: 12px;
+}
+
+/* Lista de sesiones */
+.sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.session-item {
+    padding: 12px;
+    border-bottom: 1px solid rgba(114, 186, 255, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background-color 0.15s ease;
+}
+
+.session-item:hover {
+    background-color: rgba(114, 186, 255, 0.05);
+}
+
+/* Checkbox */
+.session-checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.session-checkbox {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.checkbox-custom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(114, 186, 255, 0.3);
+    border-radius: 3px;
+    background: rgba(23, 34, 75, 0.5);
+    transition: all 0.15s ease;
+}
+
+.session-checkbox:checked+.checkbox-custom {
+    background: rgba(114, 186, 255, 0.2);
+    border-color: #72baff;
+}
+
+.session-checkbox:checked+.checkbox-custom::after {
+    content: '✓';
+    color: #72baff;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.session-checkbox:focus+.checkbox-custom {
+    border-color: rgba(114, 186, 255, 0.6);
+    box-shadow: 0 0 0 2px rgba(114, 186, 255, 0.1);
+}
+
+/* Info sesión */
+.session-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.session-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--nir-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 4px;
+}
+
+.session-meta {
+    display: flex;
+    gap: 8px;
+    font-size: 10px;
+    color: rgba(180, 203, 232, 0.6);
+}
+
+.meta-date,
+.meta-count,
+.meta-uncertainty {
+    white-space: nowrap;
+}
+
+/* Acciones de sesión */
+.session-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.action-btn {
+    background: rgba(114, 186, 255, 0.15);
+    border: 1px solid rgba(114, 186, 255, 0.3);
+    color: #72baff;
+    width: 28px;
+    height: 28px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.action-btn:hover {
+    background: rgba(114, 186, 255, 0.25);
+    border-color: rgba(114, 186, 255, 0.5);
+}
+
+.action-btn:active {
+    background: rgba(114, 186, 255, 0.35);
+}
+
+.action-btn-load {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+}
+
+.action-btn-export {
+    font-size: 13px;
+}
+
+/* Footer */
+.drawer-footer {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(114, 186, 255, 0.1);
+    background: rgba(23, 34, 75, 0.3);
+    font-size: 11px;
+    color: rgba(180, 203, 232, 0.6);
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.session-counter {
+    display: block;
+}
+
+/* Scroll personalizado */
+.drawer-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.drawer-content::-webkit-scrollbar-track {
+    background: rgba(23, 34, 75, 0.2);
+}
+
+.drawer-content::-webkit-scrollbar-thumb {
+    background: rgba(114, 186, 255, 0.3);
+    border-radius: 3px;
+}
+
+.drawer-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(114, 186, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .all-sessions-drawer {
+        width: 100%;
+    }
+
+    .drawer-controls {
+        flex-direction: column;
+    }
+}

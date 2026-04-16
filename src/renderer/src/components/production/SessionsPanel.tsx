@@ -5,9 +5,17 @@ import SessionItem from './SessionItem'
 import './SessionsPanel.css'
 
 export default function SessionsPanel({
-  session
+  session,
+  onOpenAllSessions,
+  onAddSessionToMap,
+  loadedSessionIds,
+  onSessionLoaded
 }: {
   session: ReturnType<typeof useSession>
+  onOpenAllSessions?: () => void
+  onAddSessionToMap?: (sessionId: string, label: string, points: any[], sessionInfo?: any) => void
+  loadedSessionIds?: Set<string>
+  onSessionLoaded?: (bounds: { north: number; south: number; east: number; west: number } | null) => void
 }): React.JSX.Element {
   const { sessions, isLoading, error, deleteSession, exportSession, getSession } =
     usePersistentSessions()
@@ -30,6 +38,32 @@ export default function SessionsPanel({
         if (result && result.points) {
           console.log(`[SessionsPanel] Loaded ${result.points.length} points from session`)
           
+          // Calcular bounds de la sesión para centrado automático
+          const validPoints = result.points.filter((p) => p.position !== null && p.position !== undefined)
+          let bounds = null
+          
+          if (validPoints.length > 0) {
+            const lats = validPoints.map((p) => p.position.lat)
+            const lons = validPoints.map((p) => p.position.lon)
+            bounds = {
+              north: Math.max(...lats),
+              south: Math.min(...lats),
+              east: Math.max(...lons),
+              west: Math.min(...lons)
+            }
+          } else if (result.points.length > 0) {
+            // Si no hay puntos válidos, al menos tomar el primer punto
+            const firstPoint = result.points[0]
+            if (firstPoint?.position) {
+              bounds = {
+                north: firstPoint.position.lat,
+                south: firstPoint.position.lat,
+                east: firstPoint.position.lon,
+                west: firstPoint.position.lon
+              }
+            }
+          }
+          
           // Actualizar el state de sesión con los puntos cargados
           session.setLoadedSession({
             sessionId: result.metadata.id,
@@ -37,6 +71,9 @@ export default function SessionsPanel({
             points: result.points,
             summary: result.metadata
           })
+          
+          // Notificar al contenedor para centrado del mapa
+          onSessionLoaded?.(bounds)
           
           setLoadStatus({
             message: `✓ Sesión cargada: ${result.points.length} puntos`,
@@ -87,8 +124,20 @@ export default function SessionsPanel({
   return (
     <div className="sessions-panel">
       <div className="sessions-header">
-        <h2>Historial de Sesiones</h2>
-        {sessions.length > 0 && <span className="sessions-badge">{sessions.length}</span>}
+        <div>
+          <h2>Historial de Sesiones</h2>
+          {sessions.length > 0 && <span className="sessions-badge">{sessions.length}</span>}
+        </div>
+        {onOpenAllSessions && sessions.length > 0 && (
+          <button
+            className="sessions-view-all-btn"
+            onClick={onOpenAllSessions}
+            title="Ver todas las sesiones guardadas"
+            aria-label="Ver todas las sesiones"
+          >
+            📋 Ver todas
+          </button>
+        )}
       </div>
 
       {error && <div className="error-message">Error: {error}</div>}
@@ -116,7 +165,7 @@ export default function SessionsPanel({
         </div>
       ) : (
         <div className="sessions-list">
-          {sessions.map((sess) => (
+          {sessions.slice(0, 5).map((sess) => (
             <SessionItem
               key={sess.id}
               session={sess}
