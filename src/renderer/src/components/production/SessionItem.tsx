@@ -25,15 +25,6 @@ export default function SessionItem({ session, onLoad, onDelete, onExport }: Ses
     minute: '2-digit'
   })
 
-  const handleDeleteClick = () => {
-    if (confirmDelete) {
-      onDelete(session.id)
-      setConfirmDelete(false)
-    } else {
-      setConfirmDelete(true)
-    }
-  }
-
   return (
     <div
       className="session-item"
@@ -48,14 +39,35 @@ export default function SessionItem({ session, onLoad, onDelete, onExport }: Ses
         }
       }}
     >
-      <button
-        className={`btn-delete-session ${confirmDelete ? 'confirm' : ''}`}
-        onClick={handleDeleteClick}
-        title={confirmDelete ? 'Confirmar eliminación' : 'Eliminar sesión'}
-        aria-label={confirmDelete ? 'Confirmar eliminación' : 'Eliminar sesión'}
-      >
-        🗑
-      </button>
+      {confirmDelete ? (
+        <div className="delete-confirm-group">
+          <button
+            className="btn-delete-confirm btn-delete-accept"
+            onClick={() => { onDelete(session.id); setConfirmDelete(false) }}
+            title="Confirmar eliminación"
+            aria-label="Confirmar eliminación"
+          >
+            ✓
+          </button>
+          <button
+            className="btn-delete-confirm btn-delete-cancel"
+            onClick={() => setConfirmDelete(false)}
+            title="Cancelar"
+            aria-label="Cancelar eliminación"
+          >
+            ✕
+          </button>
+        </div>
+      ) : (
+        <button
+          className="btn-delete-session"
+          onClick={() => setConfirmDelete(true)}
+          title="Eliminar sesión"
+          aria-label="Eliminar sesión"
+        >
+          🗑
+        </button>
+      )}
 
       <div className="session-info">
         <div className="session-header">

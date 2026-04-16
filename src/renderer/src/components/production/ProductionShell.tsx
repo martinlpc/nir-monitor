@@ -259,6 +259,14 @@ export default function ProductionShell(): React.JSX.Element {
               console.error(`[ProductionShell] Error exporting to ${format}:`, err)
             })
         }}
+        onDelete={(sessionId) => {
+          multipleSessions.removeSession(sessionId)
+          persistedSessions
+            .deleteSession(sessionId)
+            .catch((err) => {
+              console.error('[ProductionShell] Error deleting session:', err)
+            })
+        }}
       />
     </main>
     </GpsPositionProvider>

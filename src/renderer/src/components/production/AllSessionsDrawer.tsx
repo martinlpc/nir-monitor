@@ -12,6 +12,7 @@ interface AllSessionsDrawerProps {
   onToggleSession: (sessionId: string, checked: boolean) => void
   onLoadSession?: (sessionId: string) => void
   onExport?: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => void
+  onDelete?: (sessionId: string) => void
 }
 
 export default function AllSessionsDrawer({
@@ -22,10 +23,12 @@ export default function AllSessionsDrawer({
   loadedSessionIds,
   onToggleSession,
   onLoadSession,
-  onExport
+  onExport,
+  onDelete
 }: AllSessionsDrawerProps): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'name'>('date-desc')
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // Filtrar y ordenar sesiones
   const filteredSessions = useMemo(() => {
@@ -119,21 +122,42 @@ export default function AllSessionsDrawer({
                     </label>
 
                     <div className="session-info">
+                      <div className="session-date">{formatTimestamp(session.startedAt)}</div>
                       <div className="session-label">{session.label || 'Sin nombre'}</div>
-                      <div className="session-meta">
-                        <span className="meta-date">{formatTimestamp(session.startedAt)}</span>
-                        <span className="meta-count">
-                          {session.sampleCount} punto{session.sampleCount !== 1 ? 's' : ''}
-                        </span>
-                        {session.uncertainty !== null && (
-                          <span className="meta-uncertainty">
-                            ± {session.uncertainty.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
                     </div>
 
                     <div className="session-actions">
+                      {onDelete && (
+                        confirmDeleteId === session.id ? (
+                          <div className="drawer-delete-confirm-group">
+                            <button
+                              className="btn-delete-confirm btn-delete-accept"
+                              onClick={() => { onDelete(session.id); setConfirmDeleteId(null) }}
+                              title="Confirmar eliminación"
+                              aria-label="Confirmar eliminación"
+                            >
+                              ✓
+                            </button>
+                            <button
+                              className="btn-delete-confirm btn-delete-cancel"
+                              onClick={() => setConfirmDeleteId(null)}
+                              title="Cancelar"
+                              aria-label="Cancelar eliminación"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            className="action-btn action-btn-delete"
+                            onClick={() => setConfirmDeleteId(session.id)}
+                            title="Eliminar sesión"
+                            aria-label={`Eliminar sesión ${session.label}`}
+                          >
+                            🗑
+                          </button>
+                        )
+                      )}
                       {onLoadSession && (
                         <button
                           className="action-btn action-btn-load"

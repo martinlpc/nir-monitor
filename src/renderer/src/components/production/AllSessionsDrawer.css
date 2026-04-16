@@ -24,7 +24,7 @@
     top: 0;
     right: 0;
     height: 100vh;
-    width: 420px;
+    width: 500px;
     background: rgba(15, 26, 46, 0.95);
     border-left: 1px solid rgba(114, 186, 255, 0.2);
     box-shadow: -4px 0 16px rgba(0, 0, 0, 0.3);
@@ -85,7 +85,7 @@
 }
 
 .drawer-search {
-    flex: 1;
+    flex: 2;
     background: rgba(23, 34, 75, 0.5);
     border: 1px solid rgba(114, 186, 255, 0.2);
     border-radius: 4px;
@@ -107,6 +107,7 @@
 }
 
 .drawer-sort {
+    flex: 1;
     background: rgba(23, 34, 75, 0.5);
     border: 1px solid rgba(114, 186, 255, 0.2);
     border-radius: 4px;
@@ -151,12 +152,13 @@
 }
 
 .session-item {
-    padding: 12px;
+    padding: 10px 12px;
     border-bottom: 1px solid rgba(114, 186, 255, 0.05);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     transition: background-color 0.15s ease;
+    overflow: hidden;
 }
 
 .session-item:hover {
@@ -211,35 +213,32 @@
 .session-info {
     flex: 1;
     min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.session-date {
+    font-size: 10px;
+    color: rgba(180, 203, 232, 0.6);
+    white-space: nowrap;
+    text-align: left;
 }
 
 .session-label {
     font-size: 12px;
-    font-weight: 600;
     color: var(--nir-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    margin-bottom: 4px;
-}
-
-.session-meta {
-    display: flex;
-    gap: 8px;
-    font-size: 10px;
-    color: rgba(180, 203, 232, 0.6);
-}
-
-.meta-date,
-.meta-count,
-.meta-uncertainty {
-    white-space: nowrap;
+    text-align: left;
 }
 
 /* Acciones de sesión */
 .session-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
     flex-shrink: 0;
 }
 
@@ -247,8 +246,8 @@
     background: rgba(114, 186, 255, 0.15);
     border: 1px solid rgba(114, 186, 255, 0.3);
     color: #72baff;
-    width: 28px;
-    height: 28px;
+    width: 26px;
+    height: 26px;
     border-radius: 3px;
     cursor: pointer;
     display: flex;
@@ -269,13 +268,63 @@
 }
 
 .action-btn-load {
-    width: 32px;
-    height: 32px;
     font-size: 12px;
 }
 
 .action-btn-export {
-    font-size: 13px;
+    font-size: 12px;
+}
+
+.action-btn-delete {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #ef4444;
+}
+
+.action-btn-delete:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.drawer-delete-confirm-group {
+    display: flex;
+    gap: 4px;
+}
+
+.drawer-delete-confirm-group .btn-delete-confirm {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 3px;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 150ms ease;
+}
+
+.drawer-delete-confirm-group .btn-delete-accept {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.drawer-delete-confirm-group .btn-delete-accept:hover {
+    background: rgba(16, 185, 129, 0.35);
+}
+
+.drawer-delete-confirm-group .btn-delete-cancel {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.drawer-delete-confirm-group .btn-delete-cancel:hover {
+    background: rgba(239, 68, 68, 0.35);
 }
 
 /* Footer */
