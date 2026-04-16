@@ -208,13 +208,12 @@ export class FileSessionRepository implements ISessionRepository {
       },
       properties: {
         id: point.id,
+        sequenceNumber: point.sequenceNumber,
         sessionId: point.sessionId,
         timestamp: point.timestamp,
-        hdop: point.position.hdop,
         rss: point.emf.rss,
-        rssWithUncertainty: uncertainty != null ? point.emf.rss + uncertainty : null,
-        unit: point.emf.unit,
-        interpolated: point.interpolated
+        rssWithUncertainty: point.rssWithUncertainty,
+        unit: point.emf.unit
       }
     }))
 
@@ -271,11 +270,12 @@ export class FileSessionRepository implements ISessionRepository {
     const headers = [
       'Timestamp',
       'Session ID',
+      'Sequence Number',
       'Latitude',
       'Longitude',
       'Altitude',
-      'HDOP',
-      'RSS (dBm)',
+      'RSS (medido)',
+      'RSS (corregido)',
       'Unit'
     ]
 
@@ -283,11 +283,12 @@ export class FileSessionRepository implements ISessionRepository {
     const rows = points.map((point) => [
       new Date(point.timestamp).toISOString(),
       point.sessionId,
+      point.sequenceNumber,
       point.position.lat.toFixed(8),
       point.position.lon.toFixed(8),
       point.position.alt?.toFixed(2) || 'N/A',
-      point.position.hdop?.toFixed(2) || 'N/A',
-      point.emf.rss,
+      point.emf.rss.toFixed(2),
+      point.rssWithUncertainty.toFixed(2),
       point.emf.unit
     ])
 
@@ -309,12 +310,12 @@ export class FileSessionRepository implements ISessionRepository {
       },
       properties: {
         id: point.id,
+        sequenceNumber: point.sequenceNumber,
         sessionId: point.sessionId,
         timestamp: point.timestamp,
-        hdop: point.position.hdop,
         rss: point.emf.rss,
-        unit: point.emf.unit,
-        interpolated: point.interpolated
+        rssWithUncertainty: point.rssWithUncertainty,
+        unit: point.emf.unit
       }
     }))
 
@@ -332,31 +333,31 @@ export class FileSessionRepository implements ISessionRepository {
       geometry: { coordinates: [number, number, number] }
       properties: {
         id: string
+        sequenceNumber: number
         sessionId: string
         timestamp: number
-        hdop?: number
         rss: number
+        rssWithUncertainty: number
         unit: string
-        interpolated: boolean
       }
     }[]
   }): GeoTimestamp[] {
     return geojson.features.map((feature) => ({
       id: feature.properties.id,
       sessionId: feature.properties.sessionId,
+      sequenceNumber: feature.properties.sequenceNumber,
       timestamp: feature.properties.timestamp,
       position: {
         lat: feature.geometry.coordinates[1],
         lon: feature.geometry.coordinates[0],
-        alt: feature.geometry.coordinates[2],
-        hdop: feature.properties.hdop ?? 0
+        alt: feature.geometry.coordinates[2]
       },
       emf: {
         deviceId: 'nbm550',
         rss: feature.properties.rss,
         unit: feature.properties.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
       },
-      interpolated: feature.properties.interpolated
+      rssWithUncertainty: feature.properties.rssWithUncertainty
     }))
   }
 }

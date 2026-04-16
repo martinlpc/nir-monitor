@@ -82,14 +82,14 @@ export class SQLiteSessionRepository implements ISessionRepository {
         CREATE TABLE IF NOT EXISTS geo_points (
           id TEXT PRIMARY KEY,
           sessionId TEXT NOT NULL,
+          sequenceNumber INTEGER NOT NULL,
           timestamp TEXT NOT NULL,
           lat REAL NOT NULL,
           lon REAL NOT NULL,
           alt REAL,
-          hdop REAL,
-          rss INTEGER NOT NULL,
-          unit TEXT NOT NULL,
-          interpolated INTEGER NOT NULL DEFAULT 0
+          rss REAL NOT NULL,
+          rssWithUncertainty REAL NOT NULL,
+          unit TEXT NOT NULL
         )
       `)
 
@@ -166,29 +166,29 @@ export class SQLiteSessionRepository implements ISessionRepository {
       for (const point of points) {
         db.run(
           `INSERT INTO geo_points 
-           (id, sessionId, timestamp, lat, lon, alt, hdop, rss, unit, interpolated)
+           (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rss, rssWithUncertainty, unit)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             point.id,
             point.sessionId,
+            point.sequenceNumber,
             this.unixToISO(point.timestamp),
             point.position.lat,
             point.position.lon,
             point.position.alt,
-            point.position.hdop,
             point.emf.rss,
-            point.emf.unit,
-            point.interpolated ? 1 : 0
+            point.rssWithUncertainty,
+            point.emf.unit
           ]
         )
       }
 
-      // Calcular y guardar estadísticas
+      // Calcular y guardar estadísticas (usando rssWithUncertainty)
       const statsResult = db.exec(
         `SELECT
-          AVG(rss) as avgRss,
-          MAX(rss) as maxRss,
-          MIN(rss) as minRss,
+          AVG(rssWithUncertainty) as avgRss,
+          MAX(rssWithUncertainty) as maxRss,
+          MIN(rssWithUncertainty) as minRss,
           COUNT(*) as pointCount
         FROM geo_points
         WHERE sessionId = ?`,
@@ -247,19 +247,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       db.run(
         `INSERT INTO geo_points
-         (id, sessionId, timestamp, lat, lon, alt, hdop, rss, unit, interpolated)
+         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rss, rssWithUncertainty, unit)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           point.id,
           sessionId,
+          point.sequenceNumber,
           this.unixToISO(point.timestamp),
           point.position.lat,
           point.position.lon,
           point.position.alt,
-          point.position.hdop,
           point.emf.rss,
-          point.emf.unit,
-          point.interpolated ? 1 : 0
+          point.rssWithUncertainty,
+          point.emf.unit
         ]
       )
 
@@ -288,12 +288,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
         sessionId
       ])
 
-      // Calcular y guardar estadísticas
+      // Calcular y guardar estadísticas (usando rssWithUncertainty)
       const statsResult = db.exec(
         `SELECT
-          AVG(rss) as avgRss,
-          MAX(rss) as maxRss,
-          MIN(rss) as minRss,
+          AVG(rssWithUncertainty) as avgRss,
+          MAX(rssWithUncertainty) as maxRss,
+          MIN(rssWithUncertainty) as minRss,
           COUNT(*) as pointCount
         FROM geo_points
         WHERE sessionId = ?`,

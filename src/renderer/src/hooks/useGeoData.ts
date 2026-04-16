@@ -48,8 +48,7 @@ export function useGeoData(geoPoints: GeoTimestamp[], pointCount?: number) {
         : {
             lat: (bounds.north + bounds.south) / 2,
             lon: (bounds.east + bounds.west) / 2,
-            alt: validPoints[0].position.alt || 0,
-            hdop: validPoints[validPoints.length - 1].position.hdop
+            alt: validPoints[0].position.alt || 0
           }
 
     const trackPoints: GeoPosition[] = validPoints.map((p) => p.position)

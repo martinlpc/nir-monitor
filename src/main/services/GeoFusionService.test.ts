@@ -42,7 +42,7 @@ describe('GeoFusionService', () => {
       intervalMs: 5000
     })
 
-    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25, hdop: 0.9 })
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25 })
     service.setNBM(nbm as never)
     service.setGPS(gps as never)
     service.start('session-1')
@@ -56,7 +56,8 @@ describe('GeoFusionService', () => {
     expect(point.sessionId).toBe('session-1')
     expect(point.position.lat).toBeCloseTo(-34.6037)
     expect(point.emf.rss).toBe(8.2)
-    expect(point.interpolated).toBe(false)
+    expect(point.sequenceNumber).toBe(1)
+    expect(point.rssWithUncertainty).toBe(8.2) // sin factor de corrección por defecto
   })
 
   it('captures repeatedly in time mode when the GPS fix is valid', async () => {
@@ -70,7 +71,7 @@ describe('GeoFusionService', () => {
       intervalMs: 1000
     })
 
-    gps.setPosition({ lat: -34.6, lon: -58.38, alt: 20, hdop: 1.2 })
+    gps.setPosition({ lat: -34.6, lon: -58.38, alt: 20 })
     service.setNBM(nbm as never)
     service.setGPS(gps as never)
     service.start('session-2')

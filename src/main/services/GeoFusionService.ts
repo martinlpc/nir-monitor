@@ -30,6 +30,7 @@ export class GeoFusionService extends EventEmitter {
   private timeTimer: NodeJS.Timeout | null = null
   private capturing: boolean = false
   private uncertaintyFactor: number = 1
+  private sequenceNumber: number = 0 // incrementa cada captura en una sesión
 
   constructor(config: GeoFusionConfig = DEFAULT_FUSION_CONFIG) {
     super()
@@ -56,6 +57,7 @@ export class GeoFusionService extends EventEmitter {
     this.sessionId = sessionId
     this.lastSavedPosition = null
     this.capturing = false
+    this.sequenceNumber = 0 // reset para nueva sesión
 
     console.log(`[GeoFusionService] start() called with sessionId: ${sessionId}`)
     console.log(
@@ -189,21 +191,25 @@ export class GeoFusionService extends EventEmitter {
         return
       }
 
+      this.sequenceNumber++
+      const rssWithUncertainty = sample.rss * this.uncertaintyFactor
+
       const geoTimestamp: GeoTimestamp = {
         id: uuidv4(),
         sessionId: this.sessionId,
+        sequenceNumber: this.sequenceNumber,
         timestamp: Date.now(),
         position: { ...position },
         emf: {
           deviceId: 'nbm550',
-          rss: sample.rss * this.uncertaintyFactor,
+          rss: sample.rss,
           unit: sample.unit as EMFSample['unit']
         },
-        interpolated: false
+        rssWithUncertainty
       }
 
       console.log(
-        `[GeoFusionService] capture(): Emitting point with lat=${position.lat}, lon=${position.lon}, rss=${sample.rss} (factor=${this.uncertaintyFactor}, adjusted=${sample.rss * this.uncertaintyFactor})`
+        `[GeoFusionService] capture(): Emitting point [#${this.sequenceNumber}] lat=${position.lat}, lon=${position.lon}, rss=${sample.rss} (factor=${this.uncertaintyFactor}, adjusted=${rssWithUncertainty})`
       )
       this.lastSavedPosition = { ...position }
       this.emit('point', geoTimestamp)

@@ -75,7 +75,7 @@ describe('SessionService', () => {
     const nbm = new FakeNBMDriver()
     const gps = new FakeGPSDriver()
 
-    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 22, hdop: 0.8 })
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 22 })
 
     session.setNBM(nbm as never)
     session.setGPS(gps as never)
