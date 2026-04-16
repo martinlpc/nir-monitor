@@ -31,6 +31,7 @@ export default function DevicesPanel({
   const [loadingDevice, setLoadingDevice] = useState<string | null>(null)
   const [testMode, setTestMode] = useState(false)
   const [showTestMode, setShowTestMode] = useState(false)
+  const [sessionName, setSessionName] = useState('')
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -114,10 +115,13 @@ export default function DevicesPanel({
         sessionLabel = await generateSessionName()
       }
 
+      const finalLabel = sessionName.trim() || sessionLabel
+
       await session.start({
-        label: sessionLabel,
+        label: finalLabel,
         testMode
       })
+      setSessionName('')
     } catch (err) {
       console.error('Error starting session:', err)
     }
@@ -190,6 +194,18 @@ export default function DevicesPanel({
       )}
 
       <div className="panel-footer">
+        {!session.isRunning && (
+          <input
+            type="text"
+            className="session-name-input"
+            placeholder="Nombre de la sesión (opcional)"
+            value={sessionName}
+            onChange={(e) => setSessionName(e.target.value)}
+            maxLength={100}
+            aria-label="Nombre de la sesión"
+          />
+        )}
+
         {showTestMode && (
           <label className="test-mode-checkbox">
             <input

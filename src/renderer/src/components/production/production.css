@@ -285,6 +285,27 @@
     background: rgba(15, 26, 46, 0.8);
 }
 
+.session-name-input {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    border: 1px solid rgba(114, 186, 255, 0.2);
+    background: rgba(23, 34, 75, 0.7);
+    color: var(--nir-text);
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+    font-family: inherit;
+}
+
+.session-name-input::placeholder {
+    color: rgba(114, 186, 255, 0.4);
+}
+
+.session-name-input:focus {
+    border-color: rgba(114, 186, 255, 0.5);
+    box-shadow: 0 0 0 2px rgba(114, 186, 255, 0.1);
+}
+
 .uncertainty-warning {
     font-size: 0.78rem;
     color: var(--nir-accent);
