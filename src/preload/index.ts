@@ -52,8 +52,11 @@ const api = {
   // -- GPS -----------------------------------------------------------------
 
   gps: {
-    onPosition: (cb: (data: { coords: GeoPosition; valid: boolean }) => void) => {
-      const handler = (_: IpcRendererEvent, data: { coords: GeoPosition; valid: boolean }) => {
+    onPosition: (cb: (data: { coords: GeoPosition; valid: boolean; port?: string }) => void) => {
+      const handler = (
+        _: IpcRendererEvent,
+        data: { coords: GeoPosition; valid: boolean; port?: string }
+      ) => {
         cb(data)
       }
       ipcRenderer.on(IPC_EVENTS.GPS_POSITION, handler)
@@ -175,6 +178,12 @@ const api = {
       const handler = (_: IpcRendererEvent, data: SessionSummary) => cb(data)
       ipcRenderer.on(IPC_EVENTS.SESSION_STOPPED, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STOPPED, handler)
+    },
+
+    onAlert: (cb: (data: { message: string }) => void) => {
+      const handler = (_: IpcRendererEvent, data: { message: string }) => cb(data)
+      ipcRenderer.on(IPC_EVENTS.SESSION_ALERT, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_ALERT, handler)
     }
   },
 

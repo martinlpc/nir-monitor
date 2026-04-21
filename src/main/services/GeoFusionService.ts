@@ -143,7 +143,7 @@ export class GeoFusionService extends EventEmitter {
       console.warn(`[GeoFusionService] tryCapture(): GPS not available`)
       return
     }
-    if (!this._gps.isPositionValid) {
+    if (!this._gps.isPositionValid()) {
       console.warn(`[GeoFusionService] tryCapture(): GPS position not valid`)
       return
     }
@@ -182,7 +182,8 @@ export class GeoFusionService extends EventEmitter {
       try {
         await this.nbm.resetMaxHold()
       } catch (err) {
-        console.warn(`[GeoFusionService] capture(): resetMaxHold failed (non-fatal):`, err)
+        const message = err instanceof Error ? err.message : String(err)
+        console.warn(`[GeoFusionService] capture(): resetMaxHold failed (non-fatal): ${message}`)
         // Continuar aunque falle
       }
 

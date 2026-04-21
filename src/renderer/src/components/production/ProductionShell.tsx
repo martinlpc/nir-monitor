@@ -193,6 +193,11 @@ export default function ProductionShell(): React.JSX.Element {
               points={session.points}
               sessionId={session.sessionId}
               sessionLabel={session.label}
+              correctionFactor={session.summary?.correctionFactor}
+              deviceModel={session.summary?.instrument?.meter?.model || null}
+              deviceSerial={session.summary?.instrument?.meter?.serial || null}
+              probeModel={session.summary?.instrument?.probe?.model || null}
+              probeSerial={session.summary?.instrument?.probe?.serial || null}
             />
           )}
         </div>

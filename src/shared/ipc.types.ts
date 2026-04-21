@@ -1,23 +1,34 @@
 import type { GeoPosition, GeoTimestamp } from './GeoTimestamp'
-import type { DeviceMeta, DeviceStatus } from './device.types'
+import type { DeviceStatus } from './device.types'
+import type { DeviceManagerStateDTO } from './dto'
 
 // Canales Main → Renderer (push)
 export interface IPCEvents {
   'device:status': { deviceId: string; status: DeviceStatus }
-  'gps:position': { coords: GeoPosition; valid: boolean }
+  'gps:position': { coords: GeoPosition; valid: boolean; port?: string }
   'session:sample': GeoTimestamp
-  'session:started': { sessionId: string; startedAt: number }
-  'session:stopped': { sessionId: string; duration: number }
+  'session:started': { sessionId: string; startedAt: number; label: string }
+  'session:stopped': SessionSummary
+  'session:alert': { message: string }
 }
 
 // Canales Renderer → Main (request/response)
 export interface IPCHandlers {
-  'device:list': { request: void; response: DeviceMeta[] }
-  'device:connect': { request: { deviceId: string }; response: void }
-  'device:disconnect': { request: { deviceId: string }; response: void }
-  'session:start': { request: { label?: string }; response: string } // devuelve sessionId
-  'session:stop': { request: void; response: void }
-  'session:list': { request: void; response: SessionSummary[] }
+  'device:list': { request: void; response: DeviceManagerStateDTO }
+  'device:connect': { request: { deviceId: string }; response: DeviceManagerStateDTO }
+  'device:disconnect': { request: { deviceId: string }; response: DeviceManagerStateDTO }
+  'session:start': {
+    request: {
+      label?: string
+      triggerMode?: 'distance' | 'time'
+      minDistanceMeters?: number
+      intervalMs?: number
+      testMode?: boolean
+    }
+    response: string
+  } // devuelve sessionId
+  'session:stop': { request: void; response: SessionSummary }
+  'session:list': { request: void; response: SessionSummary | null }
   'export:geojson': { request: { sessionId: string }; response: string } // filepath
 }
 
@@ -36,11 +47,12 @@ export interface InstrumentInfo {
   }
 }
 
+// Obsoleto: Usar solo correctionFactor en SessionSummary
 export interface UncertaintyRecord {
   name: string // modelo de la sonda (ej: "EF0391")
   fMin: number // frecuencia mínima (MHz)
   fMax: number // frecuencia máxima (MHz)
-  uncertainty: number // incertidumbre (dB o %)
+  uncertainty: number // (obsoleto, usar correctionFactor)
   factor: number // factor multiplicativo para aplicar al RSS
 }
 
@@ -57,5 +69,5 @@ export interface SessionSummary {
   stoppedAt: number | null
   sampleCount: number
   instrument: InstrumentInfo | null
-  uncertainty: number | null // valor de incertidumbre aplicado a las mediciones
+  correctionFactor: number | null // multiplicador aplicado a todas las mediciones (ej: 1.08)
 }

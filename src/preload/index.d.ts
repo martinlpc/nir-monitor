@@ -21,7 +21,9 @@ declare global {
         onScanState: (cb: (state: DeviceManagerStateDTO) => void) => () => void
       }
       gps: {
-        onPosition: (cb: (data: { coords: GeoPosition; valid: boolean }) => void) => () => void
+        onPosition: (
+          cb: (data: { coords: GeoPosition; valid: boolean; port?: string }) => void
+        ) => () => void
         onNmea: (cb: (data: { line: string; port: string }) => void) => () => void
         onFixLost: (cb: () => void) => () => void
       }
@@ -72,6 +74,7 @@ declare global {
           cb: (data: { sessionId: string; startedAt: number; label: string }) => void
         ) => () => void
         onStopped: (cb: (data: SessionSummary) => void) => () => void
+        onAlert: (cb: (data: { message: string }) => void) => () => void
       }
       settings: {
         openUncertaintyFile: () => Promise<{

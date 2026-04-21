@@ -10,6 +10,20 @@ export interface SessionState {
   summary: SessionSummary | null
 }
 
+function deriveCorrectionFactorFromPoints(points: GeoTimestamp[]): number | null {
+  for (const point of points) {
+    const measured = point.emf.rss
+    const corrected = point.rssWithUncertainty
+    if (measured > 0 && Number.isFinite(measured) && Number.isFinite(corrected)) {
+      const factor = corrected / measured
+      if (Number.isFinite(factor) && factor > 0) {
+        return Number(factor.toFixed(6))
+      }
+    }
+  }
+  return null
+}
+
 /**
  * Hook para gestión del ciclo de vida de sesiones
  * Encapsula inicio/parada y recolección de puntos geospaciales
@@ -58,6 +72,16 @@ export function useSession() {
           startedAt: Date.now(),
           label: options?.label || prev.label
         }))
+        // Traer metadata activa para mostrar factor/serial durante la sesión en curso.
+        void window.api.session
+          .list()
+          .then((summary) => {
+            if (!summary) return
+            setSession((prev) =>
+              prev.sessionId === summary.id ? { ...prev, summary } : prev
+            )
+          })
+          .catch(() => {})
         pointsRef.current = []
         setPointCount(0)
 
@@ -125,6 +149,15 @@ export function useSession() {
         startedAt: data.startedAt,
         label: data.label
       }))
+      void window.api.session
+        .list()
+        .then((summary) => {
+          if (!summary) return
+          setSession((prev) =>
+            prev.sessionId === summary.id ? { ...prev, summary } : prev
+          )
+        })
+        .catch(() => {})
       pointsRef.current = []
       setPointCount(0)
       setDuration(0)
@@ -140,6 +173,11 @@ export function useSession() {
       }))
     })
     listeners.push(unsubscribeStopped)
+
+    const unsubscribeAlert = window.api.session.onAlert((data) => {
+      setError(data.message)
+    })
+    listeners.push(unsubscribeAlert)
 
     unsubscribeRef.current = listeners
 
@@ -168,6 +206,8 @@ export function useSession() {
       summary: SessionSummary
     }) => {
       console.log('[useSession] Loading saved session:', loadedData.sessionId)
+      const effectiveCorrectionFactor =
+        loadedData.summary.correctionFactor ?? deriveCorrectionFactorFromPoints(loadedData.points)
       pointsRef.current = loadedData.points
       setPointCount(loadedData.points.length)
       setSession({
@@ -175,7 +215,10 @@ export function useSession() {
         status: 'stopped',
         startedAt: loadedData.summary.startedAt,
         label: loadedData.label,
-        summary: loadedData.summary
+        summary: {
+          ...loadedData.summary,
+          correctionFactor: effectiveCorrectionFactor
+        }
       })
       setDuration((loadedData.summary.stoppedAt || Date.now()) - loadedData.summary.startedAt)
     },

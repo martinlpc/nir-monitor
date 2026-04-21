@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react'
 import './SettingsPanel.css'
 
-interface UncertaintyRecord {
+interface CorrectionFactorRecord {
   name: string
   fMin: number
   fMax: number
-  uncertainty: number
   factor: number
 }
 
-interface UncertaintyData {
+interface CorrectionFactorData {
   filePath: string
   headers: string[]
-  records: UncertaintyRecord[]
+  records: CorrectionFactorRecord[]
 }
 
 interface ProbeInfo {
@@ -21,16 +20,17 @@ interface ProbeInfo {
   calibrationDate: string | null
 }
 
-interface ActiveUncertainty {
+interface ActiveCorrectionFactor {
   factor: number | null
-  matchedRecord: UncertaintyRecord | null
+  matchedRecord: CorrectionFactorRecord | null
   probeModel: string | null
 }
 
 export default function SettingsPanel(): React.JSX.Element {
-  const [uncertainty, setUncertainty] = useState<UncertaintyData | null>(null)
+  // Cambiar nombres a los del preload original
+  const [correctionData, setCorrectionData] = useState<CorrectionFactorData | null>(null)
   const [probeInfo, setProbeInfo] = useState<ProbeInfo | null>(null)
-  const [activeUncertainty, setActiveUncertainty] = useState<ActiveUncertainty | null>(null)
+  const [activeCorrection, setActiveCorrection] = useState<ActiveCorrectionFactor | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -39,21 +39,19 @@ export default function SettingsPanel(): React.JSX.Element {
       if (res.success && res.probeInfo) setProbeInfo(res.probeInfo)
     })
     window.api.settings.getActiveUncertainty().then((res) => {
-      if (res.success) setActiveUncertainty(res)
+      if (res.success) setActiveCorrection(res)
     })
   }
 
-  // Cargar info de sonda, tabla persistida e incertidumbre activa al montar
   useEffect(() => {
     refreshProbeAndMatch()
     window.api.settings.getLoadedUncertainty().then((res) => {
       if (res.success && res.filePath && res.headers && res.records) {
-        setUncertainty({ filePath: res.filePath, headers: res.headers, records: res.records })
+        setCorrectionData({ filePath: res.filePath, headers: res.headers, records: res.records })
       }
     })
   }, [])
 
-  // Refrescar sonda e incertidumbre activa cuando el NBM se conecta
   useEffect(() => {
     const unsub = window.api.devices.onStatus((data) => {
       if (data.deviceId === 'nbm550' && data.status === 'connected') {
@@ -75,14 +73,14 @@ export default function SettingsPanel(): React.JSX.Element {
       if (!result.success) {
         setLoadError(result.error || 'Error desconocido')
       } else {
-        setUncertainty({
+        setCorrectionData({
           filePath: result.filePath!,
           headers: result.headers!,
           records: result.records!
         })
-        // Refrescar incertidumbre activa tras cargar archivo nuevo
+        // Refrescar factor activo tras cargar archivo nuevo
         const active = await window.api.settings.getActiveUncertainty()
-        if (active.success) setActiveUncertainty(active)
+        if (active.success) setActiveCorrection(active)
       }
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Error al abrir archivo')
@@ -101,11 +99,11 @@ export default function SettingsPanel(): React.JSX.Element {
             <span className="settings-option__label">Modelo</span>
             <span className="settings-option__value">{probeInfo.model ?? '—'}</span>
           </div>
-          {activeUncertainty?.matchedRecord && (
+          {activeCorrection?.matchedRecord && (
             <div className="settings-option">
-              <span className="settings-option__label">Factor a aplicar</span>
+              <span className="settings-option__label">Factor de corrección aplicado</span>
               <span className="settings-option__value settings-option__highlight">
-                ×{activeUncertainty.matchedRecord.factor}
+                ×{activeCorrection.matchedRecord.factor}
               </span>
             </div>
           )}
@@ -114,9 +112,9 @@ export default function SettingsPanel(): React.JSX.Element {
 
       {/* === Sección: Tabla de incertidumbres === */}
       <section className="settings-section">
-        <h3 className="settings-section__title">Tabla de incertidumbres</h3>
+        <h3 className="settings-section__title">Tabla de factores de corrección</h3>
         <p className="settings-section__desc">
-          Archivo con factores de incertidumbre por rango de frecuencia.
+          Archivo con factores de corrección por rango de frecuencia.
         </p>
 
         <button
@@ -124,17 +122,17 @@ export default function SettingsPanel(): React.JSX.Element {
           onClick={handleLoadFile}
           disabled={isLoading}
         >
-          {isLoading ? 'Cargando...' : uncertainty ? 'Cambiar archivo' : 'Cargar archivo'}
+          {isLoading ? 'Cargando...' : correctionData ? 'Cambiar archivo' : 'Cargar archivo'}
         </button>
 
         {loadError && (
           <div className="settings-error">{loadError}</div>
         )}
 
-        {uncertainty && (
+        {correctionData && (
           <div className="settings-uncertainty">
-            <span className="settings-filepath" title={uncertainty.filePath}>
-              {uncertainty.filePath.split(/[\\/]/).pop()}
+            <span className="settings-filepath" title={correctionData.filePath}>
+              {correctionData.filePath.split(/[\\/]/).pop()}
             </span>
             <div className="settings-table-wrapper">
               <table className="settings-table">
@@ -143,17 +141,16 @@ export default function SettingsPanel(): React.JSX.Element {
                     <th>Sonda</th>
                     <th>f Min (MHz)</th>
                     <th>f Max (MHz)</th>
-                    <th>Incert.</th>
                     <th>Factor</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {uncertainty.records.map((rec, i) => (
+                  {correctionData.records.map((rec, i) => (
                     <tr
                       key={i}
                       className={
-                        activeUncertainty?.matchedRecord?.name === rec.name &&
-                        activeUncertainty?.matchedRecord?.fMin === rec.fMin
+                        activeCorrection?.matchedRecord?.name === rec.name &&
+                        activeCorrection?.matchedRecord?.fMin === rec.fMin
                           ? 'row-active'
                           : ''
                       }
@@ -161,7 +158,6 @@ export default function SettingsPanel(): React.JSX.Element {
                       <td>{rec.name}</td>
                       <td>{rec.fMin}</td>
                       <td>{rec.fMax}</td>
-                      <td>{rec.uncertainty}</td>
                       <td>{rec.factor}</td>
                     </tr>
                   ))}

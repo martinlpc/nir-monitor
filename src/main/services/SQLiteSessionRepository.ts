@@ -85,9 +85,18 @@ export class SQLiteSessionRepository implements ISessionRepository {
           startedAt TEXT NOT NULL,
           stoppedAt TEXT,
           sampleCount INTEGER NOT NULL DEFAULT 0,
+          correctionFactor REAL,
+          instrument TEXT,
           createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `)
+      // Migraciones: agregar columnas si faltan
+      try {
+        this.db.run('ALTER TABLE sessions ADD COLUMN correctionFactor REAL')
+      } catch (e) {}
+      try {
+        this.db.run('ALTER TABLE sessions ADD COLUMN instrument TEXT')
+      } catch (e) {}
 
       this.db.run(`
         CREATE TABLE IF NOT EXISTS geo_points (
@@ -162,14 +171,16 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       // Guardar metadatos de sesión
       db.run(
-        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [
           sessionId,
           metadata.label,
           this.unixToISO(metadata.startedAt),
           metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
-          metadata.sampleCount
+          metadata.sampleCount,
+          metadata.correctionFactor ?? null,
+          metadata.instrument ? JSON.stringify(metadata.instrument) : null
         ]
       )
 
@@ -237,9 +248,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       db.run(
-        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount)
-         VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, metadata.label, this.unixToISO(metadata.startedAt), null, 0]
+        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          sessionId,
+          metadata.label,
+          this.unixToISO(metadata.startedAt),
+          null,
+          0,
+          metadata.correctionFactor ?? null,
+          metadata.instrument ? JSON.stringify(metadata.instrument) : null
+        ]
       )
       this.save()
       this.pendingPoints = 0
@@ -293,11 +312,16 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       // Actualizar metadatos finales
-      db.run(`UPDATE sessions SET stoppedAt = ?, sampleCount = ? WHERE id = ?`, [
-        metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
-        metadata.sampleCount,
-        sessionId
-      ])
+      db.run(
+        `UPDATE sessions SET stoppedAt = ?, sampleCount = ?, correctionFactor = ?, instrument = ? WHERE id = ?`,
+        [
+          metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
+          metadata.sampleCount,
+          metadata.correctionFactor ?? null,
+          metadata.instrument ? JSON.stringify(metadata.instrument) : null,
+          sessionId
+        ]
+      )
 
       // Calcular y guardar estadísticas (usando rssWithUncertainty)
       const statsResult = db.exec(
@@ -379,8 +403,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
         startedAt: this.isoToUnix(metadataMap.startedAt as string),
         stoppedAt: metadataMap.stoppedAt ? this.isoToUnix(metadataMap.stoppedAt as string) : null,
         sampleCount: metadataMap.sampleCount as number,
-        instrument: null,
-        uncertainty: null
+        instrument: metadataMap.instrument ? JSON.parse(metadataMap.instrument as string) : null,
+        correctionFactor:
+          metadataMap.correctionFactor != null ? Number(metadataMap.correctionFactor) : null
       }
 
       // Obtener puntos
@@ -424,7 +449,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       const result = db.exec(
-        `SELECT id, label, startedAt, stoppedAt, sampleCount
+        `SELECT id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument
          FROM sessions
          ORDER BY startedAt DESC`
       )
@@ -440,8 +465,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           startedAt: this.isoToUnix(rowMap.startedAt as string),
           stoppedAt: rowMap.stoppedAt ? this.isoToUnix(rowMap.stoppedAt as string) : null,
           sampleCount: rowMap.sampleCount as number,
-          instrument: null,
-          uncertainty: null
+          instrument: rowMap.instrument ? JSON.parse(rowMap.instrument as string) : null,
+          correctionFactor: rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null
         } as SessionSummary
       })
     } catch (err) {
@@ -508,7 +533,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const session = await this.getSession(sessionId)
     const stats = await this.getSessionStats(sessionId)
 
-    const uncertainty = session?.metadata.uncertainty ?? null
+    const correctionFactor = session?.metadata.correctionFactor ?? null
 
     const features = points.map((point) => ({
       type: 'Feature' as const,
@@ -552,7 +577,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
             serial: instrument?.probe.serial ?? null
           }
         },
-        uncertainty: uncertainty,
+        correctionFactor: correctionFactor,
         stats: stats
           ? {
               avgRss: stats.avgRss,
@@ -629,7 +654,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const durationMin = (durationMs / 60000).toFixed(1)
 
     const instrument = metadata.instrument
-    const uncertainty = metadata.uncertainty
+    const correctionFactor = metadata.correctionFactor
 
     summarySheet.addRows([
       { field: 'Etiqueta', value: metadata.label },
@@ -651,7 +676,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
       { field: 'Sonda - Modelo', value: instrument?.probe.model ?? '' },
       { field: 'Sonda - Nro. de serie', value: instrument?.probe.serial ?? '' },
       { field: '', value: '' },
-      { field: 'Incertidumbre aplicada', value: uncertainty != null ? uncertainty : 'N/A' },
+      {
+        field: 'Factor de corrección aplicado',
+        value: correctionFactor != null ? correctionFactor : 'N/A'
+      },
       { field: '', value: '' },
       { field: 'RSS promedio', value: stats?.avgRss?.toFixed(2) ?? 'N/A' },
       { field: 'RSS máximo', value: stats?.maxRss?.toFixed(2) ?? 'N/A' },

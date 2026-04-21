@@ -17,6 +17,7 @@ const NBM_RECONNECT_INTERVAL_MS = 3000
 const NBM_RECONNECT_TIMEOUT_MS = 30000
 const GPS_RECONNECT_INTERVAL_MS = 3000
 const GPS_RECONNECT_TIMEOUT_MS = 30000
+const NBM_MAX_CONSECUTIVE_READ_FAILURES = 8
 
 export class DeviceManager extends EventEmitter {
   private nbm: NBM550Driver | null = null
@@ -25,6 +26,7 @@ export class DeviceManager extends EventEmitter {
   private scanning: boolean = false
   private nbmPollInterval: NodeJS.Timeout | null = null
   private nbmSampleCount: number = 0
+  private nbmConsecutiveReadFailures: number = 0
   private scanner: ISerialPortScanner
   private nbmIntentionalDisconnect: boolean = false
   private nbmReconnecting: boolean = false
@@ -365,6 +367,7 @@ export class DeviceManager extends EventEmitter {
     if (this.nbmPollInterval) return
 
     this.nbmSampleCount = 0
+    this.nbmConsecutiveReadFailures = 0
 
     this.nbmPollInterval = setInterval(async () => {
       if (!this.nbm?.isConnected()) {
@@ -375,17 +378,33 @@ export class DeviceManager extends EventEmitter {
       try {
         // Leer batería cada 5 muestras (cada ~1 segundo con 200ms intervalo)
         if (this.nbmSampleCount % 5 === 0) {
-          await this.nbm.readBattery()
+          const battery = await this.nbm.readBattery()
+          if (battery === null) {
+            this.nbmConsecutiveReadFailures++
+          }
         }
 
         const sample = await this.nbm.readMeasurement()
         if (sample) {
+          this.nbmConsecutiveReadFailures = 0
           this.emit('nbm:sample', {
             rss: sample.rss,
             unit: sample.unit,
             battery: sample.battery,
             timestamp: sample.timestamp
           })
+        } else {
+          this.nbmConsecutiveReadFailures++
+        }
+
+        if (this.nbmConsecutiveReadFailures >= NBM_MAX_CONSECUTIVE_READ_FAILURES) {
+          const port = this.nbm?.meta.port ?? this.portConfig.nbm550 ?? 'desconocido'
+          const message = `NBM-550 sin respuesta continua en ${port}; iniciando reconexión automática`
+          console.error(`[DeviceManager] ${message}`)
+          this.emit('device:error', { deviceId: 'nbm550', error: message })
+          this.stopNBMPolling()
+          this.startNBMReconnect(port)
+          return
         }
 
         this.nbmSampleCount++
@@ -400,6 +419,7 @@ export class DeviceManager extends EventEmitter {
       clearInterval(this.nbmPollInterval)
       this.nbmPollInterval = null
       this.nbmSampleCount = 0
+      this.nbmConsecutiveReadFailures = 0
     }
   }
 

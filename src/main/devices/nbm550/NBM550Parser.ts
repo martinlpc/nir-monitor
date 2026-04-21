@@ -3,6 +3,12 @@ import type { NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
 export class NBM550Parser {
   private unit: string = 'V/m'
 
+  private stripQuotes(value: string | null | undefined): string | null {
+    if (!value) return null
+    const sanitized = value.replace(/^"+|"+$/g, '').trim()
+    return sanitized.length > 0 ? sanitized : null
+  }
+
   setUnit(unit: string): void {
     this.unit = unit
   }
@@ -87,9 +93,9 @@ export class NBM550Parser {
     const clean = this.cleanResponse(raw)
     const parts = clean.split(',').map((p) => p.trim())
     return {
-      model: parts[0] || null,
-      serial: parts[2] || null,
-      calibrationDate: parts[3] || null
+      model: this.stripQuotes(parts[0]),
+      serial: this.stripQuotes(parts[2]),
+      calibrationDate: this.stripQuotes(parts[3])
     }
   }
 }

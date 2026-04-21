@@ -133,7 +133,7 @@ export function registerSettingsHandlers(
       return { success: true, factor: null, matchedRecord: null, probeModel }
     }
 
-    const normalize = (s: string): string => s.toUpperCase().replace(/[\s\-_]/g, '')
+    const normalize = (s: string): string => s.toUpperCase().replace(/[^A-Z0-9]/g, '')
     const normalizedProbe = normalize(probeModel)
     const matched =
       loadedUncertainty.records.find((r) => normalize(r.name) === normalizedProbe) ??

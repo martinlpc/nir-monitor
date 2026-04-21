@@ -5,3 +5,4 @@ out
 .eslintcache
 *.log*
 *.tsbuildinfo
+src/main/scripts/showMockSessionFactors.ts

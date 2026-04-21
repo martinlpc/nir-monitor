@@ -6,6 +6,7 @@ import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/de
 
 const RESPONSE_TIMEOUT_MS = 5000 // Aumentado de 3s a 5s para mayor tiempo de respuesta
 const INIT_DELAY_MS = 1000 // Aumentado de 500ms a 1s tras abrir puerto
+const MAX_CONSECUTIVE_TIMEOUTS = 4
 
 export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   readonly meta: DeviceMeta
@@ -19,6 +20,16 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private pendingTimeout: NodeJS.Timeout | null = null
   private currentBattery: number = 100
   private probeInfo: NBM550ProbeInfo | null = null
+  private consecutiveTimeouts: number = 0
+
+  private handleCommunicationTimeout(command: string): void {
+    this.consecutiveTimeouts++
+    if (this.consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
+      const message = `NBM-550 sin respuesta (${this.consecutiveTimeouts} timeouts seguidos, último: ${command})`
+      this.setStatus('error')
+      this.emit('error', new Error(message))
+    }
+  }
 
   constructor(config: NBM550Config) {
     super()
@@ -159,7 +170,19 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   // ── Measurement ──────────────────────────────────────────────
 
   async readMeasurement(): Promise<NBM550Sample | null> {
-    const raw = await this.query('MEAS?')
+    let raw: string
+    try {
+      raw = await this.query('MEAS?')
+      this.consecutiveTimeouts = 0
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      // Timeout de lectura puede pasar de forma transitoria; no degradar estado del equipo.
+      console.warn(`[NBM550Driver] readMeasurement timeout/error (non-fatal): ${message}`)
+      if (message.includes('Timeout esperando respuesta')) {
+        this.handleCommunicationTimeout('MEAS?')
+      }
+      return null
+    }
 
     // Detectar código de error del NBM (ej: "412;" cuando el dispositivo falla)
     if (this.parser.isErrorResponse(raw)) {
@@ -181,6 +204,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   async readBattery(): Promise<number | null> {
     try {
       const raw = await this.query('BATTERY?')
+      this.consecutiveTimeouts = 0
       const battery = this.parser.parseBattery(raw)
       if (battery !== null) {
         this.currentBattery = battery
@@ -188,6 +212,10 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
       return battery
     } catch (err) {
       console.error(`[NBM550Driver] readBattery error:`, err)
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.includes('Timeout esperando respuesta')) {
+        this.handleCommunicationTimeout('BATTERY?')
+      }
       return null
     }
   }

@@ -7,9 +7,37 @@ interface PointsTableProps {
   points: GeoTimestamp[]
   sessionId?: string | null
   sessionLabel?: string
+  correctionFactor?: number | null
+  deviceModel?: string | null
+  deviceSerial?: string | null
+  probeModel?: string | null
+  probeSerial?: string | null
 }
 
-export default function PointsTable({ points, sessionId, sessionLabel }: PointsTableProps): React.JSX.Element {
+export default function PointsTable({
+  points,
+  sessionId,
+  sessionLabel,
+  correctionFactor,
+  deviceModel,
+  deviceSerial,
+  probeModel,
+  probeSerial
+}: PointsTableProps): React.JSX.Element {
+  const deriveFactorFromPoint = (point: GeoTimestamp): number | null => {
+    const measured = point.emf.rss
+    const corrected = point.rssWithUncertainty
+    if (measured > 0 && Number.isFinite(measured) && Number.isFinite(corrected)) {
+      const ratio = corrected / measured
+      if (Number.isFinite(ratio) && ratio > 0) {
+        return ratio
+      }
+    }
+    return null
+  }
+
+  const derivedFactor = points.map(deriveFactorFromPoint).find((f) => f != null) ?? null
+  const effectiveFactor = correctionFactor ?? derivedFactor
   const thresholdExceeded = sessionExceedsThreshold(points.map((p) => p.rssWithUncertainty))
 
   return (
@@ -24,9 +52,20 @@ export default function PointsTable({ points, sessionId, sessionLabel }: PointsT
               </span>
             )}
           </h3>
-          {sessionLabel && (
+          {(sessionLabel || sessionId) && (
             <div className="session-info">
-              <span className="session-name">{sessionLabel}</span>
+              <div className="session-label-block">
+                <span className="session-name">{sessionLabel}</span>
+                {(deviceModel || deviceSerial || probeModel || probeSerial) && (
+                  <span className="session-devices">
+                    {deviceModel && <span className="device-model">Equipo: {deviceModel}</span>}
+                    {deviceSerial && <span className="device-serial">SN: {deviceSerial}</span>}
+                    {probeModel && <span className="probe-model" style={{marginLeft:8}}>Sonda: {probeModel}</span>}
+                    {probeSerial && <span className="probe-serial">SN: {probeSerial}</span>}
+                  </span>
+                )}
+              </div>
+              <span style={{ flex: 1 }} />
               {sessionId && (
                 <span className="session-id" title={sessionId}>
                   {sessionId.substring(0, 8)}...
@@ -40,35 +79,40 @@ export default function PointsTable({ points, sessionId, sessionLabel }: PointsT
         <table className="points-table">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Timestamp</th>
-              <th>Lat</th>
-              <th>Lon</th>
-              <th>Alt (m)</th>
-              <th>Valor medido</th>
-              <th>VALOR FINAL</th>
-              <th>Unit</th>
+                <th>#</th>
+                <th>Timestamp</th>
+                <th>Lat</th>
+                <th>Lon</th>
+                <th>Alt (m)</th>
+                <th>Valor medido (rss) [V/m]</th>
+                <th>Factor de corrección aplicado</th>
+                <th title="Valor final = rss × factor de corrección">VALOR FINAL [V/m]</th>
             </tr>
           </thead>
           <tbody>
-            {points.map((point, idx) => (
-              <tr key={point.id}>
-                <td className="cell-number">{point.sequenceNumber || idx + 1}</td>
-                <td className="cell-timestamp">{formatTimestamp(point.timestamp)}</td>
-                <td className="cell-coord">{point.position.lat.toFixed(6)}</td>
-                <td className="cell-coord">{point.position.lon.toFixed(6)}</td>
-                <td className="cell-number">{point.position.alt.toFixed(1)}</td>
-                <td className="cell-emf">{point.emf.rss.toFixed(2)}</td>
-                <td
-                  className={`cell-emf-unc${exceedsSafetyThreshold(point.rssWithUncertainty) ? ' cell-emf-unc--threshold' : ''}`}
-                  style={{ color: getIntensityColor(point.rssWithUncertainty) }}
-                  title={`${valueToPercent(point.rssWithUncertainty).toFixed(1)}% del nivel de referencia`}
-                >
-                  {point.rssWithUncertainty.toFixed(2)}
-                </td>
-                <td className="cell-unit">{point.emf.unit}</td>
-              </tr>
-            ))}
+              {points.map((point, idx) => (
+                <tr key={point.id}>
+                  <td className="cell-number">{point.sequenceNumber || idx + 1}</td>
+                  <td className="cell-timestamp">{formatTimestamp(point.timestamp)}</td>
+                  <td className="cell-coord">{point.position.lat.toFixed(6)}</td>
+                  <td className="cell-coord">{point.position.lon.toFixed(6)}</td>
+                  <td className="cell-number">{point.position.alt.toFixed(1)}</td>
+                  <td className="cell-emf">{point.emf.rss.toFixed(2)}</td>
+                  <td className="cell-factor">
+                    {(() => {
+                      const rowFactor = effectiveFactor ?? deriveFactorFromPoint(point)
+                      return rowFactor != null ? `×${rowFactor.toFixed(4)}` : '—'
+                    })()}
+                  </td>
+                  <td
+                    className={`cell-emf-unc${exceedsSafetyThreshold(point.rssWithUncertainty) ? ' cell-emf-unc--threshold' : ''}`}
+                    style={{ color: getIntensityColor(point.rssWithUncertainty) }}
+                    title={`${valueToPercent(point.rssWithUncertainty).toFixed(1)}% del nivel de referencia`}
+                  >
+                    {point.rssWithUncertainty.toFixed(2)}
+                  </td>
+                </tr>
+              ))}
             {points.length === 0 &&
               Array.from({ length: 12 }).map((_, i) => (
                 <tr key={`empty-${i}`} className="row-placeholder">

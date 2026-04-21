@@ -75,18 +75,10 @@ export default function DevicesPanel({
     }
   }
 
-  const [uncertaintyWarning, setUncertaintyWarning] = useState<string | null>(null)
+
 
   const handleStartSession = async (): Promise<void> => {
     try {
-      // Verificar que hay archivo de incertidumbres cargado
-      const unc = await window.api.settings.getLoadedUncertainty()
-      if (!unc.success || !unc.records || unc.records.length === 0) {
-        setUncertaintyWarning('Cargá un archivo de incertidumbres en ⚙ Configuración antes de iniciar una sesión.')
-        return
-      }
-      setUncertaintyWarning(null)
-
       // Intentar obtener posición GPS actual para el nombre
       const gpsStatus = devices.gps?.status
       let sessionLabel: string
@@ -192,6 +184,11 @@ export default function DevicesPanel({
           <strong>Error:</strong> {devices.error}
         </div>
       )}
+      {session.error && (
+        <div className="error-banner">
+          <strong>Sesión:</strong> {session.error}
+        </div>
+      )}
 
       <div className="panel-footer">
         {!session.isRunning && (
@@ -228,11 +225,7 @@ export default function DevicesPanel({
           {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
         </button>
 
-        {uncertaintyWarning && (
-          <div className="uncertainty-warning" role="alert">
-            ⚠ {uncertaintyWarning}
-          </div>
-        )}
+
 
         {session.isRunning && (
           <div className="session-info">

@@ -17,5 +17,5 @@ export interface GeoTimestamp {
   timestamp: number // Unix ms — fuente de verdad para fusión
   position: GeoPosition
   emf: EMFSample
-  rssWithUncertainty: number // rss × factor de corrección de la sesión
+  rssWithUncertainty: number // rss × correctionFactor de la sesión
 }
