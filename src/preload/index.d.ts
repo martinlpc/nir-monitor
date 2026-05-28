@@ -7,6 +7,19 @@ import type { DeviceStatus } from '../shared/device.types'
 declare global {
   interface Window {
     api: {
+      /**
+       * Suscribe a eventos push desde main process. Actualmente soporta 'alert'.
+       * @param channel Canal IPC ('alert')
+       * @param cb Callback con (event, payload)
+       */
+      on: (
+        channel: 'alert',
+        cb: (event: unknown, payload: { message: string; type: string }) => void
+      ) => () => void
+      off: (
+        channel: 'alert',
+        cb: (event: unknown, payload: { message: string; type: string }) => void
+      ) => void
       ports: {
         list: () => Promise<{ path: string; manufacturer: string }[]>
       }

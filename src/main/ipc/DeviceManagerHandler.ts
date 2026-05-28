@@ -2,6 +2,7 @@
 // Solo orquesta: DeviceManager → Renderer
 import { ipcMain, BrowserWindow } from 'electron'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
+import { emitAlert } from './handlers'
 import type { DeviceManager } from '../services/DeviceManager'
 
 /**
@@ -46,6 +47,8 @@ export function registerDeviceManagerHandlers(
  * Los eventos se emiten continuamente, no need for handler
  */
 export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: DeviceManager): void {
+  let lastGpsFixState = false
+
   const sendIfReady = (event: string, data: unknown) => {
     if (!window.webContents.isDestroyed()) {
       window.webContents.send(event, data)
@@ -56,10 +59,31 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
   deviceManager.on('gps:position', (data) => sendIfReady(IPC_EVENTS.GPS_POSITION, data))
   deviceManager.on('gps:fix-lost', () => sendIfReady(IPC_EVENTS.GPS_FIX_LOST, null))
   deviceManager.on('nbm:sample', (data) => sendIfReady(IPC_EVENTS.NBM_SAMPLE, data))
-  deviceManager.on('device:status', (data) => sendIfReady(IPC_EVENTS.DEVICE_STATUS, data))
+  deviceManager.on('device:status', (data) => {
+    sendIfReady(IPC_EVENTS.DEVICE_STATUS, data)
+    // Emitir alerta tipo info al conectar dispositivos
+    if (data?.status === 'connected') {
+      if (data.deviceId === 'gps') {
+        emitAlert(window, 'GPS conectado', 'info')
+      } else if (data.deviceId === 'nbm550') {
+        emitAlert(window, 'NBM-550 conectado', 'info')
+      }
+    }
+  })
   deviceManager.on('device:error', (data) => sendIfReady(IPC_EVENTS.DEVICE_ERROR, data))
   deviceManager.on('state', (state) => sendIfReady(IPC_EVENTS.SCAN_STATE, state))
-  deviceManager.on('scanning', (scanning: boolean) =>
+  deviceManager.on('scanning', (scanning) =>
     sendIfReady(IPC_EVENTS.SCAN_STATE, { ...deviceManager.getState(), scanning })
   )
+
+  // GPS recupera fix (solo una vez por transición)
+  deviceManager.on('gps:position', (data) => {
+    const isNowValid = data && typeof data.valid === 'boolean' && data.valid === true
+
+    if (isNowValid && !lastGpsFixState) {
+      emitAlert(window, 'GPS con fix', 'info')
+    }
+
+    lastGpsFixState = !!isNowValid
+  })
 }

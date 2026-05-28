@@ -3,6 +3,7 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron'
 import * as fs from 'fs'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
+import { emitAlert } from './handlers'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 
@@ -29,35 +30,32 @@ export function registerSessionServiceHandlers(
         testMode?: boolean
       }
     ) => {
+      console.log(`[SessionServiceHandler] SESSION_START received, payload:`, payload)
+      // SessionService.start() internamente:
+      // 1. Accede a NBM y GPS desde DeviceManager
+      // 2. Valifica que estén conectados
+      // 3. Wirifica GeoFusionService
+      const { label, ...fusionConfig } = payload
+      console.log(
+        `[SessionServiceHandler] Calling sessionService.start() with label="${label}" and fusionConfig:`,
+        fusionConfig
+      )
       try {
-        console.log(`[SessionServiceHandler] SESSION_START received, payload:`, payload)
-        // SessionService.start() internamente:
-        // 1. Accede a NBM y GPS desde DeviceManager
-        // 2. Valifica que estén conectados
-        // 3. Wirifica GeoFusionService
-        const { label, ...fusionConfig } = payload
-        console.log(
-          `[SessionServiceHandler] Calling sessionService.start() with label="${label}" and fusionConfig:`,
-          fusionConfig
-        )
         const sessionId = await sessionService.start(label, fusionConfig)
         console.log(`[SessionServiceHandler] sessionService.start() returned: ${sessionId}`)
-        return { success: true, sessionId }
-      } catch (err) {
-        console.error(`[SessionServiceHandler] SESSION_START error:`, err)
-        return { success: false, error: (err as Error).message }
+        return sessionId
+      } catch (err: any) {
+        // Emitir alerta global al frontend
+        emitAlert(_window, err?.message || 'Error al iniciar sesión', 'error')
+        throw err
       }
     }
   )
 
   // session:stop - detiene captura
   ipcMain.handle(IPC_HANDLERS.SESSION_STOP, async () => {
-    try {
-      const summary = await sessionService.stop()
-      return { success: true, summary }
-    } catch (err) {
-      return { success: false, error: (err as Error).message }
-    }
+    const summary = await sessionService.stop()
+    return summary
   })
 
   // session:list - retorna metadata de sesión actual
@@ -252,4 +250,5 @@ export function bindSessionServiceEvents(
   sessionService.on('point', (point) => sendIfReady(IPC_EVENTS.SESSION_SAMPLE, point))
   sessionService.on('started', (info) => sendIfReady(IPC_EVENTS.SESSION_STARTED, info))
   sessionService.on('stopped', (summary) => sendIfReady(IPC_EVENTS.SESSION_STOPPED, summary))
+  sessionService.on('alert', (data) => sendIfReady(IPC_EVENTS.SESSION_ALERT, data))
 }

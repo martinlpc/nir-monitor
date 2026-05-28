@@ -4,6 +4,17 @@ import { registerSessionServiceHandlers, bindSessionServiceEvents } from './Sess
 import { registerSettingsHandlers } from './SettingsHandler'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
+import { AlertLogger } from '../infrastructure/AlertLogger'
+
+// Utilidad para emitir alertas globales
+export function emitAlert(
+  window: BrowserWindow,
+  message: string,
+  type: 'error' | 'warning' | 'info' = 'info'
+) {
+  window.webContents.send('alert', { message, type })
+  AlertLogger.log(message, type)
+}
 
 // -- Setup -----------------------------------------------------------
 // Registrar handlers y conectar eventos de servicios hacia el Renderer

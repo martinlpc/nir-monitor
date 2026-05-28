@@ -8,6 +8,23 @@ import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
 
 // -- API expuesta al Renderer via window.api ----------------------------
 const api = {
+  /**
+   * Suscribe a eventos push desde main process. Actualmente soporta 'alert'.
+   */
+  on: (channel: string, cb: (...args: any[]) => void) => {
+    if (channel === 'alert') {
+      const handler = (_: IpcRendererEvent, payload: { message: string; type: string }) =>
+        cb(_, payload)
+      ipcRenderer.on('alert', handler)
+      return () => ipcRenderer.removeListener('alert', handler)
+    }
+    return () => {}
+  },
+  off: (channel: string, cb: (...args: any[]) => void) => {
+    if (channel === 'alert') {
+      ipcRenderer.removeListener('alert', cb)
+    }
+  },
   // -- Puertos y dispositivos -------------------------------------------
 
   ports: {
@@ -17,7 +34,7 @@ const api = {
 
   devices: {
     list: (): Promise<DeviceManagerStateDTO> => ipcRenderer.invoke(IPC_HANDLERS.DEVICE_LIST),
-
+    // -- API expuesta al Renderer via window.api ----------------------------
     scan: (): Promise<DeviceManagerStateDTO> => ipcRenderer.invoke(IPC_HANDLERS.DEVICE_SCAN),
 
     setPort: (device: 'nbm550' | 'gps', port: string): Promise<DeviceManagerStateDTO> =>

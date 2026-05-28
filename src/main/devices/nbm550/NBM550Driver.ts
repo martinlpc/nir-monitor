@@ -152,10 +152,11 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
   async disconnect(): Promise<void> {
     if (this.port?.isOpen) {
-      await this.sendCommand('REMOTE OFF').catch(() => {})
+      try {
+        await this.sendCommand('REMOTE OFF').catch(() => {})
+      } catch {}
       await this.closePort()
     }
-
     this.setStatus('disconnected')
   }
 
@@ -170,6 +171,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   // ── Measurement ──────────────────────────────────────────────
 
   async readMeasurement(): Promise<NBM550Sample | null> {
+    if (!this.port?.isOpen) return null
     let raw: string
     try {
       raw = await this.query('MEAS?')
@@ -255,6 +257,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
   // Para Set Commands donde solo nos importa confirmar que no hubo error
   private async sendCommand(command: string): Promise<void> {
+    if (!this.port?.isOpen) return
     const response = await this.query(command)
     const code = this.parser.parseErrorCode(response)
     if (code !== 0) {
@@ -303,13 +306,19 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
   private closePort(): Promise<void> {
     return new Promise((resolve) => {
-      this.port!.close(() => resolve())
+      if (!this.port || !this.port.isOpen) return resolve()
+      this.port.close(() => {
+        this.port = undefined
+        resolve()
+      })
     })
   }
 
   private setStatus(status: DeviceStatus): void {
-    this.status = status
-    this.emit('status', status)
+    if (this.status !== status) {
+      this.status = status
+      this.emit('status', status)
+    }
   }
 
   private delay(ms: number): Promise<void> {

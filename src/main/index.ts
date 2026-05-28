@@ -117,8 +117,13 @@ app.on('window-all-closed', () => {
   }
 })
 
-app.on('before-quit', () => {
-  void services?.deviceManager.disconnectAll().catch(() => {})
+app.on('before-quit', (event) => {
+  if (services?.deviceManager) {
+    event.preventDefault()
+    services.deviceManager.disconnectAll().finally(() => {
+      app.exit()
+    })
+  }
 })
 
 // In this file you can include the rest of your app's specific main process

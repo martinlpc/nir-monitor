@@ -9,7 +9,9 @@ export const IPC_EVENTS = {
   SESSION_SAMPLE: 'session:sample',
   SESSION_STARTED: 'session:started',
   SESSION_STOPPED: 'session:stopped',
-  SCAN_STATE: 'scan:state'
+  SESSION_ALERT: 'session:alert',
+  SCAN_STATE: 'scan:state',
+  ALERT: 'alert' // Canal global para notificaciones tipo toast
 } as const
 
 // Renderer -> Main (request/response)
