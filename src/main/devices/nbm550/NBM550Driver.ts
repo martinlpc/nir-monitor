@@ -4,8 +4,8 @@ import { NBM550Parser } from './NBM550Parser'
 import type { NBM550Config, NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
 
-const RESPONSE_TIMEOUT_MS = 5000 // Aumentado de 3s a 5s para mayor tiempo de respuesta
-const INIT_DELAY_MS = 1000 // Aumentado de 500ms a 1s tras abrir puerto
+const RESPONSE_TIMEOUT_MS = 6000 // Aumentado a 6s para permitir que NBM550 responda (necesita ~800ms)
+const INIT_DELAY_MS = 2000 // Aumentado a 2s - NBM550 necesita tiempo para sincronizar a 460800 baud tras abrir puerto
 const MAX_CONSECUTIVE_TIMEOUTS = 4
 
 export class NBM550Driver extends EventEmitter implements IDeviceDriver {
@@ -64,6 +64,15 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
       console.log(`[NBM550Driver] Port opened (probe): ${this.config.port}`)
 
       this.attachDataListener()
+
+      // Limpiar cualquier dato residual en el buffer
+      this.responseBuffer = ''
+      if (this.port?.flush) {
+        await new Promise<void>((resolve) => {
+          this.port!.flush(() => resolve())
+        })
+      }
+
       await this.delay(INIT_DELAY_MS)
 
       // Solo enviar REMOTE ON para probe - si responde, es un NBM550

@@ -7,8 +7,8 @@ import type { ProbedDeviceInfo } from '../../shared/dto/index'
 
 const NBM_BAUD_RATE = 460800
 const GPS_BAUD_RATE = 4800
-const PROBE_TIMEOUT_MS = 3000
-const NMEA_LISTEN_MS = 10000 // Aumentado de 4s a 10s para permitir sincronización GPS
+const PROBE_TIMEOUT_MS = 6000 // Aumentado de 3s a 6s - NBM550 necesita tiempo para responder a REMOTE ON
+const NMEA_LISTEN_MS = 12000 // Aumentado a 12s para permitir sincronización GPS y evitar falsos negativos
 
 export class SerialPortScanner implements ISerialPortScanner {
   async listAvailablePorts(): Promise<string[]> {
@@ -137,12 +137,12 @@ export class SerialPortScanner implements ISerialPortScanner {
 
   async probeGPS(port: string, timeoutMs = NMEA_LISTEN_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing GPS on ${port}...`)
-    try {
-      const driver = new GPSDriver({
-        port,
-        baudRate: GPS_BAUD_RATE
-      })
+    const driver = new GPSDriver({
+      port,
+      baudRate: GPS_BAUD_RATE
+    })
 
+    try {
       return await new Promise<boolean>((resolve) => {
         let resolved = false
 
@@ -152,6 +152,7 @@ export class SerialPortScanner implements ISerialPortScanner {
             resolved = true
             driver.removeAllListeners('position')
             driver.removeAllListeners('nmea')
+            driver.removeAllListeners('error')
             driver.disconnect().catch(() => {})
             resolve(false)
           }
@@ -166,7 +167,8 @@ export class SerialPortScanner implements ISerialPortScanner {
             resolved = true
             clearTimeout(time)
             driver.removeAllListeners('nmea')
-            driver.disconnect()
+            driver.removeAllListeners('error')
+            driver.disconnect().catch(() => {})
             console.log(`[SerialPortScanner] ✓ GPS detected on ${port}`)
             resolve(true)
           }
@@ -177,6 +179,9 @@ export class SerialPortScanner implements ISerialPortScanner {
           if (!resolved) {
             resolved = true
             clearTimeout(time)
+            driver.removeAllListeners('error')
+            driver.removeAllListeners('nmea')
+            driver.disconnect().catch(() => {})
             resolve(false)
           }
         })
@@ -186,6 +191,9 @@ export class SerialPortScanner implements ISerialPortScanner {
           if (!resolved) {
             resolved = true
             clearTimeout(time)
+            driver.removeAllListeners('error')
+            driver.removeAllListeners('nmea')
+            driver.disconnect().catch(() => {})
             resolve(false)
           }
         })
@@ -196,6 +204,18 @@ export class SerialPortScanner implements ISerialPortScanner {
         error instanceof Error ? error.message : error
       )
       return false
+    } finally {
+      // Asegurar que el puerto se cierra aunque falle la conexión
+      // Esperar a que las escrituras finales se completen
+      await new Promise((r) => setTimeout(r, 300))
+      try {
+        await driver.disconnect()
+      } catch (err) {
+        // Ignorar errores de desconexión
+        if (!(err instanceof Error && /EPIPE|EBADF|closed/.test(err.message))) {
+          console.log(`[SerialPortScanner] GPS cleanup error on ${port}:`, err)
+        }
+      }
     }
   }
 }
