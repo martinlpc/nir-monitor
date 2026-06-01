@@ -24,7 +24,7 @@ export class DeviceManager extends EventEmitter {
   private gps: GPSDriver | null = null
   private portConfig: PortConfigData = {}
   private scanning: boolean = false
-  private nbmPollInterval: NodeJS.Timeout | null = null
+  private nbmPollTimeout: NodeJS.Timeout | null = null
   private nbmSampleCount: number = 0
   private nbmConsecutiveReadFailures: number = 0
   private scanner: ISerialPortScanner
@@ -364,60 +364,66 @@ export class DeviceManager extends EventEmitter {
   }
 
   private startNBMPolling(): void {
-    if (this.nbmPollInterval) return
+    if (this.nbmPollTimeout) return
 
     this.nbmSampleCount = 0
     this.nbmConsecutiveReadFailures = 0
 
-    this.nbmPollInterval = setInterval(async () => {
-      if (!this.nbm?.isConnected()) {
+    void this.pollCycle()
+  }
+
+  // Ciclo de polling secuencial: cada ciclo programa el siguiente solo al terminar
+  private async pollCycle(): Promise<void> {
+    if (!this.nbm?.isConnected()) {
+      this.stopNBMPolling()
+      return
+    }
+
+    try {
+      // Leer batería cada 5 muestras (cada ~1 segundo con 200ms intervalo)
+      if (this.nbmSampleCount % 5 === 0) {
+        const battery = await this.nbm.readBattery()
+        if (battery === null) {
+          this.nbmConsecutiveReadFailures++
+        }
+      }
+
+      const sample = await this.nbm.readMeasurement()
+      if (sample) {
+        this.nbmConsecutiveReadFailures = 0
+        this.emit('nbm:sample', {
+          rss: sample.rss,
+          unit: sample.unit,
+          battery: sample.battery,
+          timestamp: sample.timestamp
+        })
+      } else {
+        this.nbmConsecutiveReadFailures++
+      }
+
+      if (this.nbmConsecutiveReadFailures >= NBM_MAX_CONSECUTIVE_READ_FAILURES) {
+        const port = this.nbm?.meta.port ?? this.portConfig.nbm550 ?? 'desconocido'
+        const message = `NBM-550 sin respuesta continua en ${port}; iniciando reconexión automática`
+        console.error(`[DeviceManager] ${message}`)
+        this.emit('device:error', { deviceId: 'nbm550', error: message })
         this.stopNBMPolling()
+        this.startNBMReconnect(port)
         return
       }
 
-      try {
-        // Leer batería cada 5 muestras (cada ~1 segundo con 200ms intervalo)
-        if (this.nbmSampleCount % 5 === 0) {
-          const battery = await this.nbm.readBattery()
-          if (battery === null) {
-            this.nbmConsecutiveReadFailures++
-          }
-        }
+      this.nbmSampleCount++
+    } catch {
+      // Silenciar errores de lectura - el dispositivo puede estar ocupado
+    }
 
-        const sample = await this.nbm.readMeasurement()
-        if (sample) {
-          this.nbmConsecutiveReadFailures = 0
-          this.emit('nbm:sample', {
-            rss: sample.rss,
-            unit: sample.unit,
-            battery: sample.battery,
-            timestamp: sample.timestamp
-          })
-        } else {
-          this.nbmConsecutiveReadFailures++
-        }
-
-        if (this.nbmConsecutiveReadFailures >= NBM_MAX_CONSECUTIVE_READ_FAILURES) {
-          const port = this.nbm?.meta.port ?? this.portConfig.nbm550 ?? 'desconocido'
-          const message = `NBM-550 sin respuesta continua en ${port}; iniciando reconexión automática`
-          console.error(`[DeviceManager] ${message}`)
-          this.emit('device:error', { deviceId: 'nbm550', error: message })
-          this.stopNBMPolling()
-          this.startNBMReconnect(port)
-          return
-        }
-
-        this.nbmSampleCount++
-      } catch {
-        // Silenciar errores de lectura - el dispositivo puede estar ocupado
-      }
-    }, 200) // 5 Hz matching NBM config
+    // Solo al terminar el ciclo actual, programar el próximo
+    this.nbmPollTimeout = setTimeout(() => void this.pollCycle(), 200)
   }
 
   private stopNBMPolling(): void {
-    if (this.nbmPollInterval) {
-      clearInterval(this.nbmPollInterval)
-      this.nbmPollInterval = null
+    if (this.nbmPollTimeout) {
+      clearTimeout(this.nbmPollTimeout)
+      this.nbmPollTimeout = null
       this.nbmSampleCount = 0
       this.nbmConsecutiveReadFailures = 0
     }

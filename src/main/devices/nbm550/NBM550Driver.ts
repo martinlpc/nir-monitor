@@ -22,6 +22,10 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private probeInfo: NBM550ProbeInfo | null = null
   private consecutiveTimeouts: number = 0
 
+  // Cadena de promesas que serializa todos los comandos
+  // Garantiza que solo un query() esté pendiente por vez
+  private queryQueue: Promise<void> = Promise.resolve()
+
   private handleCommunicationTimeout(command: string): void {
     this.consecutiveTimeouts++
     if (this.consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
@@ -160,6 +164,10 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   }
 
   async disconnect(): Promise<void> {
+    // Rechazar cualquier query pendiente en la cola para no dejar promesas colgadas
+    this.queryQueue = Promise.reject(new Error('Disconnected'))
+    this.queryQueue.catch(() => {})
+
     if (this.port?.isOpen) {
       try {
         await this.sendCommand('REMOTE OFF').catch(() => {})
@@ -238,7 +246,18 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   // ── Serial I/O ───────────────────────────────────────────
 
   // Envía comando y espera respuesta (el NBM responde a todo, incluso Set)
+  // Serializado via queryQueue: cada llamada espera su turno en la cadena
   private query(command: string): Promise<string> {
+    return new Promise((resolve, reject) => {
+      this.queryQueue = this.queryQueue.then(
+        () => this.executeQuery(command).then(resolve, reject),
+        () => this.executeQuery(command).then(resolve, reject)
+      )
+    })
+  }
+
+  // Ejecución real del query. Solo se invoca desde query(), nunca directamente.
+  private executeQuery(command: string): Promise<string> {
     return new Promise((resolve, reject) => {
       if (!this.port?.isOpen) {
         return reject(new Error('Puerto no abierto'))
