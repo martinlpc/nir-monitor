@@ -22,13 +22,16 @@ export class NBMPollingController {
   private port: string = ''
   private maxFailures: number
   private callbacks: NBMPollingCallbacks
+  private pollIntervalMs: number
 
   constructor(
     maxFailures: number = DEFAULT_MAX_CONSECUTIVE_READ_FAILURES,
-    callbacks: NBMPollingCallbacks
+    callbacks: NBMPollingCallbacks,
+    pollIntervalMs: number = NBM_POLL_INTERVAL_MS
   ) {
     this.maxFailures = maxFailures
     this.callbacks = callbacks
+    this.pollIntervalMs = pollIntervalMs
   }
 
   get isPolling(): boolean {
@@ -99,6 +102,6 @@ export class NBMPollingController {
       // Silenciar errores de lectura - el dispositivo puede estar ocupado
     }
 
-    this.pollTimeout = setTimeout(() => void this.pollCycle(), NBM_POLL_INTERVAL_MS)
+    this.pollTimeout = setTimeout(() => void this.pollCycle(), this.pollIntervalMs)
   }
 }

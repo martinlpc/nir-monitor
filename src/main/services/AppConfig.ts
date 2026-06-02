@@ -8,6 +8,9 @@ export interface AppConfigData {
     gps?: string
   }
   uncertaintyFilePath?: string
+  triggerMode?: 'distance' | 'time'
+  intervalMs?: number
+  minDistanceMeters?: number
 }
 
 let CONFIG_PATH: string | null = null

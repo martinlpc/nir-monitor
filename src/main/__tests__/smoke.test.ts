@@ -133,7 +133,7 @@ describe('Smoke: full chain', () => {
       probeGPS: vi.fn(async () => false)
     }
 
-    deviceManager = new DeviceManager(mockScanner)
+    deviceManager = new DeviceManager(mockScanner, false)
     sessionService = new SessionService(new GeoFusionService())
   })
 

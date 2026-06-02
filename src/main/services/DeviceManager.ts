@@ -1,9 +1,11 @@
 import { EventEmitter } from 'events'
 import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
+import { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550Driver'
+import { SimulatedGPSDriver } from '../devices/simulated/SimulatedGPSDriver'
 import { loadPortConfig, savePortConfig, type PortConfigData } from './PortConfig'
 import { ReconnectController } from './ReconnectController'
-import { NBMPollingController } from './NBMPollingController'
+import { NBMPollingController, NBM_POLL_INTERVAL_MS } from './NBMPollingController'
 import type { DeviceStatus } from '../../shared/device.types'
 import type { GeoPosition } from '../../shared/GeoTimestamp'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
@@ -22,8 +24,8 @@ const GPS_RECONNECT_TIMEOUT_MS = 30000
 const NBM_MAX_CONSECUTIVE_READ_FAILURES = 8
 
 export class DeviceManager extends EventEmitter {
-  private nbm: NBM550Driver | null = null
-  private gps: GPSDriver | null = null
+  private nbm: NBM550Driver | SimulatedNBM550Driver | null = null
+  private gps: GPSDriver | SimulatedGPSDriver | null = null
   private portConfig: PortConfigData = {}
   private scanning: boolean = false
   private scanner: ISerialPortScanner
@@ -32,11 +34,16 @@ export class DeviceManager extends EventEmitter {
   private gpsReconnect: ReconnectController
   private nbmPolling: NBMPollingController
   private gpsIntentionalDisconnect: boolean = false
+  private simulationMode: boolean
 
-  constructor(scanner: ISerialPortScanner) {
+  constructor(scanner: ISerialPortScanner, simulationMode: boolean = false) {
     super()
 
+    this.simulationMode = simulationMode
     this.scanner = scanner
+
+    const pollInterval = this.simulationMode ? 5000 : NBM_POLL_INTERVAL_MS
+
     this.nbmReconnect = new ReconnectController({
       deviceId: 'nbm550',
       intervalMs: NBM_RECONNECT_INTERVAL_MS,
@@ -72,13 +79,17 @@ export class DeviceManager extends EventEmitter {
       onStatus: (deviceId, status) => this.emit('device:status', { deviceId, status })
     })
 
-    this.nbmPolling = new NBMPollingController(NBM_MAX_CONSECUTIVE_READ_FAILURES, {
-      onSample: (sample) => this.emit('nbm:sample', sample),
-      onMaxFailuresExceeded: (port, message) => {
-        this.emit('device:error', { deviceId: 'nbm550', error: message })
-        this.nbmReconnect.start(port)
-      }
-    })
+    this.nbmPolling = new NBMPollingController(
+      NBM_MAX_CONSECUTIVE_READ_FAILURES,
+      {
+        onSample: (sample) => this.emit('nbm:sample', sample),
+        onMaxFailuresExceeded: (port, message) => {
+          this.emit('device:error', { deviceId: 'nbm550', error: message })
+          this.nbmReconnect.start(port)
+        }
+      },
+      pollInterval
+    )
   }
 
   // -- Init ------------------------------------------
@@ -90,11 +101,11 @@ export class DeviceManager extends EventEmitter {
 
   // ── Accesors de SessionService --------------------------
 
-  getNBM(): NBM550Driver | null {
+  getNBM(): NBM550Driver | SimulatedNBM550Driver | null {
     return this.nbm
   }
 
-  getGPS(): GPSDriver | null {
+  getGPS(): GPSDriver | SimulatedGPSDriver | null {
     return this.gps
   }
 
@@ -225,9 +236,11 @@ export class DeviceManager extends EventEmitter {
   // -- Init drivers ---------------------------------------------
 
   private async initNBM(port: string): Promise<void> {
-    console.log(`[DeviceManager] initNBM starting on port ${port}`)
+    console.log(`[DeviceManager] initNBM starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`)
     this.nbmIntentionalDisconnect = false
-    this.nbm = new NBM550Driver({ port, baudRate: 460800, pollIntervalMs: 200, unit: 'V/m' })
+    this.nbm = this.simulationMode
+      ? new SimulatedNBM550Driver({ port })
+      : new NBM550Driver({ port, baudRate: 460800, pollIntervalMs: 200, unit: 'V/m' })
 
     this.nbm.on('status', (status: DeviceStatus) => {
       console.log(`[DeviceManager] NBM status changed to: ${status}`)
@@ -263,9 +276,11 @@ export class DeviceManager extends EventEmitter {
   }
 
   private async initGPS(port: string): Promise<void> {
-    console.log(`[DeviceManager] initGPS starting on port ${port}`)
+    console.log(`[DeviceManager] initGPS starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`)
     this.gpsIntentionalDisconnect = false
-    this.gps = new GPSDriver({ port, baudRate: GPS_BAUD_RATE })
+    this.gps = this.simulationMode
+      ? new SimulatedGPSDriver({ port })
+      : new GPSDriver({ port, baudRate: GPS_BAUD_RATE })
 
     this.gps.on('status', (status: DeviceStatus) => {
       console.log(`[DeviceManager] GPS status changed to: ${status}`)
