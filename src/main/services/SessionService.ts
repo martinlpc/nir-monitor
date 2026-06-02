@@ -8,7 +8,7 @@ import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 import { getLoadedUncertainty } from '../ipc/SettingsHandler'
 import { loadAppConfig } from './AppConfig'
-import { existsSync, readFileSync } from 'fs'
+import { resolveCorrectionFactor as resolveCFFromFile, findFactor } from '../uncertainty/correctionFactor'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -27,55 +27,19 @@ export class SessionService extends EventEmitter {
   private instrument: InstrumentInfo | null = null
   private correctionFactor: number | null = null
 
-  private normalizeProbeName(name: string): string {
-    return name.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  }
-
   private resolveCorrectionFactor(probeModel: string | null): number | null {
     if (!probeModel) return null
-    const normalizedProbe = this.normalizeProbeName(probeModel)
-    const findFactor = (records: Array<{ name: string; factor: number }>): number | null => {
-      const matched =
-        records.find((r) => this.normalizeProbeName(r.name) === normalizedProbe) ??
-        records.find((r) => {
-          const normalizedRecord = this.normalizeProbeName(r.name)
-          return (
-            normalizedProbe.includes(normalizedRecord) || normalizedRecord.includes(normalizedProbe)
-          )
-        })
-      return matched?.factor ?? null
-    }
 
+    // 1. Try loaded uncertainty from Settings
     const loaded = getLoadedUncertainty()
     if (loaded?.records?.length) {
-      const factor = findFactor(loaded.records)
+      const factor = findFactor(loaded.records, probeModel)
       if (factor != null) return factor
     }
 
-    // Fallback: leer directamente desde archivo configurado para evitar carreras
-    // cuando el auto-load de Settings todavía no terminó al iniciar sesión.
+    // 2. Fallback: leer archivo de incertidumbre directamente
     const config = loadAppConfig()
-    const filePath = config.uncertaintyFilePath
-    if (!filePath || !existsSync(filePath)) return null
-
-    try {
-      const content = readFileSync(filePath, 'utf-8')
-      const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0)
-      if (lines.length <= 1) return null
-      const sep = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ','
-      const records = lines
-        .slice(1)
-        .map((line) => {
-          const cols = line.split(sep).map((c) => c.trim())
-          return { name: cols[0] || '', factor: parseFloat(cols[4]) || 1 }
-        })
-        .filter((r) => r.name.length > 0)
-
-      return findFactor(records)
-    } catch (err) {
-      console.warn('[SessionService] Could not read uncertainty file for correction factor:', err)
-      return null
-    }
+    return resolveCFFromFile(probeModel, config.uncertaintyFilePath)
   }
 
   private syncCorrectionFactorFromProbe(probeModel: string | null): void {
