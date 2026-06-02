@@ -120,9 +120,16 @@ app.on('window-all-closed', () => {
 app.on('before-quit', (event) => {
   if (services?.deviceManager) {
     event.preventDefault()
-    services.deviceManager.disconnectAll().finally(() => {
-      app.exit()
-    })
+
+    const shutdown = async (): Promise<void> => {
+      if (services.sessionService.getState() === 'running') {
+        console.log('[Main] Stopping active session before quit...')
+        await services.sessionService.stop()
+      }
+      await services.deviceManager.disconnectAll()
+    }
+
+    shutdown().finally(() => app.exit())
   }
 })
 
