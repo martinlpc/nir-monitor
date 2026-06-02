@@ -98,6 +98,14 @@ vi.mock('nmea-simple', () => ({
   parseNmeaSentence: (...args: unknown[]) => mockParseNmeaSentence(...args)
 }))
 
+vi.mock('../ipc/SettingsHandler', () => ({
+  getLoadedUncertainty: () => ({
+    filePath: '/fake/uncertainty.csv',
+    headers: ['name', 'fMin', 'fMax', 'uncertainty', 'factor'],
+    records: [{ name: 'EF-0391', fMin: 0, fMax: 0, uncertainty: 0, factor: 1.37 }]
+  })
+}))
+
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/fake/userData') }
 }))
@@ -165,7 +173,7 @@ describe('Smoke: full chain', () => {
     port.emitData('V/m;\r')
 
     await waitForWrite('PROBE_INFO?')
-    port.emitData('"EF-0691",0,"12345","2024-03-15";\r')
+    port.emitData('"EF-0391",0,"12345","2024-03-15";\r')
   }
 
   it('scan -> connect -> session start/stop -> disconnect', async () => {
@@ -192,6 +200,7 @@ describe('Smoke: full chain', () => {
     }
 
     sessionService.setNBM(nbm)
+    expect((sessionService as any).correctionFactor).toBe(1.37)
     sessionService.setGPS(gps)
 
     mockParseNmeaSentence.mockReturnValue({
