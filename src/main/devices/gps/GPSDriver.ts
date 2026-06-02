@@ -106,7 +106,9 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
 
     this.port!.on('error', (err: Error) => {
       this.setStatus('error')
-      this.emit('error', err)
+      if (this.listenerCount('error') > 0) {
+        this.emit('error', err)
+      }
     })
 
     this.port!.on('close', () => {

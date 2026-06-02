@@ -44,8 +44,8 @@ export class DeviceManager extends EventEmitter {
       connectFn: async (port) => {
         this.nbmPolling.stop()
         if (this.nbm) {
-          this.nbm.removeAllListeners()
           await this.nbm.disconnect().catch(() => {})
+          this.nbm.removeAllListeners()
           this.nbm = null
         }
         await new Promise((r) => setTimeout(r, 800))
@@ -61,8 +61,8 @@ export class DeviceManager extends EventEmitter {
       timeoutMs: GPS_RECONNECT_TIMEOUT_MS,
       connectFn: async (port) => {
         if (this.gps) {
-          this.gps.removeAllListeners()
           await this.gps.disconnect().catch(() => {})
+          this.gps.removeAllListeners()
           this.gps = null
         }
         await new Promise((r) => setTimeout(r, 800))
@@ -174,16 +174,16 @@ export class DeviceManager extends EventEmitter {
       this.nbmReconnect.stop()
       this.nbmPolling.stop()
       if (this.nbm) {
-        this.nbm.removeAllListeners()
         await this.nbm.disconnect().catch(() => {})
+        this.nbm.removeAllListeners()
       }
       this.nbm = null
     } else {
       this.gpsIntentionalDisconnect = true
       this.gpsReconnect.stop()
       if (this.gps) {
-        this.gps.removeAllListeners()
         await this.gps.disconnect().catch(() => {})
+        this.gps.removeAllListeners()
       }
       this.gps = null
     }
@@ -197,12 +197,12 @@ export class DeviceManager extends EventEmitter {
     this.gpsReconnect.stop()
     this.nbmPolling.stop()
     if (this.nbm) {
-      this.nbm.removeAllListeners()
       await this.nbm.disconnect().catch(() => {})
+      this.nbm.removeAllListeners()
     }
     if (this.gps) {
-      this.gps.removeAllListeners()
       await this.gps.disconnect().catch(() => {})
+      this.gps.removeAllListeners()
     }
     this.nbm = null
     this.gps = null
