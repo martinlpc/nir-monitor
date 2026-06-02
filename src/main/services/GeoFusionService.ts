@@ -104,7 +104,10 @@ export class GeoFusionService extends EventEmitter {
   }
 
   updateConfig(config: Partial<GeoFusionConfig>): void {
-    this.config = { ...this.config, ...config }
+    const clean = Object.fromEntries(
+      Object.entries(config).filter(([_, v]) => v !== undefined)
+    )
+    this.config = { ...this.config, ...clean }
   }
 
   // ── Trigger logic ─────────────────────────────────────────

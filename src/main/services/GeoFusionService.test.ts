@@ -33,6 +33,23 @@ afterEach(() => {
 })
 
 describe('GeoFusionService', () => {
+  it('updateConfig ignores undefined values', () => {
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    service.updateConfig({
+      triggerMode: 'time',
+      minDistanceMeters: undefined,
+      intervalMs: undefined
+    })
+
+    expect(service['config'].triggerMode).toBe('time')
+    expect(service['config'].minDistanceMeters).toBe(10)
+    expect(service['config'].intervalMs).toBe(5000)
+  })
   it('captures the first valid point in distance mode', async () => {
     const nbm = new FakeNBMDriver()
     const gps = new FakeGPSDriver()

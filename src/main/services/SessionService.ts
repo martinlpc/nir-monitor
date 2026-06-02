@@ -128,14 +128,21 @@ export class SessionService extends EventEmitter {
     console.log(`[SessionService] Starting session: ${this.currentSessionId}, label: ${this.label}`)
     console.log(`[SessionService] fusionConfig:`, fusionConfig)
 
-    if (!fusionConfig) {
-      const appConfig = loadAppConfig()
-      const defaults: Partial<GeoFusionConfig> = {}
-      if (appConfig.triggerMode) defaults.triggerMode = appConfig.triggerMode
-      if (appConfig.intervalMs != null) defaults.intervalMs = appConfig.intervalMs
-      if (appConfig.minDistanceMeters != null) defaults.minDistanceMeters = appConfig.minDistanceMeters
-      if (Object.keys(defaults).length > 0) fusionConfig = defaults
+    const appConfig = loadAppConfig()
+    const merged: Partial<GeoFusionConfig> = {}
+
+    if (appConfig.triggerMode) merged.triggerMode = appConfig.triggerMode
+    if (appConfig.intervalMs != null) merged.intervalMs = appConfig.intervalMs
+    if (appConfig.minDistanceMeters != null) merged.minDistanceMeters = appConfig.minDistanceMeters
+
+    if (fusionConfig) {
+      if (fusionConfig.triggerMode !== undefined) merged.triggerMode = fusionConfig.triggerMode
+      if (fusionConfig.intervalMs !== undefined) merged.intervalMs = fusionConfig.intervalMs
+      if (fusionConfig.minDistanceMeters !== undefined) merged.minDistanceMeters = fusionConfig.minDistanceMeters
+      if (fusionConfig.testMode !== undefined) merged.testMode = fusionConfig.testMode
     }
+
+    fusionConfig = Object.keys(merged).length > 0 ? merged : undefined
 
     // En modo test, usar trigger por tiempo para capturar cada varios segundos
     if (fusionConfig?.testMode) {
