@@ -81,4 +81,41 @@ describe('NBM550Parser', () => {
     expect(parser.parseErrorCode('5;\r')).toBe(5)
     expect(parser.parseErrorCode('OK;\r')).toBe(0)
   })
+
+  describe('parseProbeInfo', () => {
+    it('parses probe info with complete data', () => {
+      const parser = new NBM550Parser()
+
+      const info = parser.parseProbeInfo('"EF-0691",0,"12345","2024-03-15";\r')
+
+      expect(info).toEqual({
+        model: 'EF-0691',
+        serial: '12345',
+        calibrationDate: '2024-03-15'
+      })
+    })
+
+    it('sets null for missing fields', () => {
+      const parser = new NBM550Parser()
+
+      const info = parser.parseProbeInfo('"EF-0691";\r')
+
+      expect(info).toEqual({
+        model: 'EF-0691',
+        serial: null,
+        calibrationDate: null
+      })
+    })
+
+    it('strips surrounding quotes from fields', () => {
+      const parser = new NBM550Parser()
+
+      const info = parser.parseProbeInfo('"EF-0691",0,"12345","2024-03-15";\r')
+
+      expect(info.model).toBe('EF-0691')
+      expect(info.model).not.toContain('"')
+      expect(info.serial).not.toContain('"')
+      expect(info.calibrationDate).not.toContain('"')
+    })
+  })
 })

@@ -253,4 +253,62 @@ describe('DeviceManager', () => {
     const state = await manager.scan()
     expect(state.gps.port).toBeNull()
   })
+
+  it('disconnectDevice stops NBM reconnect and polling and nulls the driver', async () => {
+    const manager = new DeviceManager(mockScanner)
+    const nbm = createFakeDevice('COM4')
+    ;(manager as any).nbm = nbm
+    ;(manager as any).nbmReconnect = { stop: vi.fn() }
+    ;(manager as any).nbmPolling = { stop: vi.fn() }
+
+    await manager.disconnectDevice('nbm550')
+
+    expect((manager as any).nbmReconnect.stop).toHaveBeenCalled()
+    expect((manager as any).nbmPolling.stop).toHaveBeenCalled()
+    expect(nbm.disconnect).toHaveBeenCalledTimes(1)
+    expect((manager as any).nbm).toBeNull()
+  })
+
+  it('disconnectDevice stops GPS reconnect and nulls the driver', async () => {
+    const manager = new DeviceManager(mockScanner)
+    const gps = createFakeDevice('COM5')
+    ;(manager as any).gps = gps
+    ;(manager as any).gpsReconnect = { stop: vi.fn() }
+
+    await manager.disconnectDevice('gps')
+
+    expect((manager as any).gpsReconnect.stop).toHaveBeenCalled()
+    expect(gps.disconnect).toHaveBeenCalledTimes(1)
+    expect((manager as any).gps).toBeNull()
+  })
+
+  it('connectDevice returns early when no port is configured', async () => {
+    const manager = new DeviceManager(mockScanner)
+    const setPortManualSpy = vi.spyOn(manager as any, 'setPortManual').mockResolvedValue(undefined)
+
+    await manager.connectDevice('nbm550')
+
+    expect(setPortManualSpy).not.toHaveBeenCalled()
+  })
+
+  it('connectDevice calls setPortManual with the configured port', async () => {
+    const manager = new DeviceManager(mockScanner)
+    const nbm = createFakeDevice('COM7')
+    ;(manager as any).nbm = nbm
+    const setPortManualSpy = vi.spyOn(manager as any, 'setPortManual').mockResolvedValue(undefined)
+
+    await manager.connectDevice('nbm550')
+
+    expect(setPortManualSpy).toHaveBeenCalledWith('nbm550', 'COM7')
+  })
+
+  it('connectDevice falls back to portConfig when driver is null', async () => {
+    const manager = new DeviceManager(mockScanner)
+    ;(manager as any).portConfig = { nbm550: 'COM8' }
+    const setPortManualSpy = vi.spyOn(manager as any, 'setPortManual').mockResolvedValue(undefined)
+
+    await manager.connectDevice('nbm550')
+
+    expect(setPortManualSpy).toHaveBeenCalledWith('nbm550', 'COM8')
+  })
 })
