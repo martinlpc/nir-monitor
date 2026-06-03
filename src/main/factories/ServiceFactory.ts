@@ -45,8 +45,8 @@ export function createServices(): Services {
   // 2. Inyectar scanner en DeviceManager
   const deviceManager = new DeviceManager(scanner, simulationMode)
 
-  // 3. Inyectar geoFusion y repositorio en SessionService
-  const sessionService = new SessionService(geoFusion, sessionRepository)
+  // 3. Inyectar geoFusion, repositorio y simulationMode en SessionService
+  const sessionService = new SessionService(geoFusion, sessionRepository, simulationMode)
 
   // 4. Wire: después de que DeviceManager.initialize() se complete,
   // necesitamos pasar las referencias de NBM y GPS a SessionService

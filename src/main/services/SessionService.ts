@@ -51,7 +51,7 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository) {
+  constructor(fusion: GeoFusionService, repository?: ISessionRepository, private readonly simulationMode: boolean = false) {
     super()
     this.fusion = fusion
     this.repository = repository || null
@@ -144,8 +144,16 @@ export class SessionService extends EventEmitter {
 
     fusionConfig = Object.keys(merged).length > 0 ? merged : undefined
 
-    // En modo test, usar trigger por tiempo para capturar cada varios segundos
-    if (fusionConfig?.testMode) {
+    // En modo simulación, forzar captura por tiempo cada 5s con umbral de 2m
+    if (this.simulationMode) {
+      console.log(`[SessionService] simulationMode detected - forcing time-based trigger (5s, 2m threshold)`)
+      fusionConfig = {
+        ...(fusionConfig || {}),
+        triggerMode: 'time',
+        intervalMs: 5000,
+        minDistanceMeters: 2
+      }
+    } else if (fusionConfig?.testMode) {
       console.log(
         `[SessionService] testMode detected - converting to time-based trigger (5s intervals)`
       )

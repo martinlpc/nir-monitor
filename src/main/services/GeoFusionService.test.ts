@@ -84,7 +84,7 @@ describe('GeoFusionService', () => {
     const gps = new FakeGPSDriver()
     const service = new GeoFusionService({
       triggerMode: 'time',
-      minDistanceMeters: 10,
+      minDistanceMeters: 0,
       intervalMs: 1000
     })
 

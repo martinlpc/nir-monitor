@@ -151,6 +151,26 @@ export class GeoFusionService extends EventEmitter {
       return
     }
 
+    const currentPosition = this._gps.getLastPosition()
+    if (!currentPosition) {
+      console.warn(`[GeoFusionService] tryCapture(): No position available`)
+      return
+    }
+
+    // Siempre respetar el umbral de distancia para no duplicar puntos
+    if (this.config.testMode) {
+      await this.capture()
+      return
+    }
+
+    if (this.lastSavedPosition) {
+      const dist = haversineMeters(this.lastSavedPosition, currentPosition)
+      if (dist < this.config.minDistanceMeters) {
+        console.log(`[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`)
+        return
+      }
+    }
+
     console.log(`[GeoFusionService] tryCapture(): About to capture...`)
     await this.capture()
   }
