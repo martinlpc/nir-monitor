@@ -70,7 +70,10 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
       }
     }
   })
-  deviceManager.on('device:error', (data) => sendIfReady(IPC_EVENTS.DEVICE_ERROR, data))
+  deviceManager.on('device:error', (data) => {
+    sendIfReady(IPC_EVENTS.DEVICE_ERROR, data)
+    emitAlert(window, `${data.deviceId}: ${data.error}`, 'error')
+  })
   deviceManager.on('state', (state) => sendIfReady(IPC_EVENTS.SCAN_STATE, state))
   deviceManager.on('scanning', (scanning) =>
     sendIfReady(IPC_EVENTS.SCAN_STATE, { ...deviceManager.getState(), scanning })

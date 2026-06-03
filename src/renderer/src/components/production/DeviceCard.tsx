@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { DeviceStatus } from '../../../../shared/device.types'
 import { useGpsCardInfo, useNbmCardInfo } from './useDeviceCardState'
 import './production.css'
@@ -16,6 +17,8 @@ interface DeviceCardProps {
   isLoading?: boolean
   onConnect?: () => void
   onDisconnect?: () => void
+  followPosition?: boolean
+  onFollowPositionChange?: (value: boolean) => void
 }
 
 export default function DeviceCard({
@@ -23,10 +26,13 @@ export default function DeviceCard({
   status,
   isLoading = false,
   onConnect,
-  onDisconnect
+  onDisconnect,
+  followPosition,
+  onFollowPositionChange
 }: DeviceCardProps): React.JSX.Element {
   const gpsInfo = useGpsCardInfo(device.type === 'gps')
   const nbmInfo = useNbmCardInfo(device.type === 'emf', status)
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false)
 
   const statusColor = {
     connected: '#4ade80',
@@ -44,7 +50,6 @@ export default function DeviceCard({
 
   const isConnected = status === 'connected'
   const hasPort = device.port !== 'No detectado'
-  const isAutoConnected = device.type === 'gps' && isConnected
   const hasGPSFix = gpsInfo.lat !== undefined && gpsInfo.lon !== undefined
 
   // Para GPS sin fix: cambiar color del LED a rojo
@@ -54,7 +59,7 @@ export default function DeviceCard({
   }
 
   return (
-    <div className="device-card">
+    <div className="device-card" onMouseLeave={() => setConfirmDisconnect(false)}>
       <div className="device-header">
         <div className="device-title">
           <div
@@ -66,16 +71,16 @@ export default function DeviceCard({
           <div>
             <h3 className="device-name">
               {device.type === 'gps' ? 'GPS (NMEA)' : device.name}
-              {isAutoConnected && (
-                <span style={{ fontSize: '0.7em', marginLeft: '8px', color: '#4ade80' }}>
-                  🔗 AUTO
-                </span>
-              )}
             </h3>
             <p className="device-type">{device.type === 'emf' ? 'Medidor de RNI' : device.type.toUpperCase()}</p>
           </div>
         </div>
-        <span className="device-status">{statusLabel}</span>
+        <div className="device-header-end">
+          {device.type === 'emf' && isConnected && nbmInfo.battery !== undefined && (
+            <span className="battery-indicator">🔋{nbmInfo.battery}%</span>
+          )}
+          <span className="device-status">{statusLabel}</span>
+        </div>
       </div>
 
       <div className="device-info">
@@ -89,14 +94,25 @@ export default function DeviceCard({
                     {gpsInfo.lat?.toFixed(6) ?? '-'}°, {gpsInfo.lon?.toFixed(6) ?? '-'}°
                   </span>
                 </div>
-                <div className="info-row">
-                  <span className="info-label">Altitud:</span>
-                  <span className="info-value">{gpsInfo.alt?.toFixed(1) ?? '-'} m</span>
-                </div>
+                {gpsInfo.alt != null && (
+                  <div className="info-row primary">
+                    <span className="info-label">Altitud:</span>
+                    <span className="info-value">{gpsInfo.alt.toFixed(1)}m</span>
+                  </div>
+                )}
+                <label className="test-mode-checkbox" style={{ marginTop: '2px', marginBottom: '4px', padding: '0.25rem 0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!followPosition}
+                    onChange={(e) => onFollowPositionChange?.(e.target.checked)}
+                  />
+                  <span style={{ fontSize: '0.7rem' }}>Seguir mi posición</span>
+                </label>
+                <div className="device-info-separator" />
               </>
             ) : (
               <div className="info-row primary" style={{ justifyContent: 'center', color: '#fca5a5' }}>
-                <span style={{ fontSize: '0.9rem', fontWeight: '600' }}>Buscando posición...</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>Buscando posición...</span>
               </div>
             )}
           </>
@@ -110,20 +126,13 @@ export default function DeviceCard({
                 {nbmInfo.rss?.toFixed(2) ?? '-'} {nbmInfo.unit ?? 'V/m'}
               </span>
             </div>
-            <div className="info-row">
-              <span className="info-label">Batería:</span>
-              <span className="info-value">{nbmInfo.battery ?? 0}%</span>
-            </div>
             {nbmInfo.probeModel && (
               <div className="info-row">
                 <span className="info-label">Sonda:</span>
-                <span className="info-value">{nbmInfo.probeModel}{nbmInfo.probeSerial ? ` (${nbmInfo.probeSerial})` : ''}</span>
-              </div>
-            )}
-            {nbmInfo.calibrationDate && (
-              <div className="info-row">
-                <span className="info-label">Calibración:</span>
-                <span className="info-value">{nbmInfo.calibrationDate}</span>
+                <span className="info-value">
+                  {nbmInfo.probeModel}{nbmInfo.probeSerial ? ` (#${nbmInfo.probeSerial})` : ''}
+                  {nbmInfo.calibrationDate ? `  |  ${nbmInfo.calibrationDate}` : ''}
+                </span>
               </div>
             )}
             <div className="info-row">
@@ -136,9 +145,31 @@ export default function DeviceCard({
 
       <div className="device-actions">
         {isConnected ? (
-          <button className="btn-disconnect" onClick={onDisconnect} disabled={isLoading}>
-            {isLoading ? 'Desconectando...' : 'Desconectar'}
-          </button>
+          confirmDisconnect ? (
+            <div className="disconnect-confirm-group">
+              <button
+                className="btn-disconnect-confirm btn-disconnect-accept"
+                onClick={() => { onDisconnect?.(); setConfirmDisconnect(false) }}
+                disabled={isLoading}
+                title="Confirmar desconexión"
+                aria-label="Confirmar desconexión"
+              >
+                ✓
+              </button>
+              <button
+                className="btn-disconnect-confirm btn-disconnect-cancel"
+                onClick={() => setConfirmDisconnect(false)}
+                title="Cancelar"
+                aria-label="Cancelar desconexión"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button className="btn-disconnect" onClick={() => setConfirmDisconnect(true)} disabled={isLoading}>
+              {isLoading ? 'Desconectando...' : 'Desconectar'}
+            </button>
+          )
         ) : (
           <button
             className="btn-connect primary"

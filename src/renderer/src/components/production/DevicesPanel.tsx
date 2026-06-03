@@ -32,6 +32,10 @@ export default function DevicesPanel({
   const [testMode, setTestMode] = useState(false)
   const [showTestMode, setShowTestMode] = useState(false)
   const [sessionName, setSessionName] = useState('')
+  const [triggerMode, setTriggerMode] = useState<'distance' | 'time'>('distance')
+  const [minDistanceMeters, setMinDistanceMeters] = useState(10)
+  const [intervalSec, setIntervalSec] = useState(5)
+  const [confirmStop, setConfirmStop] = useState(false)
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -111,7 +115,10 @@ export default function DevicesPanel({
 
       await session.start({
         label: finalLabel,
-        testMode
+        testMode,
+        triggerMode,
+        minDistanceMeters,
+        intervalMs: intervalSec * 1000
       })
       setSessionName('')
     } catch (err) {
@@ -164,31 +171,11 @@ export default function DevicesPanel({
             isLoading={loadingDevice === device.id}
             onConnect={() => handleConnect(device.id)}
             onDisconnect={() => handleDisconnect(device.id)}
+            followPosition={device.type === 'gps' ? followPosition : undefined}
+            onFollowPositionChange={device.type === 'gps' ? onFollowPositionChange : undefined}
           />
         ))}
       </div>
-
-      <div className="follow-position-toggle">
-        <label className="test-mode-checkbox">
-          <input
-            type="checkbox"
-            checked={followPosition}
-            onChange={(e) => onFollowPositionChange(e.target.checked)}
-          />
-          <span>Seguir mi posición</span>
-        </label>
-      </div>
-
-      {devices.error && (
-        <div className="error-banner">
-          <strong>Error:</strong> {devices.error}
-        </div>
-      )}
-      {session.error && (
-        <div className="error-banner">
-          <strong>Sesión:</strong> {session.error}
-        </div>
-      )}
 
       <div className="panel-footer">
         {!session.isRunning && (
@@ -201,6 +188,54 @@ export default function DevicesPanel({
             maxLength={100}
             aria-label="Nombre de la sesión"
           />
+        )}
+
+        {!session.isRunning && (
+          <div className="trigger-mode-group">
+            <span className="trigger-mode-label">Modo de captura</span>
+            <div className="toggle-switch" data-active={triggerMode}>
+              <button
+                className={`toggle-option${triggerMode === 'distance' ? ' active' : ''}`}
+                onClick={() => setTriggerMode('distance')}
+              >
+                Distancia
+              </button>
+              <button
+                className={`toggle-option${triggerMode === 'time' ? ' active' : ''}`}
+                onClick={() => setTriggerMode('time')}
+              >
+                Tiempo
+              </button>
+              <div className="toggle-slider" />
+            </div>
+            {triggerMode === 'distance' ? (
+              <label className="trigger-value-row">
+                <span>Distancia mínima:</span>
+                <input
+                  type="number"
+                  className="trigger-value-input"
+                  value={minDistanceMeters}
+                  onChange={(e) => setMinDistanceMeters(Number(e.target.value))}
+                  min={1}
+                  max={1000}
+                />
+                <span>m</span>
+              </label>
+            ) : (
+              <label className="trigger-value-row">
+                <span>Intervalo:</span>
+                <input
+                  type="number"
+                  className="trigger-value-input"
+                  value={intervalSec}
+                  onChange={(e) => setIntervalSec(Number(e.target.value))}
+                  min={1}
+                  max={3600}
+                />
+                <span>seg</span>
+              </label>
+            )}
+          </div>
         )}
 
         {showTestMode && (
@@ -216,21 +251,41 @@ export default function DevicesPanel({
           </label>
         )}
 
-        <button
-          className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
-          onClick={session.isRunning ? handleStopSession : handleStartSession}
-          disabled={!allConnected}
-          title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
-        >
-          {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
-        </button>
-
-
+        {session.isRunning && confirmStop ? (
+          <div className="session-stop-confirm">
+            <button
+              className="btn-stop-confirm btn-stop-accept"
+              onClick={() => { handleStopSession(); setConfirmStop(false) }}
+              title="Confirmar detener sesión"
+              aria-label="Confirmar detener sesión"
+            >
+              ✓ Detener
+            </button>
+            <button
+              className="btn-stop-confirm btn-stop-cancel"
+              onClick={() => setConfirmStop(false)}
+              title="Cancelar"
+              aria-label="Cancelar"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
+            onClick={session.isRunning ? () => setConfirmStop(true) : handleStartSession}
+            disabled={!allConnected}
+            title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
+          >
+            {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
+          </button>
+        )}
 
         {session.isRunning && (
           <div className="session-info">
             <span>Puntos: {session.pointCount}</span>
             <span>Duración: {formatDurationMs(session.duration)}</span>
+            <span>{triggerMode === 'distance' ? `📍 ${minDistanceMeters}m` : `⏱ ${intervalSec}s`}</span>
           </div>
         )}
       </div>
