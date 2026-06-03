@@ -44,7 +44,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
       })
     }
     return segments
-  }, [geoData.allPoints])
+  }, [geoData.allPoints.length])
 
   // Generar segmentos coloreados para sesiones cargadas
   const loadedSegments = useMemo(() => {
