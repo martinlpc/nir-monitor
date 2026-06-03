@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: com.enacom.nir-monitor
 productName: nir-monitor
 directories:
   buildResources: build
