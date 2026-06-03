@@ -19,6 +19,10 @@ class FakeNBMDriver extends EventEmitter {
     return Promise.resolve()
   }
 
+  getProbeInfo(): null {
+    return null
+  }
+
   readMeasurement(): Promise<{ rss: number; unit: 'V/m'; battery: number }> {
     return Promise.resolve({ rss: 6.5, unit: 'V/m', battery: 100 })
   }

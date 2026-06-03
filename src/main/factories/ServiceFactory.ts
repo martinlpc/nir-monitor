@@ -16,21 +16,37 @@ export interface Services {
   geoFusion: GeoFusionService
 }
 
+function createSimulatedScanner(): ISerialPortScanner {
+  return {
+    listAvailablePorts: async () => ['COM-sim'],
+    scanAndProbeAll: async () => ({
+      nbmPort: 'COM-sim',
+      gpsPort: 'COM-sim',
+      allProbed: []
+    }),
+    probeNBM: async () => true,
+    probeGPS: async () => true
+  }
+}
+
 /**
  * Factory pattern para crear servicios con inyección de dependencias
  * Retorna todas las instancias ya configuradas y "wireadas"
  */
 export function createServices(): Services {
+  const simulationMode = process.env.NIR_SIMULATION === 'true'
+  console.log(`[ServiceFactory] simulationMode: ${simulationMode}`)
+
   // 1. Crear dependencias base (sin dependencias)
-  const scanner = new SerialPortScanner()
+  const scanner = simulationMode ? createSimulatedScanner() : new SerialPortScanner()
   const geoFusion = new GeoFusionService()
   const sessionRepository = new SQLiteSessionRepository()
 
   // 2. Inyectar scanner en DeviceManager
-  const deviceManager = new DeviceManager(scanner)
+  const deviceManager = new DeviceManager(scanner, simulationMode)
 
-  // 3. Inyectar geoFusion y repositorio en SessionService
-  const sessionService = new SessionService(geoFusion, sessionRepository)
+  // 3. Inyectar geoFusion, repositorio y simulationMode en SessionService
+  const sessionService = new SessionService(geoFusion, sessionRepository, simulationMode)
 
   // 4. Wire: después de que DeviceManager.initialize() se complete,
   // necesitamos pasar las referencias de NBM y GPS a SessionService

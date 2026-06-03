@@ -51,7 +51,7 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository) {
+  constructor(fusion: GeoFusionService, repository?: ISessionRepository, private readonly simulationMode: boolean = false) {
     super()
     this.fusion = fusion
     this.repository = repository || null
@@ -128,8 +128,32 @@ export class SessionService extends EventEmitter {
     console.log(`[SessionService] Starting session: ${this.currentSessionId}, label: ${this.label}`)
     console.log(`[SessionService] fusionConfig:`, fusionConfig)
 
-    // En modo test, usar trigger por tiempo para capturar cada varios segundos
-    if (fusionConfig?.testMode) {
+    const appConfig = loadAppConfig()
+    const merged: Partial<GeoFusionConfig> = {}
+
+    if (appConfig.triggerMode) merged.triggerMode = appConfig.triggerMode
+    if (appConfig.intervalMs != null) merged.intervalMs = appConfig.intervalMs
+    if (appConfig.minDistanceMeters != null) merged.minDistanceMeters = appConfig.minDistanceMeters
+
+    if (fusionConfig) {
+      if (fusionConfig.triggerMode !== undefined) merged.triggerMode = fusionConfig.triggerMode
+      if (fusionConfig.intervalMs !== undefined) merged.intervalMs = fusionConfig.intervalMs
+      if (fusionConfig.minDistanceMeters !== undefined) merged.minDistanceMeters = fusionConfig.minDistanceMeters
+      if (fusionConfig.testMode !== undefined) merged.testMode = fusionConfig.testMode
+    }
+
+    fusionConfig = Object.keys(merged).length > 0 ? merged : undefined
+
+    // En modo simulación, forzar captura por tiempo cada 5s con umbral de 2m
+    if (this.simulationMode) {
+      console.log(`[SessionService] simulationMode detected - forcing time-based trigger (5s, 2m threshold)`)
+      fusionConfig = {
+        ...(fusionConfig || {}),
+        triggerMode: 'time',
+        intervalMs: 5000,
+        minDistanceMeters: 2
+      }
+    } else if (fusionConfig?.testMode) {
       console.log(
         `[SessionService] testMode detected - converting to time-based trigger (5s intervals)`
       )

@@ -10,7 +10,14 @@ const GPS_BAUD_RATE = 4800
 const PROBE_TIMEOUT_MS = 6000 // Aumentado de 3s a 6s - NBM550 necesita tiempo para responder a REMOTE ON
 const NMEA_LISTEN_MS = 12000 // Aumentado a 12s para permitir sincronización GPS y evitar falsos negativos
 
+export interface DriverFactories {
+  createNBM?: (port: string) => NBM550Driver
+  createGPS?: (port: string) => GPSDriver
+}
+
 export class SerialPortScanner implements ISerialPortScanner {
+  constructor(private readonly factories?: DriverFactories) {}
+
   async listAvailablePorts(): Promise<string[]> {
     const ports = await SerialPort.list()
     return ports.map((p) => p.path)
@@ -100,7 +107,7 @@ export class SerialPortScanner implements ISerialPortScanner {
 
   async probeNBM(port: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing NBM550 on ${port}...`)
-    const driver = new NBM550Driver({
+    const driver = this.factories?.createNBM?.(port) ?? new NBM550Driver({
       port,
       baudRate: NBM_BAUD_RATE,
       pollIntervalMs: 200,
@@ -137,7 +144,7 @@ export class SerialPortScanner implements ISerialPortScanner {
 
   async probeGPS(port: string, timeoutMs = NMEA_LISTEN_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing GPS on ${port}...`)
-    const driver = new GPSDriver({
+    const driver = this.factories?.createGPS?.(port) ?? new GPSDriver({
       port,
       baudRate: GPS_BAUD_RATE
     })

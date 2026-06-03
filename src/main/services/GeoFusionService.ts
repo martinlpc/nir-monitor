@@ -104,7 +104,10 @@ export class GeoFusionService extends EventEmitter {
   }
 
   updateConfig(config: Partial<GeoFusionConfig>): void {
-    this.config = { ...this.config, ...config }
+    const clean = Object.fromEntries(
+      Object.entries(config).filter(([_, v]) => v !== undefined)
+    )
+    this.config = { ...this.config, ...clean }
   }
 
   // ── Trigger logic ─────────────────────────────────────────
@@ -146,6 +149,26 @@ export class GeoFusionService extends EventEmitter {
     if (!this._gps.isPositionValid()) {
       console.warn(`[GeoFusionService] tryCapture(): GPS position not valid`)
       return
+    }
+
+    const currentPosition = this._gps.getLastPosition()
+    if (!currentPosition) {
+      console.warn(`[GeoFusionService] tryCapture(): No position available`)
+      return
+    }
+
+    // Siempre respetar el umbral de distancia para no duplicar puntos
+    if (this.config.testMode) {
+      await this.capture()
+      return
+    }
+
+    if (this.lastSavedPosition) {
+      const dist = haversineMeters(this.lastSavedPosition, currentPosition)
+      if (dist < this.config.minDistanceMeters) {
+        console.log(`[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`)
+        return
+      }
     }
 
     console.log(`[GeoFusionService] tryCapture(): About to capture...`)

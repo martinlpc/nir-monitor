@@ -55,13 +55,13 @@ export function useSession() {
       try {
         setError(null)
         // Si testMode está activado, NO pasar triggerMode (dejar que SessionService lo maneje)
-        const config = {
+        const config: Record<string, unknown> = {
           label: options?.label || 'Nueva sesión',
-          ...(options?.testMode ? {} : { triggerMode: options?.triggerMode || 'distance' }),
-          minDistanceMeters: options?.minDistanceMeters,
-          intervalMs: options?.intervalMs,
           testMode: options?.testMode || false
         }
+        if (options?.triggerMode) config.triggerMode = options.triggerMode
+        if (options?.minDistanceMeters !== undefined) config.minDistanceMeters = options.minDistanceMeters
+        if (options?.intervalMs !== undefined) config.intervalMs = options.intervalMs
         console.log('[useSession] Calling session.start() with config:', config)
         const sessionId = await window.api.session.start(config)
 

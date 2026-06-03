@@ -16,9 +16,9 @@ function getConfigPath(): string {
   return CONFIG_PATH
 }
 
-export function loadPortConfig(): PortConfigData {
+export function loadPortConfig(configPath?: string): PortConfigData {
   try {
-    const filePath = getConfigPath()
+    const filePath = configPath ?? getConfigPath()
     if (!existsSync(filePath)) return {}
     return JSON.parse(readFileSync(filePath, 'utf-8'))
   } catch {
@@ -26,9 +26,9 @@ export function loadPortConfig(): PortConfigData {
   }
 }
 
-export function savePortConfig(config: PortConfigData): void {
+export function savePortConfig(config: PortConfigData, configPath?: string): void {
   try {
-    const filePath = getConfigPath()
+    const filePath = configPath ?? getConfigPath()
     writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8')
   } catch {
     console.error('No pudo guardarse la configuración de puertos')
