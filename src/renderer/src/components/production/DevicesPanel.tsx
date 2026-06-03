@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { useDevices } from '../../hooks/useDevices'
 import type { useSession } from '../../hooks/useSession'
-import { generateSessionName } from '../../utils/geolocation'
+import { generateSessionName, haversineMeters } from '../../utils/geolocation'
 import { formatDurationMs } from '../../utils/formatters'
+import { useGpsPosition } from '../../hooks/useGpsPosition'
 import DeviceCard from './DeviceCard'
 import './production.css'
 
@@ -36,6 +37,7 @@ export default function DevicesPanel({
   const [minDistanceMeters, setMinDistanceMeters] = useState(10)
   const [intervalSec, setIntervalSec] = useState(5)
   const [confirmStop, setConfirmStop] = useState(false)
+  const { position } = useGpsPosition()
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -286,6 +288,11 @@ export default function DevicesPanel({
             <span>Puntos: {session.pointCount}</span>
             <span>Duración: {formatDurationMs(session.duration)}</span>
             <span>{triggerMode === 'distance' ? `📍 ${minDistanceMeters}m` : `⏱ ${intervalSec}s`}</span>
+            {position && session.points.length > 0 && (
+              <span>
+                📏 {haversineMeters(position, session.points[session.points.length - 1].position).toFixed(1)}m
+              </span>
+            )}
           </div>
         )}
       </div>
