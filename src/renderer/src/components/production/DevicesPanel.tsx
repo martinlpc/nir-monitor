@@ -4,6 +4,7 @@ import type { useSession } from '../../hooks/useSession'
 import { generateSessionName } from '../../utils/geolocation'
 import { formatDurationMs } from '../../utils/formatters'
 import DeviceCard from './DeviceCard'
+import { useToast } from './ToastProvider'
 import './production.css'
 
 interface DevicesPanelProps {
@@ -32,6 +33,19 @@ export default function DevicesPanel({
   const [testMode, setTestMode] = useState(false)
   const [showTestMode, setShowTestMode] = useState(false)
   const [sessionName, setSessionName] = useState('')
+  const [triggerMode, setTriggerMode] = useState<'distance' | 'time'>('distance')
+  const [minDistanceMeters, setMinDistanceMeters] = useState(10)
+  const [intervalSec, setIntervalSec] = useState(5)
+  const { notify } = useToast()
+
+  // Mostrar errores como toasts
+  useEffect(() => {
+    if (devices.error) notify({ message: devices.error, type: 'error' })
+  }, [devices.error, notify])
+
+  useEffect(() => {
+    if (session.error) notify({ message: session.error, type: 'error' })
+  }, [session.error, notify])
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -111,7 +125,10 @@ export default function DevicesPanel({
 
       await session.start({
         label: finalLabel,
-        testMode
+        testMode,
+        triggerMode,
+        minDistanceMeters,
+        intervalMs: intervalSec * 1000
       })
       setSessionName('')
     } catch (err) {
@@ -164,31 +181,11 @@ export default function DevicesPanel({
             isLoading={loadingDevice === device.id}
             onConnect={() => handleConnect(device.id)}
             onDisconnect={() => handleDisconnect(device.id)}
+            followPosition={device.type === 'gps' ? followPosition : undefined}
+            onFollowPositionChange={device.type === 'gps' ? onFollowPositionChange : undefined}
           />
         ))}
       </div>
-
-      <div className="follow-position-toggle">
-        <label className="test-mode-checkbox">
-          <input
-            type="checkbox"
-            checked={followPosition}
-            onChange={(e) => onFollowPositionChange(e.target.checked)}
-          />
-          <span>Seguir mi posición</span>
-        </label>
-      </div>
-
-      {devices.error && (
-        <div className="error-banner">
-          <strong>Error:</strong> {devices.error}
-        </div>
-      )}
-      {session.error && (
-        <div className="error-banner">
-          <strong>Sesión:</strong> {session.error}
-        </div>
-      )}
 
       <div className="panel-footer">
         {!session.isRunning && (
@@ -201,6 +198,61 @@ export default function DevicesPanel({
             maxLength={100}
             aria-label="Nombre de la sesión"
           />
+        )}
+
+        {!session.isRunning && (
+          <div className="trigger-mode-group">
+            <span className="trigger-mode-label">Modo de captura</span>
+            <div className="trigger-mode-options">
+              <label className={`trigger-mode-option${triggerMode === 'distance' ? ' active' : ''}`}>
+                <input
+                  type="radio"
+                  name="triggerMode"
+                  value="distance"
+                  checked={triggerMode === 'distance'}
+                  onChange={() => setTriggerMode('distance')}
+                />
+                Distancia
+              </label>
+              <label className={`trigger-mode-option${triggerMode === 'time' ? ' active' : ''}`}>
+                <input
+                  type="radio"
+                  name="triggerMode"
+                  value="time"
+                  checked={triggerMode === 'time'}
+                  onChange={() => setTriggerMode('time')}
+                />
+                Tiempo
+              </label>
+            </div>
+            {triggerMode === 'distance' ? (
+              <label className="trigger-value-row">
+                <span>Distancia mínima:</span>
+                <input
+                  type="number"
+                  className="trigger-value-input"
+                  value={minDistanceMeters}
+                  onChange={(e) => setMinDistanceMeters(Number(e.target.value))}
+                  min={1}
+                  max={1000}
+                />
+                <span>m</span>
+              </label>
+            ) : (
+              <label className="trigger-value-row">
+                <span>Intervalo:</span>
+                <input
+                  type="number"
+                  className="trigger-value-input"
+                  value={intervalSec}
+                  onChange={(e) => setIntervalSec(Number(e.target.value))}
+                  min={1}
+                  max={3600}
+                />
+                <span>seg</span>
+              </label>
+            )}
+          </div>
         )}
 
         {showTestMode && (
@@ -225,12 +277,11 @@ export default function DevicesPanel({
           {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
         </button>
 
-
-
         {session.isRunning && (
           <div className="session-info">
             <span>Puntos: {session.pointCount}</span>
             <span>Duración: {formatDurationMs(session.duration)}</span>
+            <span>{triggerMode === 'distance' ? `📍 ${minDistanceMeters}m` : `⏱ ${intervalSec}s`}</span>
           </div>
         )}
       </div>
