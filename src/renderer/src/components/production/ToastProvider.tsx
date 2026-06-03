@@ -36,18 +36,16 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const handler = (_: unknown, payload: { message: string; type: ToastType }) => {
       notify({ message: payload.message, type: payload.type })
     }
-    window.api?.on?.('alert', handler)
-    return () => {
-      window.api?.off?.('alert', handler)
-    }
+    const unsubscribe = window.api?.on?.('alert', handler)
+    return () => unsubscribe?.()
   }, [notify])
 
   // Timers
   useEffect(() => {
     toasts.forEach(toast => {
-      if (toast.type === 'error') return // requiere acción manual
-      if (timers.current[toast.id]) return // ya tiene timer
-      const timeout = toast.type === 'warning' ? 7000 : 5000
+      if (toast.type === 'error') return // requiere confirmación manual
+      if (timers.current[toast.id]) return
+      const timeout = toast.type === 'info' ? 3000 : 5000
       timers.current[toast.id] = setTimeout(() => dismiss(toast.id), timeout)
     })
     return () => {

@@ -4,7 +4,6 @@ import type { useSession } from '../../hooks/useSession'
 import { generateSessionName } from '../../utils/geolocation'
 import { formatDurationMs } from '../../utils/formatters'
 import DeviceCard from './DeviceCard'
-import { useToast } from './ToastProvider'
 import './production.css'
 
 interface DevicesPanelProps {
@@ -36,16 +35,6 @@ export default function DevicesPanel({
   const [triggerMode, setTriggerMode] = useState<'distance' | 'time'>('distance')
   const [minDistanceMeters, setMinDistanceMeters] = useState(10)
   const [intervalSec, setIntervalSec] = useState(5)
-  const { notify } = useToast()
-
-  // Mostrar errores como toasts
-  useEffect(() => {
-    if (devices.error) notify({ message: devices.error, type: 'error' })
-  }, [devices.error, notify])
-
-  useEffect(() => {
-    if (session.error) notify({ message: session.error, type: 'error' })
-  }, [session.error, notify])
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -203,27 +192,20 @@ export default function DevicesPanel({
         {!session.isRunning && (
           <div className="trigger-mode-group">
             <span className="trigger-mode-label">Modo de captura</span>
-            <div className="trigger-mode-options">
-              <label className={`trigger-mode-option${triggerMode === 'distance' ? ' active' : ''}`}>
-                <input
-                  type="radio"
-                  name="triggerMode"
-                  value="distance"
-                  checked={triggerMode === 'distance'}
-                  onChange={() => setTriggerMode('distance')}
-                />
+            <div className="toggle-switch" data-active={triggerMode}>
+              <button
+                className={`toggle-option${triggerMode === 'distance' ? ' active' : ''}`}
+                onClick={() => setTriggerMode('distance')}
+              >
                 Distancia
-              </label>
-              <label className={`trigger-mode-option${triggerMode === 'time' ? ' active' : ''}`}>
-                <input
-                  type="radio"
-                  name="triggerMode"
-                  value="time"
-                  checked={triggerMode === 'time'}
-                  onChange={() => setTriggerMode('time')}
-                />
+              </button>
+              <button
+                className={`toggle-option${triggerMode === 'time' ? ' active' : ''}`}
+                onClick={() => setTriggerMode('time')}
+              >
                 Tiempo
-              </label>
+              </button>
+              <div className="toggle-slider" />
             </div>
             {triggerMode === 'distance' ? (
               <label className="trigger-value-row">
