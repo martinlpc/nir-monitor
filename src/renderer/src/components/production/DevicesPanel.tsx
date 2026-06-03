@@ -35,6 +35,7 @@ export default function DevicesPanel({
   const [triggerMode, setTriggerMode] = useState<'distance' | 'time'>('distance')
   const [minDistanceMeters, setMinDistanceMeters] = useState(10)
   const [intervalSec, setIntervalSec] = useState(5)
+  const [confirmStop, setConfirmStop] = useState(false)
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -250,14 +251,35 @@ export default function DevicesPanel({
           </label>
         )}
 
-        <button
-          className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
-          onClick={session.isRunning ? handleStopSession : handleStartSession}
-          disabled={!allConnected}
-          title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
-        >
-          {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
-        </button>
+        {session.isRunning && confirmStop ? (
+          <div className="session-stop-confirm">
+            <button
+              className="btn-stop-confirm btn-stop-accept"
+              onClick={() => { handleStopSession(); setConfirmStop(false) }}
+              title="Confirmar detener sesión"
+              aria-label="Confirmar detener sesión"
+            >
+              ✓ Detener
+            </button>
+            <button
+              className="btn-stop-confirm btn-stop-cancel"
+              onClick={() => setConfirmStop(false)}
+              title="Cancelar"
+              aria-label="Cancelar"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <button
+            className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
+            onClick={session.isRunning ? () => setConfirmStop(true) : handleStartSession}
+            disabled={!allConnected}
+            title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
+          >
+            {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
+          </button>
+        )}
 
         {session.isRunning && (
           <div className="session-info">
