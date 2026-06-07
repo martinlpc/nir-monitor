@@ -72,16 +72,6 @@ export function useSession() {
           startedAt: Date.now(),
           label: options?.label || prev.label
         }))
-        // Traer metadata activa para mostrar factor/serial durante la sesión en curso.
-        void window.api.session
-          .list()
-          .then((summary) => {
-            if (!summary) return
-            setSession((prev) =>
-              prev.sessionId === summary.id ? { ...prev, summary } : prev
-            )
-          })
-          .catch(() => {})
         pointsRef.current = []
         setPointCount(0)
 
@@ -142,22 +132,23 @@ export function useSession() {
 
     // Listener para inicio de sesión
     const unsubscribeStarted = window.api.session.onStarted((data) => {
+      const summary: SessionSummary = {
+        id: data.sessionId,
+        label: data.label,
+        startedAt: data.startedAt,
+        stoppedAt: null,
+        sampleCount: 0,
+        correctionFactor: data.correctionFactor,
+        instrument: data.instrument
+      }
       setSession((prev) => ({
         ...prev,
         sessionId: data.sessionId,
         status: 'running',
         startedAt: data.startedAt,
-        label: data.label
+        label: data.label,
+        summary
       }))
-      void window.api.session
-        .list()
-        .then((summary) => {
-          if (!summary) return
-          setSession((prev) =>
-            prev.sessionId === summary.id ? { ...prev, summary } : prev
-          )
-        })
-        .catch(() => {})
       pointsRef.current = []
       setPointCount(0)
       setDuration(0)

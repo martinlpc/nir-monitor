@@ -14,6 +14,7 @@ export interface AppConfigData {
 }
 
 let CONFIG_PATH: string | null = null
+let configCache: AppConfigData | null = null
 
 function getConfigPath(): string {
   if (!CONFIG_PATH) {
@@ -23,12 +24,19 @@ function getConfigPath(): string {
 }
 
 export function loadAppConfig(): AppConfigData {
+  if (configCache) return configCache
   try {
     const filePath = getConfigPath()
-    if (!existsSync(filePath)) return {}
-    return JSON.parse(readFileSync(filePath, 'utf-8'))
+    if (!existsSync(filePath)) {
+      configCache = {}
+      return configCache
+    }
+    const config = JSON.parse(readFileSync(filePath, 'utf-8')) as AppConfigData
+    configCache = config
+    return config
   } catch {
-    return {}
+    configCache = {}
+    return configCache
   }
 }
 
@@ -36,6 +44,7 @@ export function saveAppConfig(config: AppConfigData): void {
   try {
     const filePath = getConfigPath()
     writeFileSync(filePath, JSON.stringify(config, null, 2), 'utf-8')
+    configCache = config
     console.log('[AppConfig] ✓ Configuración guardada en:', filePath)
   } catch (err) {
     console.error('[AppConfig] No pudo guardarse la configuración:', err)

@@ -153,12 +153,32 @@ export default function ProductionShell(): React.JSX.Element {
             >
               <SessionsPanel 
                 session={session}
+                sessions={persistedSessions.sessions}
+                isLoading={persistedSessions.isLoading}
+                error={persistedSessions.error}
                 onOpenAllSessions={() => setAllSessionsDrawerOpen(true)}
-                onAddSessionToMap={multipleSessions.addSession}
-                loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
                 onSessionLoaded={(bounds) => {
                   setFollowPosition(false)
                   setFocusSessionBounds(bounds)
+                }}
+                onDeleteSession={async (sessionId) => {
+                  try {
+                    await persistedSessions.deleteSession(sessionId)
+                  } catch (err) {
+                    console.error('[ProductionShell] Error deleting session:', err)
+                  }
+                }}
+                onExportSession={async (sessionId, format) => {
+                  const found = persistedSessions.sessions.find((s) => s.id === sessionId)
+                  if (!found) return
+                  const result = await persistedSessions.exportSession(sessionId, format, found.label)
+                  if (result.canceled) {
+                    throw new Error('Export canceled')
+                  }
+                }}
+                onGetSession={async (sessionId) => {
+                  const result = await persistedSessions.getSession(sessionId)
+                  return result
                 }}
               />
             </div>

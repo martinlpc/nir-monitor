@@ -1,24 +1,31 @@
 import { useState, useEffect } from 'react'
-import { usePersistentSessions } from '../../hooks'
 import { useSession } from '../../hooks/useSession'
-import SessionItem from './SessionItem'
+import type { SessionItem as SessionItemType } from '../../hooks/usePersistentSessions'
+import type { PersistedSession } from '../../../../shared/services/ISessionRepository'
+import SessionItemView from './SessionItem'
 import './SessionsPanel.css'
 
 export default function SessionsPanel({
   session,
+  sessions,
+  isLoading,
+  error,
   onOpenAllSessions,
-  onAddSessionToMap,
-  loadedSessionIds,
-  onSessionLoaded
+  onSessionLoaded,
+  onDeleteSession,
+  onExportSession,
+  onGetSession
 }: {
   session: ReturnType<typeof useSession>
+  sessions: SessionItemType[]
+  isLoading: boolean
+  error: string | null
   onOpenAllSessions?: () => void
-  onAddSessionToMap?: (sessionId: string, label: string, points: any[], sessionInfo?: any) => void
-  loadedSessionIds?: Set<string>
   onSessionLoaded?: (bounds: { north: number; south: number; east: number; west: number } | null) => void
+  onDeleteSession: (sessionId: string) => Promise<void>
+  onExportSession: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => Promise<void>
+  onGetSession: (sessionId: string) => Promise<PersistedSession>
 }): React.JSX.Element {
-  const { sessions, isLoading, error, deleteSession, exportSession, getSession } =
-    usePersistentSessions()
   const [loadStatus, setLoadStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   // Limpiar mensaje de estado después de 3 segundos
@@ -31,7 +38,7 @@ export default function SessionsPanel({
   const handleLoad = (sessionId: string): void => {
     setLoadStatus(null)
     
-    getSession(sessionId)
+    onGetSession(sessionId)
       .then((result) => {
         console.log('[SessionsPanel] getSession result:', result)
         
@@ -40,7 +47,7 @@ export default function SessionsPanel({
           
           // Calcular bounds de la sesión para centrado automático
           const validPoints = result.points.filter((p) => p.position !== null && p.position !== undefined)
-          let bounds = null
+          let bounds: { north: number; south: number; east: number; west: number } | null = null
           
           if (validPoints.length > 0) {
             const lats = validPoints.map((p) => p.position.lat)
@@ -94,7 +101,7 @@ export default function SessionsPanel({
 
   const handleDelete = async (sessionId: string) => {
     try {
-      await deleteSession(sessionId)
+      await onDeleteSession(sessionId)
     } catch (err) {
       console.error('Error deleting session:', err)
     }
@@ -105,11 +112,10 @@ export default function SessionsPanel({
       const found = sessions.find((s) => s.id === sessionId)
       if (!found) return
 
-      const result = await exportSession(sessionId, format, found.label)
-      if (result.canceled) return
+      await onExportSession(sessionId, format)
 
       setLoadStatus({
-        message: `✓ Exportado a: ${result.filePath}`,
+        message: `✓ Sesión exportada correctamente`,
         type: 'success'
       })
     } catch (err) {
@@ -166,7 +172,7 @@ export default function SessionsPanel({
       ) : (
         <div className="sessions-list">
           {sessions.slice(0, 5).map((sess) => (
-            <SessionItem
+            <SessionItemView
               key={sess.id}
               session={sess}
               onLoad={handleLoad}

@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { GeoTimestamp, GeoPosition } from '../shared/GeoTimestamp'
 import type { DeviceManagerStateDTO } from '../shared/dto'
 import type { DeviceStatus } from '../shared/device.types'
-import type { SessionSummary } from '../shared/ipc.types'
+import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
 
@@ -182,10 +182,10 @@ const api = {
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_SAMPLE, handler)
     },
 
-    onStarted: (cb: (data: { sessionId: string; startedAt: number; label: string }) => void) => {
+    onStarted: (cb: (data: { sessionId: string; startedAt: number; label: string; correctionFactor: number | null; instrument: InstrumentInfo | null }) => void) => {
       const handler = (
         _: IpcRendererEvent,
-        data: { sessionId: string; startedAt: number; label: string }
+        data: { sessionId: string; startedAt: number; label: string; correctionFactor: number | null; instrument: InstrumentInfo | null }
       ) => cb(data)
       ipcRenderer.on(IPC_EVENTS.SESSION_STARTED, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STARTED, handler)

@@ -1,6 +1,6 @@
 import type { GeoTimestamp, GeoPosition } from '../shared/GeoTimestamp'
 import type { DeviceManagerStateDTO } from '../shared/dto'
-import type { SessionSummary } from '../shared/ipc.types'
+import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import type { DeviceStatus } from '../shared/device.types'
 
@@ -84,7 +84,7 @@ declare global {
         ) => Promise<{ success: boolean; points?: GeoTimestamp[]; error?: string }>
         onSample: (cb: (point: GeoTimestamp) => void) => () => void
         onStarted: (
-          cb: (data: { sessionId: string; startedAt: number; label: string }) => void
+          cb: (data: { sessionId: string; startedAt: number; label: string; correctionFactor: number | null; instrument: InstrumentInfo | null }) => void
         ) => () => void
         onStopped: (cb: (data: SessionSummary) => void) => () => void
         onAlert: (cb: (data: { message: string }) => void) => () => void

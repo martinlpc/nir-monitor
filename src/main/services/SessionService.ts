@@ -218,8 +218,10 @@ export class SessionService extends EventEmitter {
     this.emit('started', {
       sessionId: this.currentSessionId,
       startedAt: this.startedAt,
-      label: this.label
-    })
+      label: this.label,
+      correctionFactor: this.correctionFactor,
+      instrument: this.instrument
+    } as any)
 
     return this.currentSessionId
   }

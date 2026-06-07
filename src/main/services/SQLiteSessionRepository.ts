@@ -20,6 +20,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private db: SqlJsDatabase | null = null
   private dbPath: string
   private initialized = false
+  private initPromise: Promise<void> | null = null
   private pendingPoints = 0
   private flushInterval: ReturnType<typeof setInterval> | null = null
   private readonly FLUSH_EVERY_N_POINTS = 10
@@ -60,7 +61,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   private async initialize(): Promise<void> {
     if (this.initialized) return
+    if (this.initPromise) return this.initPromise
 
+    this.initPromise = this._initialize()
+    try {
+      await this.initPromise
+    } finally {
+      this.initPromise = null
+    }
+  }
+
+  private async _initialize(): Promise<void> {
     try {
       // Inicializar SQL.js (cargará el WASM automáticamente)
       const SQL = await initSqlJs()
