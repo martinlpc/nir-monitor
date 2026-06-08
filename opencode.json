@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md", "CLAUDE.md"],
+  "agent": {
+    "backend-expert": {
+      "mode": "subagent",
+      "description": "Debug device connections (GPS/NBM550), fix serial communication, improve IPC channels, optimize GeoFusionService pipeline, troubleshoot reconnection logic"
+    },
+    "frontend-standards": {
+      "mode": "subagent",
+      "description": "Review React component quality, improve accessibility, optimize rendering performance, audit hook patterns, enforce React 19 conventions"
+    },
+    "persistence-auditor": {
+      "mode": "subagent",
+      "description": "Audit SQLite persistence strategy, review data saving patterns, analyze crash safety, evaluate SessionService/Repository layer performance"
+    }
+  }
+}
