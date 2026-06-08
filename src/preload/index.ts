@@ -123,6 +123,10 @@ const api = {
       minDistanceMeters?: number
       intervalMs?: number
       testMode?: boolean
+      provincia?: string
+      localidad?: string
+      apellido1?: string
+      apellido2?: string
     }): Promise<string> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_START, payload),
 
     stop: (): Promise<SessionSummary> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_STOP),

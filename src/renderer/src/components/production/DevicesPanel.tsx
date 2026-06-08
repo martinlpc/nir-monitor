@@ -5,6 +5,7 @@ import { generateSessionName, haversineMeters } from '../../utils/geolocation'
 import { formatDurationMs } from '../../utils/formatters'
 import { useGpsPosition } from '../../hooks/useGpsPosition'
 import DeviceCard from './DeviceCard'
+import SessionStartModal from '../SessionStartModal'
 import './production.css'
 
 interface DevicesPanelProps {
@@ -37,6 +38,7 @@ export default function DevicesPanel({
   const [minDistanceMeters, setMinDistanceMeters] = useState(10)
   const [intervalSec, setIntervalSec] = useState(5)
   const [confirmStop, setConfirmStop] = useState(false)
+  const [showStartModal, setShowStartModal] = useState(false)
   const { position } = useGpsPosition()
 
   // Ctrl+Alt+D togglea visibilidad del modo test
@@ -83,7 +85,7 @@ export default function DevicesPanel({
 
 
 
-  const handleStartSession = async (): Promise<void> => {
+  const handleStartSession = async (locationData?: { provincia: string; localidad: string; apellido1: string; apellido2: string }): Promise<void> => {
     try {
       // Intentar obtener posición GPS actual para el nombre
       const gpsStatus = devices.gps?.status
@@ -113,14 +115,27 @@ export default function DevicesPanel({
         sessionLabel = await generateSessionName()
       }
 
-      const finalLabel = sessionName.trim() || sessionLabel
+      let finalLabel = sessionName.trim()
+      if (!finalLabel && locationData?.localidad) {
+        const now = new Date()
+        const fecha = now.toISOString().slice(0, 10)
+        const hora = now.toTimeString().slice(0, 8).replace(/:/g, '')
+        finalLabel = `${locationData.localidad} ${fecha} ${hora}`
+      }
+      if (!finalLabel) finalLabel = sessionLabel
 
       await session.start({
         label: finalLabel,
         testMode,
         triggerMode,
         minDistanceMeters,
-        intervalMs: intervalSec * 1000
+        intervalMs: intervalSec * 1000,
+        ...(locationData ? {
+          provincia: locationData.provincia,
+          localidad: locationData.localidad,
+          apellido1: locationData.apellido1,
+          apellido2: locationData.apellido2
+        } : {})
       })
       setSessionName('')
     } catch (err) {
@@ -275,7 +290,7 @@ export default function DevicesPanel({
         ) : (
           <button
             className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
-            onClick={session.isRunning ? () => setConfirmStop(true) : handleStartSession}
+            onClick={session.isRunning ? () => setConfirmStop(true) : () => setShowStartModal(true)}
             disabled={!allConnected}
             title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
           >
@@ -296,6 +311,16 @@ export default function DevicesPanel({
           </div>
         )}
       </div>
+
+      {showStartModal && (
+        <SessionStartModal
+          onConfirm={(data) => {
+            setShowStartModal(false)
+            handleStartSession(data)
+          }}
+          onCancel={() => setShowStartModal(false)}
+        />
+      )}
     </aside>
   )
 }

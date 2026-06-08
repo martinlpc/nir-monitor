@@ -98,6 +98,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
           sampleCount INTEGER NOT NULL DEFAULT 0,
           correctionFactor REAL,
           instrument TEXT,
+          provincia TEXT,
+          localidad TEXT,
+          apellido1 TEXT,
+          apellido2 TEXT,
           createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `)
@@ -107,6 +111,18 @@ export class SQLiteSessionRepository implements ISessionRepository {
       } catch (e) {}
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN instrument TEXT')
+      } catch (e) {}
+      try {
+        this.db.run('ALTER TABLE sessions ADD COLUMN provincia TEXT')
+      } catch (e) {}
+      try {
+        this.db.run('ALTER TABLE sessions ADD COLUMN localidad TEXT')
+      } catch (e) {}
+      try {
+        this.db.run('ALTER TABLE sessions ADD COLUMN apellido1 TEXT')
+      } catch (e) {}
+      try {
+        this.db.run('ALTER TABLE sessions ADD COLUMN apellido2 TEXT')
       } catch (e) {}
 
       this.db.run(`
@@ -259,8 +275,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       db.run(
-        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument,
+         provincia, localidad, apellido1, apellido2)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           sessionId,
           metadata.label,
@@ -268,7 +285,11 @@ export class SQLiteSessionRepository implements ISessionRepository {
           null,
           0,
           metadata.correctionFactor ?? null,
-          metadata.instrument ? JSON.stringify(metadata.instrument) : null
+          metadata.instrument ? JSON.stringify(metadata.instrument) : null,
+          metadata.provincia ?? null,
+          metadata.localidad ?? null,
+          metadata.apellido1 ?? null,
+          metadata.apellido2 ?? null
         ]
       )
       this.save()
@@ -324,12 +345,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       // Actualizar metadatos finales
       db.run(
-        `UPDATE sessions SET stoppedAt = ?, sampleCount = ?, correctionFactor = ?, instrument = ? WHERE id = ?`,
+        `UPDATE sessions SET stoppedAt = ?, sampleCount = ?, correctionFactor = ?,
+         instrument = ?, provincia = ?, localidad = ?, apellido1 = ?, apellido2 = ? WHERE id = ?`,
         [
           metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
           metadata.sampleCount,
           metadata.correctionFactor ?? null,
           metadata.instrument ? JSON.stringify(metadata.instrument) : null,
+          metadata.provincia ?? null,
+          metadata.localidad ?? null,
+          metadata.apellido1 ?? null,
+          metadata.apellido2 ?? null,
           sessionId
         ]
       )
@@ -416,7 +442,11 @@ export class SQLiteSessionRepository implements ISessionRepository {
         sampleCount: metadataMap.sampleCount as number,
         instrument: metadataMap.instrument ? JSON.parse(metadataMap.instrument as string) : null,
         correctionFactor:
-          metadataMap.correctionFactor != null ? Number(metadataMap.correctionFactor) : null
+          metadataMap.correctionFactor != null ? Number(metadataMap.correctionFactor) : null,
+        provincia: metadataMap.provincia as string | undefined,
+        localidad: metadataMap.localidad as string | undefined,
+        apellido1: metadataMap.apellido1 as string | undefined,
+        apellido2: metadataMap.apellido2 as string | undefined
       }
 
       // Obtener puntos
@@ -570,6 +600,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
       properties: {
         session: {
           id: session?.metadata.id ?? sessionId,
+          provincia: session?.metadata.provincia ?? null,
+          localidad: session?.metadata.localidad ?? null,
+          apellido1: session?.metadata.apellido1 ?? null,
+          apellido2: session?.metadata.apellido2 ?? null,
           startedAt: session?.metadata.startedAt
             ? new Date(session.metadata.startedAt).toISOString()
             : null,

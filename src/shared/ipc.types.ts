@@ -24,6 +24,10 @@ export interface IPCHandlers {
       minDistanceMeters?: number
       intervalMs?: number
       testMode?: boolean
+      provincia?: string
+      localidad?: string
+      apellido1?: string
+      apellido2?: string
     }
     response: string
   } // devuelve sessionId
@@ -70,4 +74,8 @@ export interface SessionSummary {
   sampleCount: number
   instrument: InstrumentInfo | null
   correctionFactor: number | null // multiplicador aplicado a todas las mediciones (ej: 1.08)
+  provincia?: string
+  localidad?: string
+  apellido1?: string
+  apellido2?: string
 }

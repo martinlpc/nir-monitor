@@ -52,6 +52,10 @@ declare global {
           minDistanceMeters?: number
           intervalMs?: number
           testMode?: boolean
+          provincia?: string
+          localidad?: string
+          apellido1?: string
+          apellido2?: string
         }) => Promise<string>
         stop: () => Promise<SessionSummary>
         list: () => Promise<SessionSummary[]>
