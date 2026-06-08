@@ -1,5 +1,8 @@
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
+import * as fs from 'fs'
+import * as path from 'path'
+import { app } from 'electron'
 import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
@@ -26,6 +29,10 @@ export class SessionService extends EventEmitter {
   private repository: ISessionRepository | null = null
   private instrument: InstrumentInfo | null = null
   private correctionFactor: number | null = null
+  private provincia: string = ''
+  private localidad: string = ''
+  private apellido1: string = ''
+  private apellido2: string = ''
 
   private resolveCorrectionFactor(probeModel: string | null): number | null {
     if (!probeModel) return null
@@ -108,7 +115,7 @@ export class SessionService extends EventEmitter {
 
   // ── Ciclo de sesión ───────────────────────────────────────
 
-  async start(label: string = '', fusionConfig?: Partial<GeoFusionConfig>): Promise<string> {
+  async start(label: string = '', fusionConfig?: Partial<GeoFusionConfig>, locationData?: { provincia?: string; localidad?: string; apellido1?: string; apellido2?: string }): Promise<string> {
     if (this.state === 'running') {
       throw new Error('Ya hay una sesión en curso')
     }
@@ -124,6 +131,10 @@ export class SessionService extends EventEmitter {
     this.label = label || `Recorrido ${new Date().toLocaleDateString('es-AR')}`
     this.accumulatedPoints = []
     this.correctionFactor = null
+    this.provincia = locationData?.provincia || ''
+    this.localidad = locationData?.localidad || ''
+    this.apellido1 = locationData?.apellido1 || ''
+    this.apellido2 = locationData?.apellido2 || ''
 
     console.log(`[SessionService] Starting session: ${this.currentSessionId}, label: ${this.label}`)
     console.log(`[SessionService] fusionConfig:`, fusionConfig)
@@ -201,7 +212,11 @@ export class SessionService extends EventEmitter {
           stoppedAt: null,
           sampleCount: 0,
           instrument: this.instrument,
-          correctionFactor: this.correctionFactor
+          correctionFactor: this.correctionFactor,
+          provincia: this.provincia || undefined,
+          localidad: this.localidad || undefined,
+          apellido1: this.apellido1 || undefined,
+          apellido2: this.apellido2 || undefined
         })
       } catch (err) {
         console.error('[SessionService] Failed to init session in repository:', err)
@@ -242,7 +257,11 @@ export class SessionService extends EventEmitter {
       stoppedAt: Date.now(),
       sampleCount: this.pointCount,
       instrument: this.instrument,
-      correctionFactor: this.correctionFactor
+      correctionFactor: this.correctionFactor,
+      provincia: this.provincia || undefined,
+      localidad: this.localidad || undefined,
+      apellido1: this.apellido1 || undefined,
+      apellido2: this.apellido2 || undefined
     }
 
     // Finalizar sesión en el repositorio (actualizar metadatos + computar stats + flush a disco)
@@ -256,6 +275,26 @@ export class SessionService extends EventEmitter {
       } catch (err) {
         console.error(`[SessionService] Failed to finalize session: ${err}`)
         // No throw - sesión termina pero sin persistencia
+      }
+    }
+
+    // Generar GeoJSON en el Escritorio
+    if (this.repository && this.currentSessionId && this.localidad) {
+      try {
+        const desktop = app.getPath('desktop')
+        const startDate = new Date(this.startedAt)
+        const fecha = startDate.toISOString().slice(0, 10)
+        const hora = startDate.toTimeString().slice(0, 8).replace(/:/g, '')
+        const loc = this.localidad
+          .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+          .replace(/\s+/g, '-')
+        const filename = `${loc}_${fecha}_${hora}.geojson`
+        const filepath = path.join(desktop, filename)
+        const geojson = await this.repository.exportAsGeoJSON(this.currentSessionId)
+        fs.writeFileSync(filepath, geojson, 'utf-8')
+        console.log(`[SessionService] GeoJSON saved to desktop: ${filepath}`)
+      } catch (err) {
+        console.warn('[SessionService] Failed to save GeoJSON to desktop:', err)
       }
     }
 
@@ -283,7 +322,11 @@ export class SessionService extends EventEmitter {
       stoppedAt: this.state === 'stopped' ? Date.now() : null,
       sampleCount: this.pointCount,
       instrument: this.instrument,
-      correctionFactor: this.correctionFactor
+      correctionFactor: this.correctionFactor,
+      provincia: this.provincia || undefined,
+      localidad: this.localidad || undefined,
+      apellido1: this.apellido1 || undefined,
+      apellido2: this.apellido2 || undefined
     }
   }
 

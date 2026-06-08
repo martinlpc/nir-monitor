@@ -28,6 +28,10 @@ export function registerSessionServiceHandlers(
         minDistanceMeters?: number
         intervalMs?: number
         testMode?: boolean
+        provincia?: string
+        localidad?: string
+        apellido1?: string
+        apellido2?: string
       }
     ) => {
       console.log(`[SessionServiceHandler] SESSION_START received, payload:`, payload)
@@ -35,13 +39,13 @@ export function registerSessionServiceHandlers(
       // 1. Accede a NBM y GPS desde DeviceManager
       // 2. Valifica que estén conectados
       // 3. Wirifica GeoFusionService
-      const { label, ...fusionConfig } = payload
+      const { label, provincia, localidad, apellido1, apellido2, ...fusionConfig } = payload
       console.log(
         `[SessionServiceHandler] Calling sessionService.start() with label="${label}" and fusionConfig:`,
         fusionConfig
       )
       try {
-        const sessionId = await sessionService.start(label, fusionConfig)
+        const sessionId = await sessionService.start(label, fusionConfig, { provincia, localidad, apellido1, apellido2 })
         console.log(`[SessionServiceHandler] sessionService.start() returned: ${sessionId}`)
         return sessionId
       } catch (err: any) {

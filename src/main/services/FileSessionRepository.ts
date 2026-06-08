@@ -223,6 +223,10 @@ export class FileSessionRepository implements ISessionRepository {
         session: {
           id: metadata.id,
           label: metadata.label,
+          provincia: metadata.provincia ?? null,
+          localidad: metadata.localidad ?? null,
+          apellido1: metadata.apellido1 ?? null,
+          apellido2: metadata.apellido2 ?? null,
           startedAt: new Date(metadata.startedAt).toISOString(),
           stoppedAt: metadata.stoppedAt ? new Date(metadata.stoppedAt).toISOString() : null,
           sampleCount: metadata.sampleCount

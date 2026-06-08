@@ -51,6 +51,10 @@ export function useSession() {
       minDistanceMeters?: number
       intervalMs?: number
       testMode?: boolean
+      provincia?: string
+      localidad?: string
+      apellido1?: string
+      apellido2?: string
     }) => {
       try {
         setError(null)
@@ -62,6 +66,10 @@ export function useSession() {
         if (options?.triggerMode) config.triggerMode = options.triggerMode
         if (options?.minDistanceMeters !== undefined) config.minDistanceMeters = options.minDistanceMeters
         if (options?.intervalMs !== undefined) config.intervalMs = options.intervalMs
+        if (options?.provincia) config.provincia = options.provincia
+        if (options?.localidad) config.localidad = options.localidad
+        if (options?.apellido1) config.apellido1 = options.apellido1
+        if (options?.apellido2) config.apellido2 = options.apellido2
         console.log('[useSession] Calling session.start() with config:', config)
         const sessionId = await window.api.session.start(config)
 
