@@ -17,11 +17,20 @@ Desktop EMF mapper basado en ITU-T K.113. Electron 42 + React 19 + Leaflet + SQL
 - Sin estado global -- solo useState + hooks + IPC bridge
 
 ## Scripts clave
-- `npm run dev` -- dev con hot reload
-- `npm test` -- vitest run (node env, 15s timeout)
-- `npm run lint` -- eslint
-- `npm run typecheck` -- tsc node + web
-- `npm run seed:mock` -- seeds SQLite con datos mock (Neuquen)
+| Comando | Proposito |
+|---------|-----------|
+| `npm run dev` | Dev con hot reload |
+| `npm run build` | Typecheck + build production |
+| `npm test` | Vitest run (node env, 15s timeout) |
+| `npm run test:watch` | Vitest watch mode |
+| `npm run test:coverage` | Vitest con reporte V8 |
+| `npm run lint` | ESLint |
+| `npm run format` | Prettier --write |
+| `npm run typecheck` | tsc node + web |
+| `npm run seed:mock` | Seeds SQLite con datos mock (Neuquen) |
+| `npm run build:win` | Build NSIS installer |
+| `npm run build:mac` | Build DMG |
+| `npm run build:linux` | Build AppImage/snap/deb |
 
 ## Arquitectura (3-capas)
 - `src/main/` -- Electron main: drivers (serial), servicios, IPC handlers, DB
@@ -42,3 +51,18 @@ SerialPortScanner -> DeviceManager -> GeoFusionService -> SessionService -> SQLi
 - GPS: 4800 baud, NMEA 0183, ReadlineParser (\r\n)
 - NBM-550: 460800 baud, binario comando-respuesta (; delimiter)
 - Simulacion: `NIR_SIMULATION=true`
+
+## Export formats
+- GeoJSON (RFC 7946): FeatureCollection con Point [lon, lat, alt]
+- CSV: quoted comma-separated, cabecera en espanol
+- XLSX: dos hojas (Resumen + Datos) via exceljs
+- KMZ: KML comprimido con archiver, color-coded icons verde-a-rojo segun RSS
+- Coordenadas: WGS 84 (EPSG:4326), decimal degrees
+
+## Uncertainty / Correction Factor
+- Modulo en `src/main/uncertainty/correctionFactor.ts`
+- Lee archivo TSV/CSV desde Settings (columnas: name | ... | ... | ... | factor)
+- `resolveCorrectionFactor(probeModel, filePath)` -> factor numerico
+- Se aplica como `rssWithUncertainty = rss * correctionFactor`
+- Guardado en columna `sessions.correctionFactor`
+- Sin factor valido -> la sesion NO arranca

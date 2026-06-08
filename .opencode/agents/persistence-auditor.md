@@ -1,5 +1,6 @@
 ---
 description: 'Use when: reviewing database persistence strategy, auditing data saving patterns, analyzing repository/service layers, planning SQLite or storage optimizations, reviewing session save lifecycle, diagnosing data loss risks, evaluating persistence performance'
+mode: subagent
 permission:
   read: allow
   glob: allow
