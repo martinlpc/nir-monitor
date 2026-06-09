@@ -1,12 +1,61 @@
 import { useState, useMemo, useRef } from 'react'
-import provinciasData from '../data/provincias-localidades.json'
+import rawData from '../data/provincias-localidades.json'
+
+interface RawLocalidad {
+  categoria: string
+  fuente: string
+  municipio: { nombre: string; id: string }
+  departamento: { nombre: string; id: string }
+  nombre: string
+  id: string
+  provincia: { nombre: string; id: string }
+  localidad_censal: { nombre: string; id: string }
+  centroide: { lat: number; lon: number }
+}
 
 interface ProvinciaEntry {
   n: string
   l: string[]
 }
 
-const provincias = provinciasData as ProvinciaEntry[]
+const CABA_NAME = 'Ciudad Autónoma de Buenos Aires'
+
+function buildProvincias(data: { localidades: RawLocalidad[] }): ProvinciaEntry[] {
+  const grouped = new Map<string, Set<string>>()
+
+  for (const loc of data.localidades) {
+    const provName = loc.provincia.nombre
+
+    if (provName === CABA_NAME) {
+      if (!grouped.has(CABA_NAME)) {
+        grouped.set(CABA_NAME, new Set([CABA_NAME]))
+      }
+      continue
+    }
+
+    if (!grouped.has(provName)) {
+      grouped.set(provName, new Set())
+    }
+    grouped.get(provName)!.add(loc.nombre)
+  }
+
+  const entries = Array.from(grouped.entries()).sort((a, b) =>
+    a[0].localeCompare(b[0], 'es')
+  )
+
+  const cabaIdx = entries.findIndex(([name]) => name === CABA_NAME)
+  if (cabaIdx > 0) {
+    const [caba] = entries.splice(cabaIdx, 1)
+    entries.unshift(caba)
+  }
+
+  return entries.map(([name, localities]) => ({
+    n: name,
+    l: Array.from(localities).sort((a, b) => a.localeCompare(b, 'es'))
+  }))
+}
+
+const provincias = buildProvincias(rawData as { localidades: RawLocalidad[] })
 
 interface SessionStartModalProps {
   onConfirm: (data: { provincia: string; localidad: string; apellido1: string; apellido2: string }) => void
