@@ -8,6 +8,7 @@ import { PassThrough } from 'stream'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 import type { ISessionRepository, PersistedSession } from '../../shared/services/ISessionRepository'
+import { encrypt, decrypt, isEncrypted } from './CryptoService'
 
 /**
  * SQLite-based session persistence using sql.js (WASM)
@@ -80,7 +81,14 @@ export class SQLiteSessionRepository implements ISessionRepository {
       let data: Uint8Array | undefined
       if (fs.existsSync(this.dbPath)) {
         try {
-          data = fs.readFileSync(this.dbPath)
+          const raw = fs.readFileSync(this.dbPath)
+          if (isEncrypted(raw)) {
+            const decrypted = decrypt(raw)
+            data = new Uint8Array(decrypted)
+          } else {
+            // Legacy plain SQLite — migracion automatica a cifrado
+            data = new Uint8Array(raw)
+          }
         } catch (err) {
           console.warn('[SQLiteSessionRepository] Could not read existing database:', err)
         }
@@ -180,8 +188,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       const data = this.db.export()
       const buffer = Buffer.from(data)
+      const encrypted = encrypt(buffer)
       fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
-      fs.writeFileSync(this.dbPath, buffer)
+      fs.writeFileSync(this.dbPath, encrypted)
     } catch (err) {
       console.error('[SQLiteSessionRepository] Save failed:', err)
     }

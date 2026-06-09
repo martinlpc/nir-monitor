@@ -100,6 +100,44 @@ The application follows a **clean layered architecture** with three processes:
 | **XLSX** | Excel workbook with summary + raw data sheets |
 | **KMZ** | Compressed KML for Google Earth |
 
+## Database Encryption
+
+The SQLite database (`sessions.db`) is encrypted at rest using **AES-256-GCM**
+with a shared passphrase to prevent manual tampering.
+
+### Configuration
+
+Set the `NIR_DB_ENCRYPTION_KEY` environment variable with a passphrase
+agreed upon by all teams that need access:
+
+```ini
+# .env (gitignored — never commit the passphrase)
+NIR_DB_ENCRYPTION_KEY=passphrase-compartida-entre-equipos
+```
+
+The passphrase is converted to a 256-bit AES key via SHA-256, producing the
+same key on every machine with the same passphrase.
+
+> ⚠️ `.env` is in `.gitignore` — the key **never** enters the repository.
+
+### Environment variable
+
+| Variable | Required | Description |
+|---|---|---|
+| `NIR_DB_ENCRYPTION_KEY` | Yes | Shared passphrase (any string) |
+
+If not set, the app throws a clear error at startup.
+
+### Legacy migration
+
+Existing unencrypted databases are detected automatically on first load and
+migrated to the encrypted format on the next save. No manual steps needed.
+
+### Security note
+
+In production, inject the passphrase through your deployment mechanism
+(CI variables, electron-builder config, systemd environment, etc.).
+
 ## License
 
 This project is developed by ENACOM. See license information in the repository.
