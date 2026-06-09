@@ -78,7 +78,7 @@ SerialPortScanner -> DeviceManager -> GeoFusionService -> SessionService -> SQLi
 | Preload | `src/preload/index.ts` -- `window.api` |
 
 ## Agents del proyecto
-Definidos en `.opencode/agents/` -- invocar con `@backend-expert`, `@frontend-standards`, `@persistence-auditor`.
+Definidos en `.opencode/agents/` -- invocar con `@backend-expert`, `@frontend-standards`, `@persistence-auditor`, `@build-publisher`.
 
 ## Skills del proyecto
 Definidos en `.opencode/skills/` -- se cargan automaticamente segun la tarea.
