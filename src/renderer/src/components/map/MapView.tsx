@@ -9,6 +9,7 @@ import { getIntensityColor } from '../../utils/intensityPalette'
 import SyncMapView from './SyncMapView'
 import PanControl from './PanControl'
 import MaximizeControl from './MaximizeControl'
+import NbmStatusBadge from './NbmStatusBadge'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
 const DEFAULT_ZOOM = 13
@@ -105,6 +106,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           {onToggleMaximize && (
             <MaximizeControl maximized={maximized} onToggle={onToggleMaximize} />
           )}
+          <NbmStatusBadge />
           {activeSegments.map((seg) => (
             <Polyline key={seg.key} positions={seg.positions} color={seg.color} weight={4} />
           ))}

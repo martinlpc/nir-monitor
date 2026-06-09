@@ -9,9 +9,13 @@ interface MaximizeControlProps {
 
 export default function MaximizeControl({ maximized, onToggle }: MaximizeControlProps): null {
   const map = useMap()
+  const btnRef = useRef<HTMLAnchorElement | null>(null)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const onToggleRef = useRef(onToggle)
-  onToggleRef.current = onToggle
+
+  useEffect(() => {
+    onToggleRef.current = onToggle
+  })
 
   useEffect(() => {
     const Control = L.Control.extend({
@@ -30,11 +34,13 @@ export default function MaximizeControl({ maximized, onToggle }: MaximizeControl
           onToggleRef.current()
         })
 
+        btnRef.current = btn
         containerRef.current = div
         return div
       },
       onRemove() {
         containerRef.current = null
+        btnRef.current = null
       }
     })
 
@@ -44,7 +50,16 @@ export default function MaximizeControl({ maximized, onToggle }: MaximizeControl
     return () => {
       control.remove()
     }
-  }, [map, maximized])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map])
+
+  useEffect(() => {
+    const btn = btnRef.current
+    if (!btn) return
+    btn.innerHTML = maximized ? '⊡' : '⊞'
+    btn.title = maximized ? 'Restaurar vista' : 'Maximizar mapa'
+    btn.setAttribute('aria-label', btn.title)
+  }, [maximized])
 
   return null
 }
