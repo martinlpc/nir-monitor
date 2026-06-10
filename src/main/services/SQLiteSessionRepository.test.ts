@@ -19,8 +19,8 @@ function makePoint(overrides: Partial<GeoTimestamp> = {}): GeoTimestamp {
     sequenceNumber: 1,
     timestamp: Date.now(),
     position: { ...NEUQUEN },
-    emf: { deviceId: 'nbm550', rss: 5.0, unit: 'V/m' },
-    rssWithUncertainty: 5.4,
+    emf: { deviceId: 'nbm550', rawMeasurement: 5.0, unit: 'V/m' },
+    correctedMeasurement: 5.4,
     ...overrides
   }
 }
@@ -70,15 +70,15 @@ async function createSchema(db: SqlJsDatabase): Promise<void> {
       lat REAL NOT NULL,
       lon REAL NOT NULL,
       alt REAL,
-      rss REAL NOT NULL,
-      rssWithUncertainty REAL NOT NULL,
+      rawMeasurement REAL NOT NULL,
+      correctedMeasurement REAL NOT NULL,
       unit TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS session_stats (
       sessionId TEXT PRIMARY KEY,
-      avgRss REAL,
-      maxRss REAL,
-      minRss REAL,
+      avgCorrected REAL,
+      maxCorrected REAL,
+      minCorrected REAL,
       pointCount INTEGER,
       computedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
@@ -138,7 +138,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     const meta = makeSession()
     await repo.initSession(meta.id, meta)
 
-    const point = makePoint({ sessionId: meta.id, sequenceNumber: 1, rssWithUncertainty: 5.4 })
+    const point = makePoint({ sessionId: meta.id, sequenceNumber: 1, correctedMeasurement: 5.4 })
     await repo.addPoint(meta.id, point)
 
     const points = await repo.getSessionPoints(meta.id)
@@ -146,9 +146,9 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect(points[0].id).toBe(point.id)
     expect(points[0].sessionId).toBe(meta.id)
     expect(points[0].sequenceNumber).toBe(1)
-    expect(points[0].rssWithUncertainty).toBe(5.4)
+    expect(points[0].correctedMeasurement).toBe(5.4)
     expect(points[0].position.lat).toBe(NEUQUEN.lat)
-    expect(points[0].emf.rss).toBe(5.0)
+    expect(points[0].emf.rawMeasurement).toBe(5.0)
     expect(points[0].emf.unit).toBe('V/m')
     expect(typeof points[0].timestamp).toBe('number')
     expect(points[0].timestamp).toBeGreaterThan(0)
@@ -187,7 +187,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
         sessionId: meta.id,
         sequenceNumber: seq,
         timestamp: meta.startedAt + seq * 1000,
-        rssWithUncertainty: seq === 1 ? 3.0 : seq === 2 ? 5.0 : 7.0
+        correctedMeasurement: seq === 1 ? 3.0 : seq === 2 ? 5.0 : 7.0
       })
     )
     for (const p of pts) {
@@ -199,9 +199,9 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     const stats = await repo.getSessionStats(meta.id)
     expect(stats).not.toBeNull()
     expect(stats!.pointCount).toBe(3)
-    expect(stats!.avgRss).toBeCloseTo(5.0, 1)
-    expect(stats!.maxRss).toBeCloseTo(7.0, 1)
-    expect(stats!.minRss).toBeCloseTo(3.0, 1)
+    expect(stats!.avgCorrected).toBeCloseTo(5.0, 1)
+    expect(stats!.maxCorrected).toBeCloseTo(7.0, 1)
+    expect(stats!.minCorrected).toBeCloseTo(3.0, 1)
 
     const loaded = await repo.getSession(meta.id)
     expect(loaded?.metadata.stoppedAt).toBe(meta.stoppedAt)
@@ -226,8 +226,8 @@ describe('SQLiteSessionRepository (in-memory)', () => {
         sequenceNumber: seq,
         timestamp: meta.startedAt + seq * 1000,
         position: { lat: NEUQUEN.lat + seq * 0.001, lon: NEUQUEN.lon + seq * 0.001, alt: NEUQUEN.alt },
-        emf: { deviceId: 'nbm550', rss: 3.0 + seq, unit: 'V/m' },
-        rssWithUncertainty: (3.0 + seq) * 1.08
+        emf: { deviceId: 'nbm550', rawMeasurement: 3.0 + seq, unit: 'V/m' },
+        correctedMeasurement: (3.0 + seq) * 1.08
       })
     )
     for (const p of pts) {
@@ -250,7 +250,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect(session!.points[0].sequenceNumber).toBe(1)
     expect(session!.points[2].sequenceNumber).toBe(3)
     expect(typeof session!.points[0].timestamp).toBe('number')
-    expect(session!.points[0].rssWithUncertainty).toBeCloseTo(4.0 * 1.08, 2)
+    expect(session!.points[0].correctedMeasurement).toBeCloseTo(4.0 * 1.08, 2)
   })
 
   // ── deleteSession ────────────────────────────────────────────
@@ -362,7 +362,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     const lines = csv.trim().split('\n')
     expect(lines).toHaveLength(2)
     expect(lines[0]).toContain('Timestamp')
-    expect(lines[0]).toContain('RSS (corregido)')
+    expect(lines[0]).toContain('Corrected (V/m)')
     expect(lines[1]).toContain('"')
   })
 
@@ -376,7 +376,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     const stats = await repo.getSessionStats(meta.id)
     expect(stats).not.toBeNull()
     expect(stats!.pointCount).toBe(0)
-    expect(stats!.avgRss).toBeNull()
+    expect(stats!.avgCorrected).toBeNull()
   })
 
   it('returns null for non-existent session stats', async () => {

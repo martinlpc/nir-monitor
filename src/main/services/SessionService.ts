@@ -49,7 +49,7 @@ export class SessionService extends EventEmitter {
   private syncCorrectionFactorFromProbe(probeModel: string | null): void {
     const resolved = this.resolveCorrectionFactor(probeModel)
     this.correctionFactor = resolved
-    this.fusion.setUncertaintyFactor(resolved ?? 1)
+    this.fusion.setCorrectionFactor(resolved ?? 1)
     console.log(
       `[SessionService] Correction factor sync -> probe=${probeModel ?? 'N/A'}, factor=${resolved ?? 1}`
     )

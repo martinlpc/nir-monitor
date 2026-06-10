@@ -76,7 +76,7 @@ declare global {
         ) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>
         getStats: (sessionId: string) => Promise<{
           success: boolean
-          stats?: { avgRss: number; maxRss: number; minRss: number; pointCount: number } | null
+          stats?: { avgCorrected: number; maxCorrected: number; minCorrected: number; pointCount: number } | null
           error?: string
         }>
         getPointsInBounds: (

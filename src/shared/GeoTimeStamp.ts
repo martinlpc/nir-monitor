@@ -6,7 +6,7 @@ export interface GeoPosition {
 
 export interface EMFSample {
   deviceId: string // 'nbm500' | 'future-device-x'
-  rss: number // valor medido original sin correcciones
+  rawMeasurement: number // valor medido original sin correcciones
   unit: 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
 }
 
@@ -17,5 +17,5 @@ export interface GeoTimestamp {
   timestamp: number // Unix ms — fuente de verdad para fusión
   position: GeoPosition
   emf: EMFSample
-  rssWithUncertainty: number // rss × correctionFactor de la sesión
+  correctedMeasurement: number // rawMeasurement × correctionFactor de la sesión
 }

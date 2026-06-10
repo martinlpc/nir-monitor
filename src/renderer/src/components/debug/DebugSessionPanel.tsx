@@ -70,7 +70,7 @@ export default function DebugSessionPanel({
           label="Ultima muestra"
           value={
             state.lastSample
-              ? `${state.lastSample.emf.rss} ${state.lastSample.emf.unit} @ ${state.lastSample.position.lat.toFixed(5)}, ${state.lastSample.position.lon.toFixed(5)}`
+              ? `${state.lastSample.emf.rawMeasurement} ${state.lastSample.emf.unit} @ ${state.lastSample.position.lat.toFixed(5)}, ${state.lastSample.position.lon.toFixed(5)}`
               : 'sin muestras'
           }
         />

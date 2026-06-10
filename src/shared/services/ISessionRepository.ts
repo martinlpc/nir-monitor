@@ -7,9 +7,9 @@ export interface PersistedSession {
 }
 
 export interface SessionStats {
-  avgRss: number
-  maxRss: number
-  minRss: number
+  avgCorrected: number
+  maxCorrected: number
+  minCorrected: number
   pointCount: number
 }
 

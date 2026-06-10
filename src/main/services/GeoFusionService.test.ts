@@ -72,9 +72,9 @@ describe('GeoFusionService', () => {
     expect(nbm.resetMaxHold).toHaveBeenCalledTimes(1)
     expect(point.sessionId).toBe('session-1')
     expect(point.position.lat).toBeCloseTo(-34.6037)
-    expect(point.emf.rss).toBe(8.2)
+    expect(point.emf.rawMeasurement).toBe(8.2)
     expect(point.sequenceNumber).toBe(1)
-    expect(point.rssWithUncertainty).toBe(8.2) // sin factor de corrección por defecto
+    expect(point.correctedMeasurement).toBe(8.2) // sin factor de corrección por defecto
   })
 
   it('captures repeatedly in time mode when the GPS fix is valid', async () => {

@@ -41,7 +41,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           [pts[i].position.lat, pts[i].position.lon],
           [pts[i + 1].position.lat, pts[i + 1].position.lon]
         ],
-        color: getIntensityColor(pts[i].rssWithUncertainty)
+        color: getIntensityColor(pts[i].correctedMeasurement)
       })
     }
     return segments
@@ -61,7 +61,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
               [pts[i].position.lat, pts[i].position.lon],
               [pts[i + 1].position.lat, pts[i + 1].position.lon]
             ],
-            color: getIntensityColor(pts[i].rssWithUncertainty)
+            color: getIntensityColor(pts[i].correctedMeasurement)
           })
         }
         return { sessionId: session.id, segments }
@@ -117,7 +117,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           )}
           {/* Renderizar todos los puntos de medición como marcadores */}
           {geoData.allPoints.map((point) => {
-            const pointColor = getIntensityColor(point.rssWithUncertainty)
+            const pointColor = getIntensityColor(point.correctedMeasurement)
             return (
               <CircleMarker
                 key={point.id}
@@ -131,9 +131,9 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
                 }}
               >
                 <Popup>
-                  Valor final: {point.rssWithUncertainty.toFixed(2)} {point.emf.unit}
+                  Valor final: {point.correctedMeasurement.toFixed(2)} {point.emf.unit}
                   <br />
-                  Medido: {point.emf.rss.toFixed(2)} {point.emf.unit}
+                  Medido: {point.emf.rawMeasurement.toFixed(2)} {point.emf.unit}
                   <br />
                   Lat: {point.position.lat.toFixed(6)}
                   <br />
@@ -199,7 +199,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
               }}
             >
               <Popup>
-                {lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}
+                {lastPoint.emf.rawMeasurement.toFixed(2)} {lastPoint.emf.unit}
                 <br />
                 {lastPoint.position.lat.toFixed(6)}, {lastPoint.position.lon.toFixed(6)}
                 <br />

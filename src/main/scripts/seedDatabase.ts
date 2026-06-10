@@ -126,8 +126,8 @@ function generateMockSession(routeIndex: number): {
       sequenceNumber: i + 1,
       timestamp: Math.round(timestamp),
       position,
-      emf: { deviceId: 'nbm550', rss: Math.round(rss * 100) / 100, unit: 'V/m' },
-      rssWithUncertainty: Math.round(rssWithUncertainty * 100) / 100
+      emf: { deviceId: 'nbm550', rawMeasurement: Math.round(rss * 100) / 100, unit: 'V/m' },
+      correctedMeasurement: Math.round(rssWithUncertainty * 100) / 100
     })
   }
   const metadata: SessionSummary = {

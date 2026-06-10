@@ -12,8 +12,8 @@ export interface SessionState {
 
 function deriveCorrectionFactorFromPoints(points: GeoTimestamp[]): number | null {
   for (const point of points) {
-    const measured = point.emf.rss
-    const corrected = point.rssWithUncertainty
+    const measured = point.emf.rawMeasurement
+    const corrected = point.correctedMeasurement
     if (measured > 0 && Number.isFinite(measured) && Number.isFinite(corrected)) {
       const factor = corrected / measured
       if (Number.isFinite(factor) && factor > 0) {

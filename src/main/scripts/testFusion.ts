@@ -216,7 +216,7 @@ async function main(): Promise<void> {
       }
 
       seq++
-      const rssWithUncertainty = Math.round(sample.rss * opts.cf * 100) / 100
+      const correctedMeasurement = Math.round(sample.rss * opts.cf * 100) / 100
 
       const point: GeoTimestamp = {
         id: uuidv4(),
@@ -226,10 +226,10 @@ async function main(): Promise<void> {
         position: { ...position },
         emf: {
           deviceId: 'nbm550',
-          rss: sample.rss,
+          rawMeasurement: sample.rss,
           unit: sample.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
         },
-        rssWithUncertainty
+        correctedMeasurement
       }
 
       points.push(point)
@@ -244,8 +244,8 @@ async function main(): Promise<void> {
       const line =  `[${String(seq).padStart(3, '0')}] ${fmtTime(point.timestamp)}  ` +
         `${point.position.lat.toFixed(6)}, ${point.position.lon.toFixed(6)}` +
         `${point.position.alt != null ? `, ${point.position.alt.toFixed(0)}m` : ''}  →  ` +
-        `${point.emf.rss.toFixed(2)} ${point.emf.unit}` +
-        `  (corr: ${rssWithUncertainty.toFixed(2)} | cf: ${opts.cf})`
+        `${point.emf.rawMeasurement.toFixed(2)} ${point.emf.unit}` +
+        `  (corr: ${correctedMeasurement.toFixed(2)} | cf: ${opts.cf})`
 
       console.log(line)
 
@@ -298,9 +298,9 @@ async function main(): Promise<void> {
   console.log(`   Puntos:    ${points.length}`)
   console.log(`   Duración:  ${duration}s`)
   if (points.length > 0) {
-    const rssValues = points.map(p => p.emf.rss)
-    const avg = rssValues.reduce((a, b) => a + b, 0) / rssValues.length
-    console.log(`   RSS:       min ${Math.min(...rssValues).toFixed(2)}  /  max ${Math.max(...rssValues).toFixed(2)}  /  avg ${avg.toFixed(2)} V/m`)
+    const rawValues = points.map(p => p.emf.rawMeasurement)
+    const avg = rawValues.reduce((a, b) => a + b, 0) / rawValues.length
+    console.log(`   Raw:       min ${Math.min(...rawValues).toFixed(2)}  /  max ${Math.max(...rawValues).toFixed(2)}  /  avg ${avg.toFixed(2)} V/m`)
     console.log(`   CF:        ${opts.cf}`)
     console.log(`   Primer:    ${fmtTime(points[0].timestamp)}  ${points[0].position.lat.toFixed(4)}, ${points[0].position.lon.toFixed(4)}`)
     console.log(`   Último:    ${fmtTime(points[points.length - 1].timestamp)}  ${points[points.length - 1].position.lat.toFixed(4)}, ${points[points.length - 1].position.lon.toFixed(4)}`)
@@ -318,8 +318,8 @@ async function main(): Promise<void> {
         sequenceNumber: points[0].sequenceNumber,
         sessionId: points[0].sessionId,
         timestamp: points[0].timestamp,
-        rss: points[0].emf.rss,
-        rssWithUncertainty: points[0].rssWithUncertainty,
+        rawMeasurement: points[0].emf.rawMeasurement,
+        correctedMeasurement: points[0].correctedMeasurement,
         unit: points[0].emf.unit
       }
     }

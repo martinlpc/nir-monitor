@@ -25,8 +25,8 @@ export default function PointsTable({
   probeSerial
 }: PointsTableProps): React.JSX.Element {
   const deriveFactorFromPoint = (point: GeoTimestamp): number | null => {
-    const measured = point.emf.rss
-    const corrected = point.rssWithUncertainty
+    const measured = point.emf.rawMeasurement
+    const corrected = point.correctedMeasurement
     if (measured > 0 && Number.isFinite(measured) && Number.isFinite(corrected)) {
       const ratio = corrected / measured
       if (Number.isFinite(ratio) && ratio > 0) {
@@ -38,7 +38,7 @@ export default function PointsTable({
 
   const derivedFactor = points.map(deriveFactorFromPoint).find((f) => f != null) ?? null
   const effectiveFactor = correctionFactor ?? derivedFactor
-  const thresholdExceeded = sessionExceedsThreshold(points.map((p) => p.rssWithUncertainty))
+  const thresholdExceeded = sessionExceedsThreshold(points.map((p) => p.correctedMeasurement))
 
   return (
     <div className="points-table-container">
@@ -97,7 +97,7 @@ export default function PointsTable({
                   <td className="cell-coord">{point.position.lat.toFixed(6)}</td>
                   <td className="cell-coord">{point.position.lon.toFixed(6)}</td>
                   <td className="cell-number">{point.position.alt.toFixed(1)}</td>
-                  <td className="cell-emf">{point.emf.rss.toFixed(2)}</td>
+                  <td className="cell-emf">{point.emf.rawMeasurement.toFixed(2)}</td>
                   <td className="cell-factor">
                     {(() => {
                       const rowFactor = effectiveFactor ?? deriveFactorFromPoint(point)
@@ -105,11 +105,11 @@ export default function PointsTable({
                     })()}
                   </td>
                   <td
-                    className={`cell-emf-unc${exceedsSafetyThreshold(point.rssWithUncertainty) ? ' cell-emf-unc--threshold' : ''}`}
-                    style={{ color: getIntensityColor(point.rssWithUncertainty) }}
-                    title={`${valueToPercent(point.rssWithUncertainty).toFixed(1)}% del nivel de referencia`}
+                    className={`cell-emf-unc${exceedsSafetyThreshold(point.correctedMeasurement) ? ' cell-emf-unc--threshold' : ''}`}
+                    style={{ color: getIntensityColor(point.correctedMeasurement) }}
+                    title={`${valueToPercent(point.correctedMeasurement).toFixed(1)}% del nivel de referencia`}
                   >
-                    {point.rssWithUncertainty.toFixed(2)}
+                    {point.correctedMeasurement.toFixed(2)}
                   </td>
                 </tr>
               ))}

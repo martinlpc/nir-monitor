@@ -15,7 +15,7 @@ import { encrypt, decrypt, isEncrypted } from './CryptoService'
  * Schema:
  * - sessions: metadata (id, label, startedAt, stoppedAt, sampleCount)
  * - geo_points: individual points (sessionId, position, emf data)
- * - session_stats: pre-calculated statistics (avg_rss, max_rss, etc.)
+ * - session_stats: pre-calculated statistics (avgCorrected, maxCorrected, etc.)
  */
 export class SQLiteSessionRepository implements ISessionRepository {
   private db: SqlJsDatabase | null = null
@@ -153,8 +153,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           lat REAL NOT NULL,
           lon REAL NOT NULL,
           alt REAL,
-          rss REAL NOT NULL,
-          rssWithUncertainty REAL NOT NULL,
+          rawMeasurement REAL NOT NULL,
+          correctedMeasurement REAL NOT NULL,
           unit TEXT NOT NULL
         )
       `)
@@ -162,9 +162,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
       this.db.run(`
         CREATE TABLE IF NOT EXISTS session_stats (
           sessionId TEXT PRIMARY KEY,
-          avgRss REAL,
-          maxRss REAL,
-          minRss REAL,
+          avgCorrected REAL,
+          maxCorrected REAL,
+          minCorrected REAL,
           pointCount INTEGER,
           computedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -236,7 +236,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       for (const point of points) {
         db.run(
           `INSERT INTO geo_points 
-           (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rss, rssWithUncertainty, unit)
+           (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             point.id,
@@ -246,19 +246,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
             point.position.lat,
             point.position.lon,
             point.position.alt,
-            point.emf.rss,
-            point.rssWithUncertainty,
+            point.emf.rawMeasurement,
+            point.correctedMeasurement,
             point.emf.unit
           ]
         )
       }
 
-      // Calcular y guardar estadísticas (usando rssWithUncertainty)
+      // Calcular y guardar estadísticas (usando correctedMeasurement)
       const statsResult = db.exec(
         `SELECT
-          AVG(rssWithUncertainty) as avgRss,
-          MAX(rssWithUncertainty) as maxRss,
-          MIN(rssWithUncertainty) as minRss,
+          AVG(correctedMeasurement) as avgCorrected,
+          MAX(correctedMeasurement) as maxCorrected,
+          MIN(correctedMeasurement) as minCorrected,
           COUNT(*) as pointCount
         FROM geo_points
         WHERE sessionId = ?`,
@@ -267,17 +267,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       const stats = statsResult[0]?.values[0]
         ? {
-            avgRss: statsResult[0].values[0][0] as number | null,
-            maxRss: statsResult[0].values[0][1] as number | null,
-            minRss: statsResult[0].values[0][2] as number | null,
+            avgCorrected: statsResult[0].values[0][0] as number | null,
+            maxCorrected: statsResult[0].values[0][1] as number | null,
+            minCorrected: statsResult[0].values[0][2] as number | null,
             pointCount: statsResult[0].values[0][3] as number
           }
-        : { avgRss: null, maxRss: null, minRss: null, pointCount: 0 }
+        : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
 
       db.run(
-        `INSERT INTO session_stats (sessionId, avgRss, maxRss, minRss, pointCount)
+        `INSERT INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
          VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, stats.avgRss, stats.maxRss, stats.minRss, stats.pointCount]
+        [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
       )
 
       this.save()
@@ -330,7 +330,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       db.run(
         `INSERT INTO geo_points
-         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rss, rssWithUncertainty, unit)
+         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           point.id,
@@ -340,8 +340,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           point.position.lat,
           point.position.lon,
           point.position.alt,
-          point.emf.rss,
-          point.rssWithUncertainty,
+          point.emf.rawMeasurement,
+          point.correctedMeasurement,
           point.emf.unit
         ]
       )
@@ -381,12 +381,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
         ]
       )
 
-      // Calcular y guardar estadísticas (usando rssWithUncertainty)
+      // Calcular y guardar estadísticas (usando correctedMeasurement)
       const statsResult = db.exec(
         `SELECT
-          AVG(rssWithUncertainty) as avgRss,
-          MAX(rssWithUncertainty) as maxRss,
-          MIN(rssWithUncertainty) as minRss,
+          AVG(correctedMeasurement) as avgCorrected,
+          MAX(correctedMeasurement) as maxCorrected,
+          MIN(correctedMeasurement) as minCorrected,
           COUNT(*) as pointCount
         FROM geo_points
         WHERE sessionId = ?`,
@@ -395,17 +395,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       const stats = statsResult[0]?.values[0]
         ? {
-            avgRss: statsResult[0].values[0][0] as number | null,
-            maxRss: statsResult[0].values[0][1] as number | null,
-            minRss: statsResult[0].values[0][2] as number | null,
+            avgCorrected: statsResult[0].values[0][0] as number | null,
+            maxCorrected: statsResult[0].values[0][1] as number | null,
+            minCorrected: statsResult[0].values[0][2] as number | null,
             pointCount: statsResult[0].values[0][3] as number
           }
-        : { avgRss: null, maxRss: null, minRss: null, pointCount: 0 }
+        : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
 
       db.run(
-        `INSERT OR REPLACE INTO session_stats (sessionId, avgRss, maxRss, minRss, pointCount)
+        `INSERT OR REPLACE INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
          VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, stats.avgRss, stats.maxRss, stats.minRss, stats.pointCount]
+        [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
       )
 
       this.stopFlushTimer()
@@ -491,10 +491,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
           },
           emf: {
             deviceId: 'nbm550',
-            rss: rowMap.rss as number,
+            rawMeasurement: rowMap.rawMeasurement as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          rssWithUncertainty: rowMap.rssWithUncertainty as number
+          correctedMeasurement: rowMap.correctedMeasurement as number
         }
       })
 
@@ -585,10 +585,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
           },
           emf: {
             deviceId: 'nbm550',
-            rss: rowMap.rss as number,
+            rawMeasurement: rowMap.rawMeasurement as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          rssWithUncertainty: rowMap.rssWithUncertainty as number
+          correctedMeasurement: rowMap.correctedMeasurement as number
         }
       })
     } catch (err) {
@@ -615,8 +615,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         sequenceNumber: point.sequenceNumber,
         timestamp: point.timestamp,
         datetime: new Date(point.timestamp).toISOString(),
-        rss: point.emf.rss,
-        rssWithUncertainty: point.rssWithUncertainty,
+        rawMeasurement: point.emf.rawMeasurement,
+        correctedMeasurement: point.correctedMeasurement,
         unit: point.emf.unit
       }
     }))
@@ -653,9 +653,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
         correctionFactor: correctionFactor,
         stats: stats
           ? {
-              avgRss: stats.avgRss,
-              maxRss: stats.maxRss,
-              minRss: stats.minRss,
+              avgCorrected: stats.avgCorrected,
+              maxCorrected: stats.maxCorrected,
+              minCorrected: stats.minCorrected,
               pointCount: stats.pointCount
             }
           : null
@@ -675,8 +675,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       'Latitude',
       'Longitude',
       'Altitude (m)',
-      'RSS (medido)',
-      'RSS (corregido)',
+      'Raw (V/m)',
+      'Corrected (V/m)',
       'Unit'
     ]
 
@@ -686,8 +686,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       point.position.lat.toFixed(8),
       point.position.lon.toFixed(8),
       point.position.alt?.toFixed(2) || 'N/A',
-      point.emf.rss.toFixed(2),
-      point.rssWithUncertainty.toFixed(2),
+      point.emf.rawMeasurement.toFixed(2),
+      point.correctedMeasurement.toFixed(2),
       point.emf.unit
     ])
 
@@ -754,9 +754,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
         value: correctionFactor != null ? correctionFactor : 'N/A'
       },
       { field: '', value: '' },
-      { field: 'RSS promedio', value: stats?.avgRss?.toFixed(2) ?? 'N/A' },
-      { field: 'RSS máximo', value: stats?.maxRss?.toFixed(2) ?? 'N/A' },
-      { field: 'RSS mínimo', value: stats?.minRss?.toFixed(2) ?? 'N/A' }
+      { field: 'Promedio corregido', value: stats?.avgCorrected?.toFixed(2) ?? 'N/A' },
+      { field: 'Máximo corregido', value: stats?.maxCorrected?.toFixed(2) ?? 'N/A' },
+      { field: 'Mínimo corregido', value: stats?.minCorrected?.toFixed(2) ?? 'N/A' }
     ])
 
     // ── Hoja 2: Datos ──
@@ -768,8 +768,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       { header: 'Latitud', key: 'lat', width: 14 },
       { header: 'Longitud', key: 'lon', width: 14 },
       { header: 'Altitud (m)', key: 'alt', width: 12 },
-      { header: 'RSS medido (V/m)', key: 'rss', width: 14 },
-      { header: 'RSS corregido (V/m)', key: 'rssWithUncertainty', width: 18 },
+      { header: 'Raw (V/m)', key: 'rawMeasurement', width: 14 },
+      { header: 'Corrected (V/m)', key: 'correctedMeasurement', width: 18 },
       { header: 'Unidad', key: 'unit', width: 12 }
     ]
     dataSheet.getRow(1).eachCell((cell) => {
@@ -783,8 +783,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         lat: point.position.lat,
         lon: point.position.lon,
         alt: point.position.alt ?? 0,
-        rss: point.emf.rss.toFixed(2),
-        rssWithUncertainty: point.rssWithUncertainty.toFixed(2),
+        rawMeasurement: point.emf.rawMeasurement.toFixed(2),
+        correctedMeasurement: point.correctedMeasurement.toFixed(2),
         unit: point.emf.unit
       })
     })
@@ -828,19 +828,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private buildKML(
     metadata: SessionSummary,
     points: GeoTimestamp[],
-    stats: { avgRss: number; maxRss: number; minRss: number; pointCount: number } | null
+    stats: { avgCorrected: number; maxCorrected: number; minCorrected: number; pointCount: number } | null
   ): string {
     const escXml = (s: string): string =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-    // Escala de color según RSS relativo (verde → amarillo → rojo)
-    const rssValues = points.map((p) => p.emf.rss)
-    const minRss = stats?.minRss ?? Math.min(...rssValues)
-    const maxRss = stats?.maxRss ?? Math.max(...rssValues)
-    const range = maxRss - minRss || 1
+    // Escala de color según valor relativo (verde → amarillo → rojo)
+    const measurementValues = points.map((p) => p.emf.rawMeasurement)
+    const minCorrected = stats?.minCorrected ?? Math.min(...measurementValues)
+    const maxCorrected = stats?.maxCorrected ?? Math.max(...measurementValues)
+    const range = maxCorrected - minCorrected || 1
 
-    const rssToColor = (rss: number): string => {
-      const t = Math.max(0, Math.min(1, (rss - minRss) / range))
+    const measurementToColor = (value: number): string => {
+      const t = Math.max(0, Math.min(1, (value - minCorrected) / range))
       // KML uses aabbggrr (alpha, blue, green, red)
       const r = Math.round(255 * t)
       const g = Math.round(255 * (1 - t))
@@ -851,7 +851,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     // Generar estilos únicos
     const styles = new Map<string, string>()
     points.forEach((p) => {
-      const color = rssToColor(p.emf.rss)
+      const color = measurementToColor(p.emf.rawMeasurement)
       if (!styles.has(color)) {
         styles.set(color, `style_${styles.size}`)
       }
@@ -872,20 +872,20 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     const placemarks = points
       .map((p) => {
-        const color = rssToColor(p.emf.rss)
+        const color = measurementToColor(p.emf.rawMeasurement)
         const styleId = styles.get(color)!
         const dt = new Date(p.timestamp).toISOString()
-        const rssU = metadata.correctionFactor != null ? p.rssWithUncertainty.toFixed(2) : ''
+        const rssU = metadata.correctionFactor != null ? p.correctedMeasurement.toFixed(2) : ''
         return `
     <Placemark>
-      <name>${escXml(p.emf.rss + ' ' + p.emf.unit)}</name>
+      <name>${escXml(p.emf.rawMeasurement + ' ' + p.emf.unit)}</name>
       <description>${escXml(dt)}</description>
       <styleUrl>#${styleId}</styleUrl>
       <TimeStamp><when>${dt}</when></TimeStamp>
       <Point><coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0}</coordinates></Point>
       <ExtendedData>
-        <Data name="rss"><value>${p.emf.rss}</value></Data>
-        <Data name="rssWithUncertainty"><value>${rssU}</value></Data>
+        <Data name="rawMeasurement"><value>${p.emf.rawMeasurement}</value></Data>
+        <Data name="correctedMeasurement"><value>${rssU}</value></Data>
         <Data name="unit"><value>${escXml(p.emf.unit)}</value></Data>
       </ExtendedData>
     </Placemark>`
@@ -949,7 +949,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       const result = db.exec(
-        `SELECT avgRss, maxRss, minRss, pointCount FROM session_stats WHERE sessionId = ?`,
+        `SELECT avgCorrected, maxCorrected, minCorrected, pointCount FROM session_stats WHERE sessionId = ?`,
         [sessionId]
       )
 
@@ -960,9 +960,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
       const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
 
       return {
-        avgRss: rowMap.avgRss as number,
-        maxRss: rowMap.maxRss as number,
-        minRss: rowMap.minRss as number,
+        avgCorrected: rowMap.avgCorrected as number,
+        maxCorrected: rowMap.maxCorrected as number,
+        minCorrected: rowMap.minCorrected as number,
         pointCount: rowMap.pointCount as number
       }
     } catch (err) {
@@ -1011,10 +1011,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
           },
           emf: {
             deviceId: 'nbm550',
-            rss: rowMap.rss as number,
+            rawMeasurement: rowMap.rawMeasurement as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          rssWithUncertainty: rowMap.rssWithUncertainty as number
+          correctedMeasurement: rowMap.correctedMeasurement as number
         }
       })
     } catch (err) {

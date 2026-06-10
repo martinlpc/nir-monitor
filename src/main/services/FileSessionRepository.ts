@@ -195,13 +195,13 @@ export class FileSessionRepository implements ISessionRepository {
   async getSessionStats(sessionId: string): Promise<SessionStats | null> {
     try {
       const points = await this.getSessionPoints(sessionId)
-      if (points.length === 0) return { avgRss: 0, maxRss: 0, minRss: 0, pointCount: 0 }
+      if (points.length === 0) return { avgCorrected: 0, maxCorrected: 0, minCorrected: 0, pointCount: 0 }
 
-      const values = points.map((p) => p.rssWithUncertainty)
+      const values = points.map((p) => p.correctedMeasurement)
       return {
-        avgRss: values.reduce((a, b) => a + b, 0) / values.length,
-        maxRss: Math.max(...values),
-        minRss: Math.min(...values),
+        avgCorrected: values.reduce((a, b) => a + b, 0) / values.length,
+        maxCorrected: Math.max(...values),
+        minCorrected: Math.min(...values),
         pointCount: values.length
       }
     } catch (err) {
@@ -250,8 +250,8 @@ export class FileSessionRepository implements ISessionRepository {
         sequenceNumber: point.sequenceNumber,
         sessionId: point.sessionId,
         timestamp: point.timestamp,
-        rss: point.emf.rss,
-        rssWithUncertainty: point.rssWithUncertainty,
+        rawMeasurement: point.emf.rawMeasurement,
+        correctedMeasurement: point.correctedMeasurement,
         unit: point.emf.unit
       }
     }))
@@ -317,8 +317,8 @@ export class FileSessionRepository implements ISessionRepository {
       'Latitude',
       'Longitude',
       'Altitude',
-      'RSS (medido)',
-      'RSS (corregido)',
+      'Raw (V/m)',
+      'Corrected (V/m)',
       'Unit'
     ]
 
@@ -330,8 +330,8 @@ export class FileSessionRepository implements ISessionRepository {
       point.position.lat.toFixed(8),
       point.position.lon.toFixed(8),
       point.position.alt?.toFixed(2) || 'N/A',
-      point.emf.rss.toFixed(2),
-      point.rssWithUncertainty.toFixed(2),
+      point.emf.rawMeasurement.toFixed(2),
+      point.correctedMeasurement.toFixed(2),
       point.emf.unit
     ])
 
@@ -356,8 +356,8 @@ export class FileSessionRepository implements ISessionRepository {
         sequenceNumber: point.sequenceNumber,
         sessionId: point.sessionId,
         timestamp: point.timestamp,
-        rss: point.emf.rss,
-        rssWithUncertainty: point.rssWithUncertainty,
+        rawMeasurement: point.emf.rawMeasurement,
+        correctedMeasurement: point.correctedMeasurement,
         unit: point.emf.unit
       }
     }))
@@ -379,8 +379,8 @@ export class FileSessionRepository implements ISessionRepository {
         sequenceNumber: number
         sessionId: string
         timestamp: number
-        rss: number
-        rssWithUncertainty: number
+        rawMeasurement: number
+        correctedMeasurement: number
         unit: string
       }
     }[]
@@ -397,10 +397,10 @@ export class FileSessionRepository implements ISessionRepository {
       },
       emf: {
         deviceId: 'nbm550',
-        rss: feature.properties.rss,
+        rawMeasurement: feature.properties.rawMeasurement,
         unit: feature.properties.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
       },
-      rssWithUncertainty: feature.properties.rssWithUncertainty
+      correctedMeasurement: feature.properties.correctedMeasurement
     }))
   }
 }

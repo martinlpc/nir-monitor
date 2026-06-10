@@ -144,9 +144,9 @@ export function usePersistentSessions() {
     async (
       sessionId: string
     ): Promise<{
-      avgRss: number
-      maxRss: number
-      minRss: number
+      avgCorrected: number
+      maxCorrected: number
+      minCorrected: number
       pointCount: number
     } | null> => {
       try {
