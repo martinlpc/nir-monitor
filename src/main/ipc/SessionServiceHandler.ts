@@ -1,7 +1,8 @@
 // Handlers IPC para SessionService - sin lógica de negocio
 // Solo orquesta: SessionService → Renderer
-import { ipcMain, BrowserWindow, dialog } from 'electron'
+import { ipcMain, BrowserWindow, dialog, app } from 'electron'
 import * as fs from 'fs'
+import * as path from 'path'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import { emitAlert } from './handlers'
 import type { DeviceManager } from '../services/DeviceManager'
@@ -56,9 +57,29 @@ export function registerSessionServiceHandlers(
     }
   )
 
-  // session:stop - detiene captura
+  // session:stop - detiene captura y exporta GeoJSON al escritorio
   ipcMain.handle(IPC_HANDLERS.SESSION_STOP, async () => {
     const summary = await sessionService.stop()
+
+    // Auto-export GeoJSON al escritorio (obligatorio)
+    const repository = sessionService.getRepository()
+    if (summary?.localidad && summary?.id && repository) {
+      try {
+        const desktop = app.getPath('desktop')
+        const startDate = new Date(summary.startedAt)
+        const fecha = startDate.toISOString().slice(0, 10)
+        const hora = startDate.toTimeString().slice(0, 8).replace(/:/g, '')
+        const loc = summary.localidad.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '').replace(/\s+/g, '-')
+        const filename = `${loc}_${fecha}_${hora}.geojson`
+        const filepath = path.join(desktop, filename)
+        const geojson = await repository.exportAsGeoJSON(summary.id)
+        fs.writeFileSync(filepath, geojson, 'utf-8')
+        console.log(`[SessionServiceHandler] GeoJSON saved to desktop: ${filepath}`)
+      } catch (err) {
+        console.warn('[SessionServiceHandler] Failed to save GeoJSON to desktop:', err)
+      }
+    }
+
     return summary
   })
 
@@ -197,13 +218,8 @@ export function registerSessionServiceHandlers(
       return { success: false, error: 'Repository not available' }
     }
     try {
-      // Verificar si el repositorio tiene el método getSessionStats
-      if ('getSessionStats' in repository) {
-        const stats = await (repository as any).getSessionStats(sessionId)
-        return { success: true, stats }
-      } else {
-        return { success: false, error: 'Stats not available' }
-      }
+      const stats = await repository.getSessionStats(sessionId)
+      return { success: true, stats }
     } catch (err) {
       return { success: false, error: (err as Error).message }
     }
@@ -218,19 +234,8 @@ export function registerSessionServiceHandlers(
         return { success: false, error: 'Repository not available' }
       }
       try {
-        // Verificar si el repositorio tiene el método getPointsInBounds
-        if ('getPointsInBounds' in repository) {
-          const points = await (repository as any).getPointsInBounds(
-            sessionId,
-            north,
-            south,
-            east,
-            west
-          )
-          return { success: true, points }
-        } else {
-          return { success: false, error: 'Spatial queries not available' }
-        }
+        const points = await repository.getPointsInBounds(sessionId, north, south, east, west)
+        return { success: true, points }
       } catch (err) {
         return { success: false, error: (err as Error).message }
       }

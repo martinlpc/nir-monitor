@@ -7,7 +7,7 @@ import archiver from 'archiver'
 import { PassThrough } from 'stream'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
-import type { ISessionRepository, PersistedSession } from '../../shared/services/ISessionRepository'
+import type { ISessionRepository, PersistedSession, SessionStats } from '../../shared/services/ISessionRepository'
 import { encrypt, decrypt, isEncrypted } from './CryptoService'
 
 /**
@@ -776,7 +776,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       cell.style = headerStyle
     })
 
-    points.forEach((point, i) => {
+    points.forEach((point) => {
       dataSheet.addRow({
         sequenceNumber: point.sequenceNumber,
         datetime: new Date(point.timestamp).toLocaleString('es-AR'),
@@ -875,7 +875,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
         const color = rssToColor(p.emf.rss)
         const styleId = styles.get(color)!
         const dt = new Date(p.timestamp).toISOString()
-        const rssU = metadata.uncertainty != null ? p.emf.rss + metadata.uncertainty : ''
+        const rssU = metadata.correctionFactor != null ? p.rssWithUncertainty.toFixed(2) : ''
         return `
     <Placemark>
       <name>${escXml(p.emf.rss + ' ' + p.emf.unit)}</name>
@@ -887,8 +887,6 @@ export class SQLiteSessionRepository implements ISessionRepository {
         <Data name="rss"><value>${p.emf.rss}</value></Data>
         <Data name="rssWithUncertainty"><value>${rssU}</value></Data>
         <Data name="unit"><value>${escXml(p.emf.unit)}</value></Data>
-        <Data name="hdop"><value>${p.position.hdop ?? 0}</value></Data>
-        <Data name="interpolated"><value>${p.interpolated}</value></Data>
       </ExtendedData>
     </Placemark>`
       })
@@ -909,7 +907,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       ? `\nMedidor: ${inst.meter.brand} ${inst.meter.model} (S/N: ${inst.meter.serial})` +
         `\nÚltima calibración: ${inst.meter.lastCalibrationDate ?? 'N/A'}` +
         `\nSonda: ${inst.probe.brand} ${inst.probe.model} (S/N: ${inst.probe.serial})` +
-        `\nIncertidumbre: ${metadata.uncertainty ?? 'N/A'}`
+        `\nFactor de corrección: ${metadata.correctionFactor ?? 'N/A'}`
       : ''
 
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -945,7 +943,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   async getSessionStats(
     sessionId: string
-  ): Promise<{ avgRss: number; maxRss: number; minRss: number; pointCount: number } | null> {
+  ): Promise<SessionStats | null> {
     await this.initialize()
     const db = this.ensureDb()
 

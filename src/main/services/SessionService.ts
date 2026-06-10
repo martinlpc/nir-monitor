@@ -1,8 +1,5 @@
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import * as fs from 'fs'
-import * as path from 'path'
-import { app } from 'electron'
 import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
@@ -275,26 +272,6 @@ export class SessionService extends EventEmitter {
       } catch (err) {
         console.error(`[SessionService] Failed to finalize session: ${err}`)
         // No throw - sesión termina pero sin persistencia
-      }
-    }
-
-    // Generar GeoJSON en el Escritorio
-    if (this.repository && this.currentSessionId && this.localidad) {
-      try {
-        const desktop = app.getPath('desktop')
-        const startDate = new Date(this.startedAt)
-        const fecha = startDate.toISOString().slice(0, 10)
-        const hora = startDate.toTimeString().slice(0, 8).replace(/:/g, '')
-        const loc = this.localidad
-          .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
-          .replace(/\s+/g, '-')
-        const filename = `${loc}_${fecha}_${hora}.geojson`
-        const filepath = path.join(desktop, filename)
-        const geojson = await this.repository.exportAsGeoJSON(this.currentSessionId)
-        fs.writeFileSync(filepath, geojson, 'utf-8')
-        console.log(`[SessionService] GeoJSON saved to desktop: ${filepath}`)
-      } catch (err) {
-        console.warn('[SessionService] Failed to save GeoJSON to desktop:', err)
       }
     }
 

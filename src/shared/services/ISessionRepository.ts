@@ -6,6 +6,13 @@ export interface PersistedSession {
   points: GeoTimestamp[]
 }
 
+export interface SessionStats {
+  avgRss: number
+  maxRss: number
+  minRss: number
+  pointCount: number
+}
+
 export interface ISessionRepository {
   /**
    * Guardar sesión completada (metadatos + puntos)
@@ -66,6 +73,22 @@ export interface ISessionRepository {
    * Exportar sesión como KMZ (KML comprimido para Google Earth)
    */
   exportAsKMZ(sessionId: string): Promise<Buffer>
+
+  /**
+   * Obtener estadísticas pre-calculadas de una sesión
+   */
+  getSessionStats(sessionId: string): Promise<SessionStats | null>
+
+  /**
+   * Buscar puntos dentro de un bounding box geográfico
+   */
+  getPointsInBounds(
+    sessionId: string,
+    north: number,
+    south: number,
+    east: number,
+    west: number
+  ): Promise<GeoTimestamp[]>
 
   /**
    * Exportar sesión como CSV

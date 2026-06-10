@@ -3,7 +3,7 @@ import * as path from 'path'
 import { app } from 'electron'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
-import type { ISessionRepository, PersistedSession } from '../../shared/services/ISessionRepository'
+import type { ISessionRepository, PersistedSession, SessionStats } from '../../shared/services/ISessionRepository'
 
 /**
  * File-based session persistence
@@ -192,12 +192,51 @@ export class FileSessionRepository implements ISessionRepository {
     }
   }
 
+  async getSessionStats(sessionId: string): Promise<SessionStats | null> {
+    try {
+      const points = await this.getSessionPoints(sessionId)
+      if (points.length === 0) return { avgRss: 0, maxRss: 0, minRss: 0, pointCount: 0 }
+
+      const values = points.map((p) => p.rssWithUncertainty)
+      return {
+        avgRss: values.reduce((a, b) => a + b, 0) / values.length,
+        maxRss: Math.max(...values),
+        minRss: Math.min(...values),
+        pointCount: values.length
+      }
+    } catch (err) {
+      console.error(`Error computing stats for session ${sessionId}:`, err)
+      return null
+    }
+  }
+
+  async getPointsInBounds(
+    sessionId: string,
+    north: number,
+    south: number,
+    east: number,
+    west: number
+  ): Promise<GeoTimestamp[]> {
+    try {
+      const all = await this.getSessionPoints(sessionId)
+      return all.filter(
+        (p) =>
+          p.position.lat >= south &&
+          p.position.lat <= north &&
+          p.position.lon >= west &&
+          p.position.lon <= east
+      )
+    } catch (err) {
+      console.error(`Error querying bounds for session ${sessionId}:`, err)
+      return []
+    }
+  }
+
   async exportAsGeoJSON(sessionId: string): Promise<string> {
     const session = await this.getSession(sessionId)
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
-    const uncertainty = metadata.uncertainty
     const instrument = metadata.instrument
 
     const features = points.map((point) => ({
@@ -246,7 +285,7 @@ export class FileSessionRepository implements ISessionRepository {
               }
             }
           : null,
-        uncertainty: uncertainty ?? null
+        correctionFactor: metadata.correctionFactor ?? null
       },
       features
     }
