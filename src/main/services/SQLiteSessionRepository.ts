@@ -19,15 +19,22 @@ import { encrypt, decrypt, isEncrypted } from './CryptoService'
  */
 export class SQLiteSessionRepository implements ISessionRepository {
   private db: SqlJsDatabase | null = null
-  private dbPath: string
+  private dbPath: string = ''
   private initialized = false
   private initPromise: Promise<void> | null = null
   private pendingPoints = 0
   private flushInterval: ReturnType<typeof setInterval> | null = null
   private readonly FLUSH_EVERY_N_POINTS = 10
   private readonly FLUSH_INTERVAL_MS = 30_000
+  private readonly isTestMode: boolean
 
-  constructor() {
+  constructor(options?: { testDb?: SqlJsDatabase }) {
+    if (options?.testDb) {
+      this.db = options.testDb
+      this.isTestMode = true
+      return
+    }
+    this.isTestMode = false
     try {
       const dataPath = app.getPath('userData')
       this.dbPath = path.join(dataPath, 'sessions.db')
@@ -62,6 +69,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   private async initialize(): Promise<void> {
     if (this.initialized) return
+    if (this.isTestMode) {
+      this.initialized = true
+      return
+    }
     if (this.initPromise) return this.initPromise
 
     this.initPromise = this._initialize()
@@ -79,7 +90,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       // Cargar BD existente si existe
       let data: Uint8Array | undefined
-      if (fs.existsSync(this.dbPath)) {
+      if (!this.isTestMode && fs.existsSync(this.dbPath)) {
         try {
           const raw = fs.readFileSync(this.dbPath)
           if (isEncrypted(raw)) {
@@ -185,6 +196,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   private save(): void {
     if (!this.db) return
+    if (this.isTestMode) return
     try {
       const data = this.db.export()
       const buffer = Buffer.from(data)
@@ -499,7 +511,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       const result = db.exec(
-        `SELECT id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument
+        `SELECT id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument,
+          provincia, localidad, apellido1, apellido2
          FROM sessions
          ORDER BY startedAt DESC`
       )
@@ -516,7 +529,11 @@ export class SQLiteSessionRepository implements ISessionRepository {
           stoppedAt: rowMap.stoppedAt ? this.isoToUnix(rowMap.stoppedAt as string) : null,
           sampleCount: rowMap.sampleCount as number,
           instrument: rowMap.instrument ? JSON.parse(rowMap.instrument as string) : null,
-          correctionFactor: rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null
+          correctionFactor: rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null,
+          provincia: rowMap.provincia as string | undefined,
+          localidad: rowMap.localidad as string | undefined,
+          apellido1: rowMap.apellido1 as string | undefined,
+          apellido2: rowMap.apellido2 as string | undefined
         } as SessionSummary
       })
     } catch (err) {
@@ -530,6 +547,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const db = this.ensureDb()
 
     try {
+      db.run('DELETE FROM geo_points WHERE sessionId = ?', [sessionId])
+      db.run('DELETE FROM session_stats WHERE sessionId = ?', [sessionId])
       db.run('DELETE FROM sessions WHERE id = ?', [sessionId])
       this.save()
       console.log(`[SQLiteSessionRepository] Session ${sessionId} deleted`)
@@ -557,19 +576,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
         return {
           id: rowMap.id as string,
           sessionId: rowMap.sessionId as string,
-          timestamp: rowMap.timestamp as number,
+          sequenceNumber: rowMap.sequenceNumber as number,
+          timestamp: this.isoToUnix(rowMap.timestamp as string),
           position: {
             lat: rowMap.lat as number,
             lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0,
-            hdop: (rowMap.hdop as number) || 0
+            alt: (rowMap.alt as number) || 0
           },
           emf: {
             deviceId: 'nbm550',
             rss: rowMap.rss as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          interpolated: (rowMap.interpolated as number) === 1
+          rssWithUncertainty: rowMap.rssWithUncertainty as number
         }
       })
     } catch (err) {
@@ -985,19 +1004,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
         return {
           id: rowMap.id as string,
           sessionId: rowMap.sessionId as string,
-          timestamp: rowMap.timestamp as number,
+          sequenceNumber: rowMap.sequenceNumber as number,
+          timestamp: this.isoToUnix(rowMap.timestamp as string),
           position: {
             lat: rowMap.lat as number,
             lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0,
-            hdop: (rowMap.hdop as number) || 0
+            alt: (rowMap.alt as number) || 0
           },
           emf: {
             deviceId: 'nbm550',
             rss: rowMap.rss as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          interpolated: (rowMap.interpolated as number) === 1
+          rssWithUncertainty: rowMap.rssWithUncertainty as number
         }
       })
     } catch (err) {
@@ -1012,7 +1031,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
   close(): void {
     this.stopFlushTimer()
     if (this.db) {
-      this.save()
+      if (!this.isTestMode) this.save()
       this.db.close()
       this.db = null
       this.initialized = false
