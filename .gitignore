@@ -7,3 +7,4 @@ out
 *.tsbuildinfo
 src/main/scripts/showMockSessionFactors.ts
 .env
+coverage
