@@ -34,23 +34,25 @@ npm run build:win / :mac / :linux
 ```
 
 ### Output structure
+
 - `out/` — electron-vite build (main + preload + renderer)
 - `dist/` — instaladores generados por electron-builder
 
 ### Configuración electron-builder (`electron-builder.yml`)
 
-| Aspecto | Detalle |
-|---------|---------|
-| appId | `com.enacom.nir-monitor` |
-| Windows | NSIS installer: `nir-monitor-{version}-setup.exe` |
-| macOS | DMG: `nir-monitor-{version}.dmg`, notarization deshabilitada |
-| Linux | AppImage + snap + deb: `nir-monitor-{version}.AppImage` |
+| Aspecto     | Detalle                                                                |
+| ----------- | ---------------------------------------------------------------------- |
+| appId       | `com.enacom.nir-monitor`                                               |
+| Windows     | NSIS installer: `nir-monitor-{version}-setup.exe`                      |
+| macOS       | DMG: `nir-monitor-{version}.dmg`, notarization deshabilitada           |
+| Linux       | AppImage + snap + deb: `nir-monitor-{version}.AppImage`                |
 | Auto-update | Provider `generic`, URL placeholder `https://example.com/auto-updates` |
-| Excludes | `src/`, `.vscode/`, configs, etc. |
-| asarUnpack | `resources/**` |
-| npmRebuild | `false` (serialport es prebuild) |
+| Excludes    | `src/`, `.vscode/`, configs, etc.                                      |
+| asarUnpack  | `resources/**`                                                         |
+| npmRebuild  | `false` (serialport es prebuild)                                       |
 
 ### Auto-update (`dev-app-update.yml`)
+
 ```yaml
 provider: generic
 url: https://example.com/auto-updates
@@ -58,6 +60,7 @@ updaterCacheDirName: nir-monitor-updater
 ```
 
 ### Estado actual
+
 - `electron-updater` está instalado pero **no hay código que lo implemente** (no hay llamadas a `autoUpdater`)
 - No hay CI/CD workflows (`.github/workflows/` no existe)
 - No hay configuración de code signing

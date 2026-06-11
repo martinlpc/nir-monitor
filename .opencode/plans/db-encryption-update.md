@@ -31,7 +31,7 @@ NIR_DB_ENCRYPTION_KEY=passphrase-acordada-con-el-equipo
 
 Entre "Export Formats" y "License":
 
-```markdown
+````markdown
 ## Database Encryption
 
 The SQLite database (`sessions.db`) is encrypted at rest using **AES-256-GCM**
@@ -46,6 +46,7 @@ agreed upon by all teams that need access:
 # .env (gitignored — never commit the passphrase)
 NIR_DB_ENCRYPTION_KEY=passphrase-compartida-entre-equipos
 ```
+````
 
 The passphrase is converted to a 256-bit AES key via SHA-256, producing the
 same key on every machine with the same passphrase.
@@ -54,9 +55,9 @@ same key on every machine with the same passphrase.
 
 ### Environment variable
 
-| Variable | Required | Description |
-|---|---|---|
-| `NIR_DB_ENCRYPTION_KEY` | Yes | Shared passphrase (any string) |
+| Variable                | Required | Description                    |
+| ----------------------- | -------- | ------------------------------ |
+| `NIR_DB_ENCRYPTION_KEY` | Yes      | Shared passphrase (any string) |
 
 If not set, the app throws a clear error at startup.
 
@@ -69,11 +70,12 @@ migrated to the encrypted format on the next save. No manual steps needed.
 
 In production, inject the passphrase through your deployment mechanism
 (CI variables, electron-builder config, systemd environment, etc.).
-```
+
+````
 
 ## 4. Verificación
 
 ```bash
 npm run typecheck
 npm test
-```
+````

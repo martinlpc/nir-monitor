@@ -6,15 +6,19 @@ description: Complete lifecycle of a measurement session — start, capture, sto
 Archivo: `src/main/services/SessionService.ts`
 
 ## Estados
+
 ```
 idle -> running -> stopped
 ```
 
 ## Start (pre-validaciones)
+
 ```typescript
 SessionService.start(label, fusionConfig?, locationData?): Promise<string>
 ```
+
 Validaciones en orden:
+
 1. No debe haber sesion en curso (`state !== 'running'`)
 2. NBM-550 debe estar conectado
 3. GPS debe estar conectado
@@ -28,20 +32,24 @@ Validaciones en orden:
 10. Emite evento `started`
 
 ## Durante captura
+
 - `GeoFusionService` emite `point` cuando se dispara trigger
 - `SessionService` escucha, incrementa contador, acumula en array
 - Persiste async: `repository.addPoint()` (no bloquea)
 - Emite `session:sample` via IPC al renderer
 
 ## Config de captura (orden de precedencia)
+
 1. Parametros explicitos de `start()` (mas prioridad)
 2. `AppConfig` persistido (triggerMode, intervalMs, minDistanceMeters)
 3. Valores default del `GeoFusionConfig`
 
 ## Stop
+
 ```typescript
 SessionService.stop(): Promise<SessionSummary>
 ```
+
 1. Detiene fusion (`fusion.stop()` -> clearTimeout)
 2. Cambia estado a `stopped`
 3. Construye `SessionSummary` con metadatos
@@ -55,11 +63,13 @@ SessionService.stop(): Promise<SessionSummary>
 6. Emite evento `stopped`
 
 ## State getters
+
 - `getState()` -> `'idle' | 'running' | 'stopped'`
 - `getCurrentSessionId()` -> string | null
 - `getSummary()` -> SessionSummary | null
 
 ## Wiring
+
 - SessionService no gestiona dispositivos directamente
 - Recibe NBM y GPS via `setNBM()` / `setGPS()`
 - ServiceFactory hace el wiring despues de deviceManager.initialize()

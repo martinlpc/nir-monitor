@@ -9,6 +9,7 @@ description: SQLite persistence layer — schema, repositories, batching, migrat
 ## Schema (3 tablas)
 
 ### sessions
+
 ```sql
 CREATE TABLE IF NOT EXISTS sessions (
   id TEXT PRIMARY KEY,
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 ```
 
 ### geo_points
+
 ```sql
 CREATE TABLE IF NOT EXISTS geo_points (
   id TEXT PRIMARY KEY,
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS geo_points (
 ```
 
 ### session_stats
+
 ```sql
 CREATE TABLE IF NOT EXISTS session_stats (
   sessionId TEXT PRIMARY KEY,
@@ -55,6 +58,7 @@ CREATE TABLE IF NOT EXISTS session_stats (
 ```
 
 ## Indices
+
 ```sql
 CREATE INDEX IF NOT EXISTS idx_geo_session_id ON geo_points(sessionId)
 CREATE INDEX IF NOT EXISTS idx_geo_timestamp ON geo_points(timestamp)
@@ -62,16 +66,19 @@ CREATE INDEX IF NOT EXISTS idx_geo_lat_lon ON geo_points(lat, lon)
 ```
 
 ## Migraciones
+
 - No hay framework de migraciones formal
 - Estrategia: ALTER TABLE ADD COLUMN con try/catch silencioso
 - Si la columna ya existe, el error se ignora
 
 ## Repositorios
+
 - `ISessionRepository` en `src/shared/services/` (interface)
 - `SQLiteSessionRepository` (principal, activa)
 - `FileSessionRepository` (GeoJSON-based, fallback inactivo)
 
 ## Batching
+
 - Cada 10 puntos acumulados o 30s (lo que ocurra primero)
 - Flush forzado al detener sesion
 - IDs: UUID v4 con `uuid` package

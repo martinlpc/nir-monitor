@@ -1,5 +1,5 @@
 ---
-description: "Use when: debugging device connections (GPS/NBM550), fixing serial port communication, improving IPC channels between main and renderer, transforming or validating data before database persistence, reviewing GeoFusionService capture pipeline, optimizing DeviceManager polling, fixing driver protocols (NMEA/binary), troubleshooting reconnection logic, wiring services in ServiceFactory, reviewing data flow from sensor to SQLite, adding new device drivers, extending shared interfaces or DTOs"
+description: 'Use when: debugging device connections (GPS/NBM550), fixing serial port communication, improving IPC channels between main and renderer, transforming or validating data before database persistence, reviewing GeoFusionService capture pipeline, optimizing DeviceManager polling, fixing driver protocols (NMEA/binary), troubleshooting reconnection logic, wiring services in ServiceFactory, reviewing data flow from sensor to SQLite, adding new device drivers, extending shared interfaces or DTOs'
 permission:
   read: allow
   edit: allow
@@ -23,10 +23,10 @@ Este proyecto captura datos de campo electromagnético (EMF) georeferenciados us
 
 ### Dispositivos soportados
 
-| Dispositivo | Puerto serie | Baud rate | Protocolo | Parser |
-|-------------|-------------|-----------|-----------|--------|
-| GPS genérico | Serial | 4800 | NMEA 0183 (GGA, RMC, GSA) | `ReadlineParser` (`\r\n`) |
-| Narda NBM-550 | Serial | 460800 | Binario comando-respuesta (`;` delimiter) | Custom buffer parser |
+| Dispositivo   | Puerto serie | Baud rate | Protocolo                                 | Parser                    |
+| ------------- | ------------ | --------- | ----------------------------------------- | ------------------------- |
+| GPS genérico  | Serial       | 4800      | NMEA 0183 (GGA, RMC, GSA)                 | `ReadlineParser` (`\r\n`) |
+| Narda NBM-550 | Serial       | 460800    | Binario comando-respuesta (`;` delimiter) | Custom buffer parser      |
 
 ### Arquitectura de servicios
 
@@ -77,18 +77,18 @@ ServiceFactory → inyección manual de dependencias + wiring de eventos
 
 ### Archivos clave
 
-| Capa | Archivos |
-|------|----------|
-| Drivers | `src/main/devices/gps/GPSDriver.ts`, `src/main/devices/nbm550/NBM550Driver.ts`, `src/main/devices/nbm550/NBM550Parser.ts` |
-| Servicios | `src/main/services/DeviceManager.ts`, `src/main/services/SessionService.ts`, `src/main/services/GeoFusionService.ts` |
-| Persistencia | `src/main/services/SQLiteSessionRepository.ts`, `src/main/services/FileSessionRepository.ts`, `src/main/services/PortConfig.ts` |
-| IPC | `src/main/ipc/channels.ts`, `src/main/ipc/handlers.ts`, `src/main/ipc/DeviceManagerHandler.ts`, `src/main/ipc/SessionServiceHandler.ts` |
-| Fábrica | `src/main/factories/ServiceFactory.ts` |
-| Infraestructura | `src/main/infrastructure/SerialPortScanner.ts` |
-| Tipos compartidos | `src/shared/device.types.ts`, `src/shared/GeoTimestamp.ts`, `src/shared/ipc.types.ts`, `src/shared/dto/index.ts` |
-| Interfaces | `src/shared/services/IDeviceManager.ts`, `src/shared/services/ISessionService.ts`, `src/shared/services/IGeoFusionService.ts`, `src/shared/services/ISessionRepository.ts` |
-| Tests | `src/main/devices/nbm550/NBM550Parser.test.ts`, `src/main/services/DeviceManager.test.ts`, `src/main/services/SessionService.test.ts`, `src/main/services/GeoFusionService.test.ts`, `src/main/services/Integration.test.ts` |
-| Entrada | `src/main/index.ts`, `src/main/application/Application.ts` |
+| Capa              | Archivos                                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Drivers           | `src/main/devices/gps/GPSDriver.ts`, `src/main/devices/nbm550/NBM550Driver.ts`, `src/main/devices/nbm550/NBM550Parser.ts`                                                                                                    |
+| Servicios         | `src/main/services/DeviceManager.ts`, `src/main/services/SessionService.ts`, `src/main/services/GeoFusionService.ts`                                                                                                         |
+| Persistencia      | `src/main/services/SQLiteSessionRepository.ts`, `src/main/services/FileSessionRepository.ts`, `src/main/services/PortConfig.ts`                                                                                              |
+| IPC               | `src/main/ipc/channels.ts`, `src/main/ipc/handlers.ts`, `src/main/ipc/DeviceManagerHandler.ts`, `src/main/ipc/SessionServiceHandler.ts`                                                                                      |
+| Fábrica           | `src/main/factories/ServiceFactory.ts`                                                                                                                                                                                       |
+| Infraestructura   | `src/main/infrastructure/SerialPortScanner.ts`                                                                                                                                                                               |
+| Tipos compartidos | `src/shared/device.types.ts`, `src/shared/GeoTimestamp.ts`, `src/shared/ipc.types.ts`, `src/shared/dto/index.ts`                                                                                                             |
+| Interfaces        | `src/shared/services/IDeviceManager.ts`, `src/shared/services/ISessionService.ts`, `src/shared/services/IGeoFusionService.ts`, `src/shared/services/ISessionRepository.ts`                                                   |
+| Tests             | `src/main/devices/nbm550/NBM550Parser.test.ts`, `src/main/services/DeviceManager.test.ts`, `src/main/services/SessionService.test.ts`, `src/main/services/GeoFusionService.test.ts`, `src/main/services/Integration.test.ts` |
+| Entrada           | `src/main/index.ts`, `src/main/application/Application.ts`                                                                                                                                                                   |
 
 ## Áreas de Expertise
 

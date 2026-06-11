@@ -21,17 +21,17 @@ Developed by the [Ente Nacional de Comunicaciones (ENACOM)](https://www.enacom.g
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Desktop shell | Electron 42 |
-| Frontend | React 19, TypeScript 5.9, Vite 7 |
-| Maps | Leaflet 1.9, react-leaflet 5 |
-| Serial communication | serialport 13 |
-| GPS parsing | nmea-simple |
-| Database | SQLite via sql.js (WebAssembly) |
-| Export | exceljs (XLSX), archiver (KMZ/ZIP) |
-| Testing | Vitest |
-| Packaging | electron-builder (Windows, macOS, Linux) |
+| Layer                | Technology                               |
+| -------------------- | ---------------------------------------- |
+| Desktop shell        | Electron 42                              |
+| Frontend             | React 19, TypeScript 5.9, Vite 7         |
+| Maps                 | Leaflet 1.9, react-leaflet 5             |
+| Serial communication | serialport 13                            |
+| GPS parsing          | nmea-simple                              |
+| Database             | SQLite via sql.js (WebAssembly)          |
+| Export               | exceljs (XLSX), archiver (KMZ/ZIP)       |
+| Testing              | Vitest                                   |
+| Packaging            | electron-builder (Windows, macOS, Linux) |
 
 ## Prerequisites
 
@@ -93,12 +93,12 @@ The application follows a **clean layered architecture** with three processes:
 
 ## Export Formats
 
-| Format | Description |
-|---|---|
-| **GeoJSON** | Standard GIS interchange format |
-| **CSV** | Flat table of all measurement points |
-| **XLSX** | Excel workbook with summary + raw data sheets |
-| **KMZ** | Compressed KML for Google Earth |
+| Format      | Description                                   |
+| ----------- | --------------------------------------------- |
+| **GeoJSON** | Standard GIS interchange format               |
+| **CSV**     | Flat table of all measurement points          |
+| **XLSX**    | Excel workbook with summary + raw data sheets |
+| **KMZ**     | Compressed KML for Google Earth               |
 
 ## Database Encryption
 
@@ -122,9 +122,9 @@ same key on every machine with the same passphrase.
 
 ### Environment variable
 
-| Variable | Required | Description |
-|---|---|---|
-| `NIR_DB_ENCRYPTION_KEY` | Yes | Shared passphrase (any string) |
+| Variable                | Required | Description                    |
+| ----------------------- | -------- | ------------------------------ |
+| `NIR_DB_ENCRYPTION_KEY` | Yes      | Shared passphrase (any string) |
 
 If not set, the app throws a clear error at startup.
 
