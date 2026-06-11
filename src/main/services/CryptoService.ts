@@ -28,17 +28,12 @@ export function encrypt(plaintext: Buffer): Buffer {
 
 export function decrypt(ciphertext: Buffer): Buffer {
   const key = getKey()
-  const authTag = ciphertext.subarray(
-    MAGIC.length,
-    MAGIC.length + AUTH_TAG_LENGTH
-  )
+  const authTag = ciphertext.subarray(MAGIC.length, MAGIC.length + AUTH_TAG_LENGTH)
   const iv = ciphertext.subarray(
     MAGIC.length + AUTH_TAG_LENGTH,
     MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH
   )
-  const payload = ciphertext.subarray(
-    MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH
-  )
+  const payload = ciphertext.subarray(MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH)
   const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
   decipher.setAuthTag(authTag)
   return Buffer.concat([decipher.update(payload), decipher.final()])
@@ -47,3 +42,5 @@ export function decrypt(ciphertext: Buffer): Buffer {
 export function isEncrypted(buffer: Buffer): boolean {
   return buffer.subarray(0, MAGIC.length).equals(MAGIC)
 }
+
+export { encrypt as encryptBuffer, decrypt as decryptBuffer }

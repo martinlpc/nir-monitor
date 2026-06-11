@@ -8,9 +8,7 @@ function App(): React.JSX.Element {
   const debugEnabled = new URLSearchParams(window.location.search).get('debug') === '1'
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        {debugEnabled ? <DebugPanel /> : <ProductionShell />}
-      </ToastProvider>
+      <ToastProvider>{debugEnabled ? <DebugPanel /> : <ProductionShell />}</ToastProvider>
     </ErrorBoundary>
   )
 }

@@ -22,8 +22,12 @@ export default function DebugHero({
         </p>
       </div>
       <div className="hero-meta">
-        <span className={`badge ${scanning ? 'warn' : 'ok'}`}>{scanning ? 'Escaneando' : 'Idle'}</span>
-        <span className={`badge ${gpsFix ? 'ok' : 'danger'}`}>{gpsFix ? 'GPS fix' : 'GPS sin fix'}</span>
+        <span className={`badge ${scanning ? 'warn' : 'ok'}`}>
+          {scanning ? 'Escaneando' : 'Idle'}
+        </span>
+        <span className={`badge ${gpsFix ? 'ok' : 'danger'}`}>
+          {gpsFix ? 'GPS fix' : 'GPS sin fix'}
+        </span>
         <span className={`badge ${sessionId ? 'active' : ''}`}>
           {sessionId ? 'Sesion activa' : 'Sin sesion'}
         </span>
@@ -32,4 +36,3 @@ export default function DebugHero({
     </section>
   )
 }
-

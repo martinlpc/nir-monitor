@@ -14,6 +14,7 @@ export default function SessionsPanel({
   onSessionLoaded,
   onDeleteSession,
   onExportSession,
+  onImportSession,
   onGetSession
 }: {
   session: ReturnType<typeof useSession>
@@ -21,12 +22,18 @@ export default function SessionsPanel({
   isLoading: boolean
   error: string | null
   onOpenAllSessions?: () => void
-  onSessionLoaded?: (bounds: { north: number; south: number; east: number; west: number } | null) => void
+  onSessionLoaded?: (
+    bounds: { north: number; south: number; east: number; west: number } | null
+  ) => void
   onDeleteSession: (sessionId: string) => Promise<void>
   onExportSession: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => Promise<void>
+  onImportSession?: () => Promise<{ sessionId?: string; canceled?: boolean }>
   onGetSession: (sessionId: string) => Promise<PersistedSession>
 }): React.JSX.Element {
-  const [loadStatus, setLoadStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [loadStatus, setLoadStatus] = useState<{
+    message: string
+    type: 'success' | 'error'
+  } | null>(null)
 
   // Limpiar mensaje de estado después de 3 segundos
   useEffect(() => {
@@ -37,18 +44,20 @@ export default function SessionsPanel({
 
   const handleLoad = (sessionId: string): void => {
     setLoadStatus(null)
-    
+
     onGetSession(sessionId)
       .then((result) => {
         console.log('[SessionsPanel] getSession result:', result)
-        
+
         if (result && result.points) {
           console.log(`[SessionsPanel] Loaded ${result.points.length} points from session`)
-          
+
           // Calcular bounds de la sesión para centrado automático
-          const validPoints = result.points.filter((p) => p.position !== null && p.position !== undefined)
+          const validPoints = result.points.filter(
+            (p) => p.position !== null && p.position !== undefined
+          )
           let bounds: { north: number; south: number; east: number; west: number } | null = null
-          
+
           if (validPoints.length > 0) {
             const lats = validPoints.map((p) => p.position.lat)
             const lons = validPoints.map((p) => p.position.lon)
@@ -70,18 +79,18 @@ export default function SessionsPanel({
               }
             }
           }
-          
+
           // Actualizar el state de sesión con los puntos cargados
           session.setLoadedSession({
             sessionId: result.metadata.id,
             label: result.metadata.label || `Session ${result.metadata.startedAt}`,
-            points: result.points,
+            points: validPoints.length > 0 ? validPoints : result.points,
             summary: result.metadata
           })
-          
+
           // Notificar al contenedor para centrado del mapa
           onSessionLoaded?.(bounds)
-          
+
           setLoadStatus({
             message: `✓ Sesión cargada: ${result.points.length} puntos`,
             type: 'success'
@@ -104,6 +113,25 @@ export default function SessionsPanel({
       await onDeleteSession(sessionId)
     } catch (err) {
       console.error('Error deleting session:', err)
+    }
+  }
+
+  const handleImport = async () => {
+    if (!onImportSession) return
+    try {
+      const result = await onImportSession()
+      if (result.canceled) return
+
+      setLoadStatus({
+        message: `✓ GeoJSON importado correctamente`,
+        type: 'success'
+      })
+    } catch (err) {
+      console.error('Error importing GeoJSON:', err)
+      setLoadStatus({
+        message: `Error al importar: ${err instanceof Error ? err.message : 'desconocido'}`,
+        type: 'error'
+      })
     }
   }
 
@@ -130,34 +158,51 @@ export default function SessionsPanel({
   return (
     <div className="sessions-panel">
       <div className="sessions-header">
-        <div>
+        <div className="sessions-header-title">
           <h2>Historial de Sesiones</h2>
           {sessions.length > 0 && <span className="sessions-badge">{sessions.length}</span>}
         </div>
-        {onOpenAllSessions && sessions.length > 0 && (
-          <button
-            className="sessions-view-all-btn"
-            onClick={onOpenAllSessions}
-            title="Ver todas las sesiones guardadas"
-            aria-label="Ver todas las sesiones"
-          >
-            📋 Ver todas
-          </button>
-        )}
+        <div className="sessions-header-actions">
+          {onImportSession && (
+            <button
+              className="sessions-import-btn"
+              onClick={handleImport}
+              title="Importar GeoJSON cifrado o plano"
+              aria-label="Importar GeoJSON"
+            >
+              📥 Importar
+            </button>
+          )}
+          {onOpenAllSessions && sessions.length > 0 && (
+            <button
+              className="sessions-view-all-btn"
+              onClick={onOpenAllSessions}
+              title="Ver todas las sesiones guardadas"
+              aria-label="Ver todas las sesiones"
+            >
+              📋 Ver todas
+            </button>
+          )}
+        </div>
       </div>
 
       {error && <div className="error-message">Error: {error}</div>}
-      
+
       {loadStatus && (
-        <div role="status" aria-live="polite" style={{
-          padding: '8px 12px',
-          background: loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-          border: `1px solid ${loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
-          borderRadius: '4px',
-          fontSize: '12px',
-          color: loadStatus.type === 'success' ? '#72baff' : '#fca5a5',
-          marginBottom: '8px'
-        }}>
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            padding: '8px 12px',
+            background:
+              loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+            border: `1px solid ${loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            borderRadius: '4px',
+            fontSize: '12px',
+            color: loadStatus.type === 'success' ? '#72baff' : '#fca5a5',
+            marginBottom: '8px'
+          }}
+        >
           {loadStatus.message}
         </div>
       )}

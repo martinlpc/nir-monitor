@@ -117,17 +117,11 @@ export default function SettingsPanel(): React.JSX.Element {
           Archivo con factores de corrección por rango de frecuencia.
         </p>
 
-        <button
-          className="settings-btn"
-          onClick={handleLoadFile}
-          disabled={isLoading}
-        >
+        <button className="settings-btn" onClick={handleLoadFile} disabled={isLoading}>
           {isLoading ? 'Cargando...' : correctionData ? 'Cambiar archivo' : 'Cargar archivo'}
         </button>
 
-        {loadError && (
-          <div className="settings-error">{loadError}</div>
-        )}
+        {loadError && <div className="settings-error">{loadError}</div>}
 
         {correctionData && (
           <div className="settings-uncertainty">

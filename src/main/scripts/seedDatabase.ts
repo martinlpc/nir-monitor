@@ -7,6 +7,7 @@
  * Para dev, aseguramos la ruta correcta manualmente.
  */
 
+import 'dotenv/config'
 import path from 'path'
 import os from 'os'
 import { v4 as uuidv4 } from 'uuid'

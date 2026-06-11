@@ -22,7 +22,12 @@ export default function ProductionShell(): React.JSX.Element {
   const [followPosition, setFollowPosition] = useState(true)
   const [mapMaximized, setMapMaximized] = useState(false)
   const [allSessionsDrawerOpen, setAllSessionsDrawerOpen] = useState(false)
-  const [focusSessionBounds, setFocusSessionBounds] = useState<{ north: number; south: number; east: number; west: number } | null>(null)
+  const [focusSessionBounds, setFocusSessionBounds] = useState<{
+    north: number
+    south: number
+    east: number
+    west: number
+  } | null>(null)
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -30,9 +35,10 @@ export default function ProductionShell(): React.JSX.Element {
       setActiveTab((prev) => {
         const tabs: Array<'devices' | 'sessions' | 'settings'> = ['devices', 'sessions', 'settings']
         const idx = tabs.indexOf(prev)
-        const next = e.key === 'ArrowRight'
-          ? tabs[(idx + 1) % tabs.length]
-          : tabs[(idx - 1 + tabs.length) % tabs.length]
+        const next =
+          e.key === 'ArrowRight'
+            ? tabs[(idx + 1) % tabs.length]
+            : tabs[(idx - 1 + tabs.length) % tabs.length]
         const btn = document.getElementById(`tab-${next}`)
         btn?.focus()
         return next
@@ -61,7 +67,9 @@ export default function ProductionShell(): React.JSX.Element {
       .filter((p) => p.position !== null && p.position !== undefined)
 
     // También incluir puntos de la sesión activa/cargada
-    const activePoints = session.points.filter((p) => p.position !== null && p.position !== undefined)
+    const activePoints = session.points.filter(
+      (p) => p.position !== null && p.position !== undefined
+    )
     const combined = [...allPoints, ...activePoints]
 
     if (combined.length === 0) {
@@ -87,213 +95,241 @@ export default function ProductionShell(): React.JSX.Element {
 
   return (
     <GpsPositionProvider>
-    <main className="prod-shell">
-      <div className="prod-layout">
-        {/* Panel lateral con tabs */}
-        <div className="side-panel">
-          <div className="panel-tabs" role="tablist" aria-label="Panel de navegación" onKeyDown={handleTabKeyDown}>
-            <button
-              className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
-              onClick={() => setActiveTab('devices')}
-              role="tab"
-              id="tab-devices"
-              aria-selected={activeTab === 'devices'}
-              aria-controls="tabpanel-devices"
-              tabIndex={activeTab === 'devices' ? 0 : -1}
-              title="Dispositivos y sesión actual"
+      <main className="prod-shell">
+        <div className="prod-layout">
+          {/* Panel lateral con tabs */}
+          <div className="side-panel">
+            <div
+              className="panel-tabs"
+              role="tablist"
+              aria-label="Panel de navegación"
+              onKeyDown={handleTabKeyDown}
             >
-              Dispositivos
-            </button>
-            <button
-              className={`tab-button ${activeTab === 'sessions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('sessions')}
-              role="tab"
-              id="tab-sessions"
-              aria-selected={activeTab === 'sessions'}
-              aria-controls="tabpanel-sessions"
-              tabIndex={activeTab === 'sessions' ? 0 : -1}
-              title="Historial de sesiones guardadas"
-            >
-              Historial
-            </button>
-            <button
-              className={`tab-button tab-button--icon ${activeTab === 'settings' ? 'active' : ''}`}
-              onClick={() => setActiveTab('settings')}
-              role="tab"
-              id="tab-settings"
-              aria-selected={activeTab === 'settings'}
-              aria-controls="tabpanel-settings"
-              tabIndex={activeTab === 'settings' ? 0 : -1}
-              title="Configuración"
-            >
-              ⚙
-            </button>
+              <button
+                className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
+                onClick={() => setActiveTab('devices')}
+                role="tab"
+                id="tab-devices"
+                aria-selected={activeTab === 'devices'}
+                aria-controls="tabpanel-devices"
+                tabIndex={activeTab === 'devices' ? 0 : -1}
+                title="Dispositivos y sesión actual"
+              >
+                Dispositivos
+              </button>
+              <button
+                className={`tab-button ${activeTab === 'sessions' ? 'active' : ''}`}
+                onClick={() => setActiveTab('sessions')}
+                role="tab"
+                id="tab-sessions"
+                aria-selected={activeTab === 'sessions'}
+                aria-controls="tabpanel-sessions"
+                tabIndex={activeTab === 'sessions' ? 0 : -1}
+                title="Historial de sesiones guardadas"
+              >
+                Historial
+              </button>
+              <button
+                className={`tab-button tab-button--icon ${activeTab === 'settings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('settings')}
+                role="tab"
+                id="tab-settings"
+                aria-selected={activeTab === 'settings'}
+                aria-controls="tabpanel-settings"
+                tabIndex={activeTab === 'settings' ? 0 : -1}
+                title="Configuración"
+              >
+                ⚙
+              </button>
+            </div>
+
+            <div className="panel-content">
+              {/* Mantener ambos componentes montados pero solo mostrar uno - preserva estado */}
+              <div
+                role="tabpanel"
+                id="tabpanel-devices"
+                aria-labelledby="tab-devices"
+                style={{ display: activeTab === 'devices' ? 'block' : 'none' }}
+              >
+                <DevicesPanel
+                  devices={devices}
+                  session={session}
+                  followPosition={followPosition}
+                  onFollowPositionChange={setFollowPosition}
+                />
+              </div>
+              <div
+                role="tabpanel"
+                id="tabpanel-sessions"
+                aria-labelledby="tab-sessions"
+                style={{ display: activeTab === 'sessions' ? 'block' : 'none' }}
+              >
+                <SessionsPanel
+                  session={session}
+                  sessions={persistedSessions.sessions}
+                  isLoading={persistedSessions.isLoading}
+                  error={persistedSessions.error}
+                  onOpenAllSessions={() => setAllSessionsDrawerOpen(true)}
+                  onSessionLoaded={(bounds) => {
+                    setFollowPosition(false)
+                    setFocusSessionBounds(bounds)
+                  }}
+                  onDeleteSession={async (sessionId) => {
+                    try {
+                      await persistedSessions.deleteSession(sessionId)
+                    } catch (err) {
+                      console.error('[ProductionShell] Error deleting session:', err)
+                    }
+                  }}
+                  onExportSession={async (sessionId, format) => {
+                    const found = persistedSessions.sessions.find((s) => s.id === sessionId)
+                    if (!found) return
+                    const result = await persistedSessions.exportSession(
+                      sessionId,
+                      format,
+                      found.label
+                    )
+                    if (result.canceled) {
+                      throw new Error('Export canceled')
+                    }
+                  }}
+                  onGetSession={async (sessionId) => {
+                    const result = await persistedSessions.getSession(sessionId)
+                    return result
+                  }}
+                  onImportSession={async () => {
+                    return await persistedSessions.importGeoJSON()
+                  }}
+                />
+              </div>
+              <div
+                role="tabpanel"
+                id="tabpanel-settings"
+                aria-labelledby="tab-settings"
+                style={{ display: activeTab === 'settings' ? 'block' : 'none' }}
+              >
+                <SettingsPanel />
+              </div>
+            </div>
           </div>
 
-          <div className="panel-content">
-            {/* Mantener ambos componentes montados pero solo mostrar uno - preserva estado */}
+          <div className="prod-main">
             <div
-              role="tabpanel"
-              id="tabpanel-devices"
-              aria-labelledby="tab-devices"
-              style={{ display: activeTab === 'devices' ? 'block' : 'none' }}
+              className={`map-container ${mapMaximized ? 'map-maximized' : ''}`}
+              style={{ position: 'relative' }}
             >
-              <DevicesPanel
-                devices={devices}
-                session={session}
+              {(session.sessionId || multipleSessions.loadedSessions.length > 0) && (
+                <button
+                  className="map-clear-btn"
+                  onClick={() => {
+                    session.reset()
+                    multipleSessions.clearSessions()
+                    setFocusSessionBounds(null)
+                    setFollowPosition(true)
+                  }}
+                  title="Limpiar sesión cargada"
+                  aria-label="Limpiar sesión cargada"
+                >
+                  ✕ Limpiar sesión cargada
+                </button>
+              )}
+              {/* Mapa con datos geoespaciales */}
+              <MapView
+                geoData={geoData}
+                isSessionActive={session.status === 'running'}
                 followPosition={followPosition}
                 onFollowPositionChange={setFollowPosition}
+                maximized={mapMaximized}
+                onToggleMaximize={() => setMapMaximized((prev) => !prev)}
+                loadedSessions={multipleSessions.loadedSessions}
+                focusSessionBounds={focusSessionBounds}
               />
             </div>
-            <div
-              role="tabpanel"
-              id="tabpanel-sessions"
-              aria-labelledby="tab-sessions"
-              style={{ display: activeTab === 'sessions' ? 'block' : 'none' }}
-            >
-              <SessionsPanel 
-                session={session}
-                sessions={persistedSessions.sessions}
-                isLoading={persistedSessions.isLoading}
-                error={persistedSessions.error}
-                onOpenAllSessions={() => setAllSessionsDrawerOpen(true)}
-                onSessionLoaded={(bounds) => {
-                  setFollowPosition(false)
-                  setFocusSessionBounds(bounds)
-                }}
-                onDeleteSession={async (sessionId) => {
-                  try {
-                    await persistedSessions.deleteSession(sessionId)
-                  } catch (err) {
-                    console.error('[ProductionShell] Error deleting session:', err)
-                  }
-                }}
-                onExportSession={async (sessionId, format) => {
-                  const found = persistedSessions.sessions.find((s) => s.id === sessionId)
-                  if (!found) return
-                  const result = await persistedSessions.exportSession(sessionId, format, found.label)
-                  if (result.canceled) {
-                    throw new Error('Export canceled')
-                  }
-                }}
-                onGetSession={async (sessionId) => {
-                  const result = await persistedSessions.getSession(sessionId)
-                  return result
-                }}
+            {/* Tabla de puntos */}
+            {!mapMaximized && (
+              <PointsTable
+                points={session.points}
+                sessionId={session.sessionId}
+                sessionLabel={session.label}
+                correctionFactor={session.summary?.correctionFactor}
+                deviceModel={session.summary?.instrument?.meter?.model || null}
+                deviceSerial={session.summary?.instrument?.meter?.serial || null}
+                probeModel={session.summary?.instrument?.probe?.model || null}
+                probeSerial={session.summary?.instrument?.probe?.serial || null}
               />
-            </div>
-            <div
-              role="tabpanel"
-              id="tabpanel-settings"
-              aria-labelledby="tab-settings"
-              style={{ display: activeTab === 'settings' ? 'block' : 'none' }}
-            >
-              <SettingsPanel />
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="prod-main">
-          <div className={`map-container ${mapMaximized ? 'map-maximized' : ''}`} style={{ position: 'relative' }}>
-            {/* Mapa con datos geoespaciales */}
-            <MapView
-              geoData={geoData}
-              isSessionActive={session.status === 'running'}
-              followPosition={followPosition}
-              onFollowPositionChange={setFollowPosition}
-              maximized={mapMaximized}
-              onToggleMaximize={() => setMapMaximized((prev) => !prev)}
-              loadedSessions={multipleSessions.loadedSessions}
-              focusSessionBounds={focusSessionBounds}
-            />
-          </div>
-          {/* Tabla de puntos */}
-          {!mapMaximized && (
-            <PointsTable 
-              points={session.points}
-              sessionId={session.sessionId}
-              sessionLabel={session.label}
-              correctionFactor={session.summary?.correctionFactor}
-              deviceModel={session.summary?.instrument?.meter?.model || null}
-              deviceSerial={session.summary?.instrument?.meter?.serial || null}
-              probeModel={session.summary?.instrument?.probe?.model || null}
-              probeSerial={session.summary?.instrument?.probe?.serial || null}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* All Sessions Drawer */}
-      <AllSessionsDrawer
-        isOpen={allSessionsDrawerOpen}
-        onClose={() => setAllSessionsDrawerOpen(false)}
-        sessions={persistedSessions.sessions}
-        isLoading={persistedSessions.isLoading}
-        loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
-        onToggleSession={(sessionId, checked) => {
-          if (checked) {
-            // Cargar sesión completa
+        {/* All Sessions Drawer */}
+        <AllSessionsDrawer
+          isOpen={allSessionsDrawerOpen}
+          onClose={() => setAllSessionsDrawerOpen(false)}
+          sessions={persistedSessions.sessions}
+          isLoading={persistedSessions.isLoading}
+          loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
+          onToggleSession={(sessionId, checked) => {
+            if (checked) {
+              // Cargar sesión completa
+              persistedSessions
+                .getSession(sessionId)
+                .then((fullSession) => {
+                  const sessionInfo = persistedSessions.sessions.find((s) => s.id === sessionId)
+                  multipleSessions.addSession(
+                    sessionId,
+                    fullSession.metadata.label || `Session ${fullSession.metadata.startedAt}`,
+                    fullSession.points,
+                    sessionInfo
+                  )
+                })
+                .catch((err) => {
+                  console.error('[ProductionShell] Error loading session for drawer:', err)
+                })
+            } else {
+              multipleSessions.removeSession(sessionId)
+            }
+          }}
+          onLoadSession={(sessionId) => {
+            // Cargar como sesión principal
+            setFollowPosition(false)
             persistedSessions
               .getSession(sessionId)
-              .then((fullSession) => {
-                const sessionInfo = persistedSessions.sessions.find((s) => s.id === sessionId)
-                multipleSessions.addSession(
-                  sessionId,
-                  fullSession.metadata.label || `Session ${fullSession.metadata.startedAt}`,
-                  fullSession.points,
-                  sessionInfo
-                )
+              .then((result) => {
+                session.setLoadedSession({
+                  sessionId: result.metadata.id,
+                  label: result.metadata.label || `Session ${result.metadata.startedAt}`,
+                  points: result.points,
+                  summary: result.metadata
+                })
+                setAllSessionsDrawerOpen(false)
               })
               .catch((err) => {
-                console.error('[ProductionShell] Error loading session for drawer:', err)
+                console.error('[ProductionShell] Error loading session as primary:', err)
               })
-          } else {
-            multipleSessions.removeSession(sessionId)
-          }
-        }}
-        onLoadSession={(sessionId) => {
-          // Cargar como sesión principal
-          setFollowPosition(false)
-          persistedSessions
-            .getSession(sessionId)
-            .then((result) => {
-              session.setLoadedSession({
-                sessionId: result.metadata.id,
-                label: result.metadata.label || `Session ${result.metadata.startedAt}`,
-                points: result.points,
-                summary: result.metadata
-              })
-              setAllSessionsDrawerOpen(false)
-            })
-            .catch((err) => {
-              console.error('[ProductionShell] Error loading session as primary:', err)
-            })
-        }}
-        onExport={(sessionId, format) => {
-          const found = persistedSessions.sessions.find((s) => s.id === sessionId)
-          if (!found) return
+          }}
+          onExport={(sessionId, format) => {
+            const found = persistedSessions.sessions.find((s) => s.id === sessionId)
+            if (!found) return
 
-          persistedSessions
-            .exportSession(sessionId, format, found.label)
-            .then((result) => {
-              if (!result.canceled) {
-                console.log(`[ProductionShell] Exported to: ${result.filePath}`)
-              }
-            })
-            .catch((err) => {
-              console.error(`[ProductionShell] Error exporting to ${format}:`, err)
-            })
-        }}
-        onDelete={(sessionId) => {
-          multipleSessions.removeSession(sessionId)
-          persistedSessions
-            .deleteSession(sessionId)
-            .catch((err) => {
+            persistedSessions
+              .exportSession(sessionId, format, found.label)
+              .then((result) => {
+                if (!result.canceled) {
+                  console.log(`[ProductionShell] Exported to: ${result.filePath}`)
+                }
+              })
+              .catch((err) => {
+                console.error(`[ProductionShell] Error exporting to ${format}:`, err)
+              })
+          }}
+          onDelete={(sessionId) => {
+            multipleSessions.removeSession(sessionId)
+            persistedSessions.deleteSession(sessionId).catch((err) => {
               console.error('[ProductionShell] Error deleting session:', err)
             })
-        }}
-      />
-    </main>
+          }}
+        />
+      </main>
     </GpsPositionProvider>
   )
 }

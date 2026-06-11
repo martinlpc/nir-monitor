@@ -28,7 +28,10 @@ export default function DebugSessionPanel({
 
       <label className="field">
         <span>Etiqueta</span>
-        <input value={state.sessionLabel} onChange={(event) => onSessionLabelChange(event.target.value)} />
+        <input
+          value={state.sessionLabel}
+          onChange={(event) => onSessionLabelChange(event.target.value)}
+        />
       </label>
 
       <div className="field-row">
@@ -86,4 +89,3 @@ export default function DebugSessionPanel({
     </article>
   )
 }
-

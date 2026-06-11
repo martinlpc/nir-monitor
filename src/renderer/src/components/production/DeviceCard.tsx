@@ -69,10 +69,10 @@ export default function DeviceCard({
             aria-label={`Estado: ${statusLabel}`}
           />
           <div>
-            <h3 className="device-name">
-              {device.type === 'gps' ? 'GPS (NMEA)' : device.name}
-            </h3>
-            <p className="device-type">{device.type === 'emf' ? 'Medidor de RNI' : device.type.toUpperCase()}</p>
+            <h3 className="device-name">{device.type === 'gps' ? 'GPS (NMEA)' : device.name}</h3>
+            <p className="device-type">
+              {device.type === 'emf' ? 'Medidor de RNI' : device.type.toUpperCase()}
+            </p>
           </div>
         </div>
         <div className="device-header-end">
@@ -100,7 +100,10 @@ export default function DeviceCard({
                     <span className="info-value">{gpsInfo.alt.toFixed(1)}m</span>
                   </div>
                 )}
-                <label className="test-mode-checkbox" style={{ marginTop: '2px', marginBottom: '4px', padding: '0.25rem 0.5rem' }}>
+                <label
+                  className="test-mode-checkbox"
+                  style={{ marginTop: '2px', marginBottom: '4px', padding: '0.25rem 0.5rem' }}
+                >
                   <input
                     type="checkbox"
                     checked={!!followPosition}
@@ -111,7 +114,10 @@ export default function DeviceCard({
                 <div className="device-info-separator" />
               </>
             ) : (
-              <div className="info-row primary" style={{ justifyContent: 'center', color: '#fca5a5' }}>
+              <div
+                className="info-row primary"
+                style={{ justifyContent: 'center', color: '#fca5a5' }}
+              >
                 <span style={{ fontSize: '0.8rem', fontWeight: '600' }}>Buscando posición...</span>
               </div>
             )}
@@ -130,7 +136,8 @@ export default function DeviceCard({
               <div className="info-row">
                 <span className="info-label">Sonda:</span>
                 <span className="info-value">
-                  {nbmInfo.probeModel}{nbmInfo.probeSerial ? ` (#${nbmInfo.probeSerial})` : ''}
+                  {nbmInfo.probeModel}
+                  {nbmInfo.probeSerial ? ` (#${nbmInfo.probeSerial})` : ''}
                   {nbmInfo.calibrationDate ? `  |  ${nbmInfo.calibrationDate}` : ''}
                 </span>
               </div>
@@ -149,7 +156,10 @@ export default function DeviceCard({
             <div className="disconnect-confirm-group">
               <button
                 className="btn-disconnect-confirm btn-disconnect-accept"
-                onClick={() => { onDisconnect?.(); setConfirmDisconnect(false) }}
+                onClick={() => {
+                  onDisconnect?.()
+                  setConfirmDisconnect(false)
+                }}
                 disabled={isLoading}
                 title="Confirmar desconexión"
                 aria-label="Confirmar desconexión"
@@ -166,7 +176,11 @@ export default function DeviceCard({
               </button>
             </div>
           ) : (
-            <button className="btn-disconnect" onClick={() => setConfirmDisconnect(true)} disabled={isLoading}>
+            <button
+              className="btn-disconnect"
+              onClick={() => setConfirmDisconnect(true)}
+              disabled={isLoading}
+            >
               {isLoading ? 'Desconectando...' : 'Desconectar'}
             </button>
           )

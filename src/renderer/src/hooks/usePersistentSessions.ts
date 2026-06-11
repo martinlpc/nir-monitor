@@ -115,6 +115,27 @@ export function usePersistentSessions() {
     }
   }, [])
 
+  // Importar GeoJSON (cifrado o plano)
+  const importGeoJSON = useCallback(async (): Promise<{
+    sessionId?: string
+    canceled?: boolean
+  }> => {
+    try {
+      const result = await window.api.session.importGeoJSON()
+      if (result.canceled) {
+        return { canceled: true }
+      }
+      if (result.success && result.sessionId) {
+        await loadSessions()
+        return { sessionId: result.sessionId }
+      }
+      throw new Error(result.error || 'Failed to import GeoJSON')
+    } catch (err) {
+      console.error('[usePersistentSessions] Error importing GeoJSON:', err)
+      throw err
+    }
+  }, [loadSessions])
+
   // Exportar con diálogo nativo (GeoJSON, XLSX, KMZ)
   const exportSession = useCallback(
     async (
@@ -209,6 +230,7 @@ export function usePersistentSessions() {
     exportGeoJSON,
     exportCSV,
     exportSession,
+    importGeoJSON,
     getStats,
     getPointsInBounds,
 

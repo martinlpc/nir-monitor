@@ -4,9 +4,9 @@
   "description": "Non-Ionizing Radiations mapper, based on ITU-K.113",
   "main": "./out/main/index.js",
   "author": {
-    "name" : "Ente Nacional de Comunicaciones",
+    "name": "Ente Nacional de Comunicaciones",
     "email": "mpacheco@enacom.gob.ar",
-    "url" : "https://www.enacom.gob.ar"
+    "url": "https://www.enacom.gob.ar"
   },
   "contributors": [
     "Martin Pacheco - mpachecodev@gmail.com"
@@ -37,6 +37,7 @@
     "@electron-toolkit/utils": "4.0.0",
     "@types/archiver": "7.0.0",
     "archiver": "7.0.1",
+    "dotenv": "^17.4.2",
     "electron-updater": "6.3.9",
     "exceljs": "4.4.0",
     "leaflet": "1.9.4",

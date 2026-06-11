@@ -104,9 +104,7 @@ export class GeoFusionService extends EventEmitter {
   }
 
   updateConfig(config: Partial<GeoFusionConfig>): void {
-    const clean = Object.fromEntries(
-      Object.entries(config).filter(([_, v]) => v !== undefined)
-    )
+    const clean = Object.fromEntries(Object.entries(config).filter(([_, v]) => v !== undefined))
     this.config = { ...this.config, ...clean }
   }
 
@@ -166,7 +164,9 @@ export class GeoFusionService extends EventEmitter {
     if (this.lastSavedPosition) {
       const dist = haversineMeters(this.lastSavedPosition, currentPosition)
       if (dist < this.config.minDistanceMeters) {
-        console.log(`[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`)
+        console.log(
+          `[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`
+        )
         return
       }
     }

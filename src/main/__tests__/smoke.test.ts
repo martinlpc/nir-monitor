@@ -4,82 +4,84 @@ import { SessionService } from '../services/SessionService'
 import { GeoFusionService } from '../services/GeoFusionService'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 
-const { portInstances, FakeSerialPort, gpsParserDataListeners, mockParseNmeaSentence } = vi.hoisted(() => {
-  const gpsParserDataListeners: Array<(line: string) => void> = []
-  const mockParseNmeaSentence = vi.fn()
+const { portInstances, FakeSerialPort, gpsParserDataListeners, mockParseNmeaSentence } = vi.hoisted(
+  () => {
+    const gpsParserDataListeners: Array<(line: string) => void> = []
+    const mockParseNmeaSentence = vi.fn()
 
-  class FakeSerialPort {
-    static instances: FakeSerialPort[] = []
-    static openShouldFail: Error | null = null
+    class FakeSerialPort {
+      static instances: FakeSerialPort[] = []
+      static openShouldFail: Error | null = null
 
-    writes: string[] = []
-    isOpen = false
-    private dataListeners: Array<(chunk: Buffer) => void> = []
-    private errorListeners: Array<(err: Error) => void> = []
-    private closeListeners: Array<() => void> = []
+      writes: string[] = []
+      isOpen = false
+      private dataListeners: Array<(chunk: Buffer) => void> = []
+      private errorListeners: Array<(err: Error) => void> = []
+      private closeListeners: Array<() => void> = []
 
-    constructor() {
-      FakeSerialPort.instances.push(this)
-    }
-
-    on(event: string, fn: (...args: unknown[]) => void): this {
-      if (event === 'data') this.dataListeners.push(fn as (chunk: Buffer) => void)
-      else if (event === 'error') this.errorListeners.push(fn as (err: Error) => void)
-      else if (event === 'close') this.closeListeners.push(fn as () => void)
-      return this
-    }
-
-    write(data: string, cb?: (err?: Error | null) => void): void {
-      this.writes.push(data)
-      cb?.(null)
-    }
-
-    open(cb: (err?: Error | null) => void): void {
-      if (FakeSerialPort.openShouldFail) {
-        const err = FakeSerialPort.openShouldFail
-        FakeSerialPort.openShouldFail = null
-        cb(err)
-        return
+      constructor() {
+        FakeSerialPort.instances.push(this)
       }
-      this.isOpen = true
-      cb(null)
-    }
 
-    close(cb?: () => void): void {
-      this.isOpen = false
-      this.closeListeners.forEach((fn) => fn())
-      cb?.()
-    }
+      on(event: string, fn: (...args: unknown[]) => void): this {
+        if (event === 'data') this.dataListeners.push(fn as (chunk: Buffer) => void)
+        else if (event === 'error') this.errorListeners.push(fn as (err: Error) => void)
+        else if (event === 'close') this.closeListeners.push(fn as () => void)
+        return this
+      }
 
-    flush(cb?: () => void): void {
-      cb?.()
-    }
+      write(data: string, cb?: (err?: Error | null) => void): void {
+        this.writes.push(data)
+        cb?.(null)
+      }
 
-    pipe(): { on: (event: string, fn: (...args: unknown[]) => void) => void } {
-      return {
-        on(event: string, fn: (...args: unknown[]) => void) {
-          if (event === 'data') gpsParserDataListeners.push(fn as (line: string) => void)
+      open(cb: (err?: Error | null) => void): void {
+        if (FakeSerialPort.openShouldFail) {
+          const err = FakeSerialPort.openShouldFail
+          FakeSerialPort.openShouldFail = null
+          cb(err)
+          return
+        }
+        this.isOpen = true
+        cb(null)
+      }
+
+      close(cb?: () => void): void {
+        this.isOpen = false
+        this.closeListeners.forEach((fn) => fn())
+        cb?.()
+      }
+
+      flush(cb?: () => void): void {
+        cb?.()
+      }
+
+      pipe(): { on: (event: string, fn: (...args: unknown[]) => void) => void } {
+        return {
+          on(event: string, fn: (...args: unknown[]) => void) {
+            if (event === 'data') gpsParserDataListeners.push(fn as (line: string) => void)
+          }
         }
       }
+
+      emitData(data: string): void {
+        this.dataListeners.forEach((fn) => fn(Buffer.from(data, 'ascii')))
+      }
+
+      emitError(err: Error): void {
+        this.errorListeners.forEach((fn) => fn(err))
+      }
+
+      emitClose(): void {
+        this.isOpen = false
+        this.closeListeners.forEach((fn) => fn())
+      }
     }
 
-    emitData(data: string): void {
-      this.dataListeners.forEach((fn) => fn(Buffer.from(data, 'ascii')))
-    }
-
-    emitError(err: Error): void {
-      this.errorListeners.forEach((fn) => fn(err))
-    }
-
-    emitClose(): void {
-      this.isOpen = false
-      this.closeListeners.forEach((fn) => fn())
-    }
+    const portInstances: FakeSerialPort[] = FakeSerialPort.instances
+    return { portInstances, FakeSerialPort, gpsParserDataListeners, mockParseNmeaSentence }
   }
-
-  const portInstances: FakeSerialPort[] = FakeSerialPort.instances
-  return { portInstances, FakeSerialPort, gpsParserDataListeners, mockParseNmeaSentence }
-})
+)
 
 vi.mock('serialport', () => ({
   SerialPort: FakeSerialPort
@@ -142,17 +144,17 @@ describe('Smoke: full chain', () => {
   })
 
   async function respondToNBMInit(): Promise<void> {
-    await vi.waitFor(
-      () => expect(FakeSerialPort.instances.length).toBeGreaterThan(0),
-      { timeout: 10000, interval: 50 }
-    )
+    await vi.waitFor(() => expect(FakeSerialPort.instances.length).toBeGreaterThan(0), {
+      timeout: 10000,
+      interval: 50
+    })
     const port = FakeSerialPort.instances[0]
 
     const waitForWrite = (contains: string) =>
-      vi.waitFor(
-        () => expect(port.writes.some((w) => w.includes(contains))).toBe(true),
-        { timeout: 15000, interval: 100 }
-      )
+      vi.waitFor(() => expect(port.writes.some((w) => w.includes(contains))).toBe(true), {
+        timeout: 15000,
+        interval: 100
+      })
 
     await waitForWrite('REMOTE ON')
     port.emitData('0;\r')

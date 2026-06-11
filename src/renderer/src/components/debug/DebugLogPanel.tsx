@@ -45,4 +45,3 @@ export default function DebugLogPanel({
     </section>
   )
 }
-

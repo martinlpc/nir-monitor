@@ -107,12 +107,14 @@ export class SerialPortScanner implements ISerialPortScanner {
 
   async probeNBM(port: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing NBM550 on ${port}...`)
-    const driver = this.factories?.createNBM?.(port) ?? new NBM550Driver({
-      port,
-      baudRate: NBM_BAUD_RATE,
-      pollIntervalMs: 200,
-      unit: 'V/m'
-    })
+    const driver =
+      this.factories?.createNBM?.(port) ??
+      new NBM550Driver({
+        port,
+        baudRate: NBM_BAUD_RATE,
+        pollIntervalMs: 200,
+        unit: 'V/m'
+      })
 
     try {
       const probePromise = driver.quickProbe()
@@ -144,10 +146,12 @@ export class SerialPortScanner implements ISerialPortScanner {
 
   async probeGPS(port: string, timeoutMs = NMEA_LISTEN_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing GPS on ${port}...`)
-    const driver = this.factories?.createGPS?.(port) ?? new GPSDriver({
-      port,
-      baudRate: GPS_BAUD_RATE
-    })
+    const driver =
+      this.factories?.createGPS?.(port) ??
+      new GPSDriver({
+        port,
+        baudRate: GPS_BAUD_RATE
+      })
 
     try {
       return await new Promise<boolean>((resolve) => {

@@ -1,14 +1,16 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { GPSDriver } from './GPSDriver'
 
-const { readlineListeners, portListeners, mockSerialPort, mockParseNmeaSentence } = vi.hoisted(() => {
-  const readlineListeners: Record<string, Array<(...args: unknown[]) => void>> = {}
-  const portListeners: Record<string, Array<(...args: unknown[]) => void>> = {}
-  const mockSerialPort = vi.fn()
-  const mockParseNmeaSentence = vi.fn()
+const { readlineListeners, portListeners, mockSerialPort, mockParseNmeaSentence } = vi.hoisted(
+  () => {
+    const readlineListeners: Record<string, Array<(...args: unknown[]) => void>> = {}
+    const portListeners: Record<string, Array<(...args: unknown[]) => void>> = {}
+    const mockSerialPort = vi.fn()
+    const mockParseNmeaSentence = vi.fn()
 
-  return { readlineListeners, portListeners, mockSerialPort, mockParseNmeaSentence }
-})
+    return { readlineListeners, portListeners, mockSerialPort, mockParseNmeaSentence }
+  }
+)
 
 vi.mock('serialport', () => {
   const lineParser = {

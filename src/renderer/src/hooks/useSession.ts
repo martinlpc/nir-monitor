@@ -64,7 +64,8 @@ export function useSession() {
           testMode: options?.testMode || false
         }
         if (options?.triggerMode) config.triggerMode = options.triggerMode
-        if (options?.minDistanceMeters !== undefined) config.minDistanceMeters = options.minDistanceMeters
+        if (options?.minDistanceMeters !== undefined)
+          config.minDistanceMeters = options.minDistanceMeters
         if (options?.intervalMs !== undefined) config.intervalMs = options.intervalMs
         if (options?.provincia) config.provincia = options.provincia
         if (options?.localidad) config.localidad = options.localidad

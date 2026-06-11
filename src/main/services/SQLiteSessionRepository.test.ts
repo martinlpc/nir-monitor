@@ -34,8 +34,18 @@ function makeSession(overrides: Partial<SessionSummary> = {}): SessionSummary {
     stoppedAt: startedAt + 60000,
     sampleCount: 0,
     instrument: {
-      meter: { brand: 'Narda', model: 'NBM-550', serial: 'SN-001', lastCalibrationDate: '2025-01-01T00:00:00Z' },
-      probe: { brand: 'Narda', model: 'EF0391', serial: 'PROBE-001', calibrationDate: '2025-01-01T00:00:00Z' }
+      meter: {
+        brand: 'Narda',
+        model: 'NBM-550',
+        serial: 'SN-001',
+        lastCalibrationDate: '2025-01-01T00:00:00Z'
+      },
+      probe: {
+        brand: 'Narda',
+        model: 'EF0391',
+        serial: 'PROBE-001',
+        calibrationDate: '2025-01-01T00:00:00Z'
+      }
     },
     correctionFactor: 1.08,
     provincia: 'Neuquén',
@@ -225,7 +235,11 @@ describe('SQLiteSessionRepository (in-memory)', () => {
         sessionId: meta.id,
         sequenceNumber: seq,
         timestamp: meta.startedAt + seq * 1000,
-        position: { lat: NEUQUEN.lat + seq * 0.001, lon: NEUQUEN.lon + seq * 0.001, alt: NEUQUEN.alt },
+        position: {
+          lat: NEUQUEN.lat + seq * 0.001,
+          lon: NEUQUEN.lon + seq * 0.001,
+          alt: NEUQUEN.alt
+        },
         emf: { deviceId: 'nbm550', rawMeasurement: 3.0 + seq, unit: 'V/m' },
         correctedMeasurement: (3.0 + seq) * 1.08
       })
@@ -259,9 +273,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     const meta = makeSession({ sampleCount: 2 })
     await repo.initSession(meta.id, meta)
 
-    const pts = [1, 2].map((seq) =>
-      makePoint({ sessionId: meta.id, sequenceNumber: seq })
-    )
+    const pts = [1, 2].map((seq) => makePoint({ sessionId: meta.id, sequenceNumber: seq }))
     for (const p of pts) {
       await repo.addPoint(meta.id, p)
     }
@@ -311,9 +323,21 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     await repo.initSession(meta.id, meta)
 
     const pts = [
-      makePoint({ sessionId: meta.id, sequenceNumber: 1, position: { lat: -38.95, lon: -68.06, alt: 270 } }),
-      makePoint({ sessionId: meta.id, sequenceNumber: 2, position: { lat: -38.93, lon: -68.04, alt: 275 } }),
-      makePoint({ sessionId: meta.id, sequenceNumber: 3, position: { lat: -38.90, lon: -68.00, alt: 280 } })
+      makePoint({
+        sessionId: meta.id,
+        sequenceNumber: 1,
+        position: { lat: -38.95, lon: -68.06, alt: 270 }
+      }),
+      makePoint({
+        sessionId: meta.id,
+        sequenceNumber: 2,
+        position: { lat: -38.93, lon: -68.04, alt: 275 }
+      }),
+      makePoint({
+        sessionId: meta.id,
+        sequenceNumber: 3,
+        position: { lat: -38.9, lon: -68.0, alt: 280 }
+      })
     ]
     for (const p of pts) {
       await repo.addPoint(meta.id, p)

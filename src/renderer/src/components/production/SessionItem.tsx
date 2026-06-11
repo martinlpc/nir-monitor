@@ -30,7 +30,10 @@ export default function SessionItem({ session, onLoad, onDelete, onExport }: Ses
       className="session-item"
       tabIndex={0}
       onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => { setShowActions(false); setConfirmDelete(false) }}
+      onMouseLeave={() => {
+        setShowActions(false)
+        setConfirmDelete(false)
+      }}
       onFocus={() => setShowActions(true)}
       onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) {
@@ -43,7 +46,10 @@ export default function SessionItem({ session, onLoad, onDelete, onExport }: Ses
         <div className="delete-confirm-group">
           <button
             className="btn-delete-confirm btn-delete-accept"
-            onClick={() => { onDelete(session.id); setConfirmDelete(false) }}
+            onClick={() => {
+              onDelete(session.id)
+              setConfirmDelete(false)
+            }}
             title="Confirmar eliminación"
             aria-label="Confirmar eliminación"
           >
@@ -86,11 +92,7 @@ export default function SessionItem({ session, onLoad, onDelete, onExport }: Ses
 
       {showActions && (
         <div className="session-actions">
-          <button
-            className="btn-primary"
-            onClick={() => onLoad(session.id)}
-            title="Cargar sesión"
-          >
+          <button className="btn-primary" onClick={() => onLoad(session.id)} title="Cargar sesión">
             Cargar
           </button>
           <button

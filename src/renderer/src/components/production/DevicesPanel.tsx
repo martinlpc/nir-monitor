@@ -19,7 +19,10 @@ interface DevicesPanelProps {
 const KNOWN_DEVICE_IDS = ['nbm550', 'gps'] as const
 type KnownDeviceId = (typeof KNOWN_DEVICE_IDS)[number]
 
-const KNOWN_DEVICES: Record<KnownDeviceId, { name: string; type: 'emf' | 'gps'; baudRate: number }> = {
+const KNOWN_DEVICES: Record<
+  KnownDeviceId,
+  { name: string; type: 'emf' | 'gps'; baudRate: number }
+> = {
   nbm550: { name: 'NBM-550', type: 'emf', baudRate: 460800 },
   gps: { name: 'GPS (Primary)', type: 'gps', baudRate: 4800 }
 }
@@ -83,9 +86,12 @@ export default function DevicesPanel({
     }
   }
 
-
-
-  const handleStartSession = async (locationData?: { provincia: string; localidad: string; apellido1: string; apellido2: string }): Promise<void> => {
+  const handleStartSession = async (locationData?: {
+    provincia: string
+    localidad: string
+    apellido1: string
+    apellido2: string
+  }): Promise<void> => {
     try {
       // Intentar obtener posición GPS actual para el nombre
       const gpsStatus = devices.gps?.status
@@ -130,12 +136,14 @@ export default function DevicesPanel({
         triggerMode,
         minDistanceMeters,
         intervalMs: intervalSec * 1000,
-        ...(locationData ? {
-          provincia: locationData.provincia,
-          localidad: locationData.localidad,
-          apellido1: locationData.apellido1,
-          apellido2: locationData.apellido2
-        } : {})
+        ...(locationData
+          ? {
+              provincia: locationData.provincia,
+              localidad: locationData.localidad,
+              apellido1: locationData.apellido1,
+              apellido2: locationData.apellido2
+            }
+          : {})
       })
       setSessionName('')
     } catch (err) {
@@ -160,8 +168,7 @@ export default function DevicesPanel({
     baudRate: KNOWN_DEVICES[id].baudRate
   }))
 
-  const allConnected =
-    devices.isConnected('nbm550') && devices.isConnected('gps')
+  const allConnected = devices.isConnected('nbm550') && devices.isConnected('gps')
 
   return (
     <aside className="devices-panel">
@@ -183,7 +190,8 @@ export default function DevicesPanel({
             key={device.id}
             device={device}
             status={
-              (device.id === 'nbm550' ? devices.nbm550?.status : devices.gps?.status) ?? 'disconnected'
+              (device.id === 'nbm550' ? devices.nbm550?.status : devices.gps?.status) ??
+              'disconnected'
             }
             isLoading={loadingDevice === device.id}
             onConnect={() => handleConnect(device.id)}
@@ -272,7 +280,10 @@ export default function DevicesPanel({
           <div className="session-stop-confirm">
             <button
               className="btn-stop-confirm btn-stop-accept"
-              onClick={() => { handleStopSession(); setConfirmStop(false) }}
+              onClick={() => {
+                handleStopSession()
+                setConfirmStop(false)
+              }}
               title="Confirmar detener sesión"
               aria-label="Confirmar detener sesión"
             >
@@ -292,7 +303,9 @@ export default function DevicesPanel({
             className={`btn-session ${session.isRunning ? 'btn-pause' : 'btn-start'}`}
             onClick={session.isRunning ? () => setConfirmStop(true) : () => setShowStartModal(true)}
             disabled={!allConnected}
-            title={allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'}
+            title={
+              allConnected ? 'Iniciar/detener sesión de medición' : 'Conecta ambos dispositivos'
+            }
           >
             {session.isRunning ? '⏹ Detener sesión' : '▶ Iniciar sesión de medición'}
           </button>
@@ -302,10 +315,17 @@ export default function DevicesPanel({
           <div className="session-info">
             <span>Puntos: {session.pointCount}</span>
             <span>Duración: {formatDurationMs(session.duration)}</span>
-            <span>{triggerMode === 'distance' ? `📍 ${minDistanceMeters}m` : `⏱ ${intervalSec}s`}</span>
+            <span>
+              {triggerMode === 'distance' ? `📍 ${minDistanceMeters}m` : `⏱ ${intervalSec}s`}
+            </span>
             {position && session.points.length > 0 && (
               <span>
-                📏 {haversineMeters(position, session.points[session.points.length - 1].position).toFixed(1)}m
+                📏{' '}
+                {haversineMeters(
+                  position,
+                  session.points[session.points.length - 1].position
+                ).toFixed(1)}
+                m
               </span>
             )}
           </div>

@@ -81,46 +81,46 @@ async function connectDriverReal(d: NBM550Driver): Promise<void> {
   const p = d.connect()
   const port = portInstances[0]
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('REMOTE ON'))).toBe(true),
-    { timeout: 5000, interval: 100 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('REMOTE ON'))).toBe(true), {
+    timeout: 5000,
+    interval: 100
+  })
   port.emitData('0;\r')
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('SAMPLE_RATE'))).toBe(true),
-    { timeout: 5000, interval: 100 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('SAMPLE_RATE'))).toBe(true), {
+    timeout: 5000,
+    interval: 100
+  })
   port.emitData('0;\r')
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('MEAS_VIEW'))).toBe(true),
-    { timeout: 2000, interval: 50 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('MEAS_VIEW'))).toBe(true), {
+    timeout: 2000,
+    interval: 50
+  })
   port.emitData('0;\r')
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('RESULT_TYPE'))).toBe(true),
-    { timeout: 2000, interval: 50 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('RESULT_TYPE'))).toBe(true), {
+    timeout: 2000,
+    interval: 50
+  })
   port.emitData('0;\r')
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('RESULT_UNIT '))).toBe(true),
-    { timeout: 2000, interval: 50 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('RESULT_UNIT '))).toBe(true), {
+    timeout: 2000,
+    interval: 50
+  })
   port.emitData('0;\r')
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('RESULT_UNIT?'))).toBe(true),
-    { timeout: 2000, interval: 50 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('RESULT_UNIT?'))).toBe(true), {
+    timeout: 2000,
+    interval: 50
+  })
   port.emitData('V/m;\r')
 
-  await vi.waitFor(
-    () => expect(port.writes.some((w) => w.includes('PROBE_INFO?'))).toBe(true),
-    { timeout: 2000, interval: 50 }
-  )
+  await vi.waitFor(() => expect(port.writes.some((w) => w.includes('PROBE_INFO?'))).toBe(true), {
+    timeout: 2000,
+    interval: 50
+  })
   port.emitData('"EF-0691",0,"12345","2024-03-15";\r')
 
   await p
@@ -171,10 +171,10 @@ describe('NBM550Driver', () => {
     const probePromise = driver.quickProbe()
     const port = portInstances[0]
 
-    await vi.waitFor(
-      () => expect(port.writes.some((w) => w.includes('REMOTE ON'))).toBe(true),
-      { timeout: 5000, interval: 100 }
-    )
+    await vi.waitFor(() => expect(port.writes.some((w) => w.includes('REMOTE ON'))).toBe(true), {
+      timeout: 5000,
+      interval: 100
+    })
     port.emitData('0;\r')
 
     await probePromise
@@ -358,9 +358,7 @@ describe('NBM550Driver', () => {
 
     port.emitError(new Error('port disconnected'))
 
-    expect(errorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'port disconnected' })
-    )
+    expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ message: 'port disconnected' }))
     expect(d.status).toBe('error')
   })
 

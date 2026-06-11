@@ -17,7 +17,7 @@ const ICONS: Record<ToastType, string> = {
   error: '⛔',
   warning: '⚠️',
   info: 'ℹ️',
-  done: '✅',
+  done: '✅'
 }
 
 export default function Toast({ message, type, onClose }: Props) {
@@ -47,7 +47,9 @@ export default function Toast({ message, type, onClose }: Props) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span className="toast__icon" aria-hidden>{ICONS[type]}</span>
+      <span className="toast__icon" aria-hidden>
+        {ICONS[type]}
+      </span>
       <span className="toast__msg">{message}</span>
       <button
         className="toast__close"

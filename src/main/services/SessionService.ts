@@ -8,7 +8,10 @@ import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 import { getLoadedUncertainty } from '../ipc/SettingsHandler'
 import { loadAppConfig } from './AppConfig'
-import { resolveCorrectionFactor as resolveCFFromFile, findFactor } from '../uncertainty/correctionFactor'
+import {
+  resolveCorrectionFactor as resolveCFFromFile,
+  findFactor
+} from '../uncertainty/correctionFactor'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -55,7 +58,11 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository, private readonly simulationMode: boolean = false) {
+  constructor(
+    fusion: GeoFusionService,
+    repository?: ISessionRepository,
+    private readonly simulationMode: boolean = false
+  ) {
     super()
     this.fusion = fusion
     this.repository = repository || null
@@ -112,7 +119,16 @@ export class SessionService extends EventEmitter {
 
   // ── Ciclo de sesión ───────────────────────────────────────
 
-  async start(label: string = '', fusionConfig?: Partial<GeoFusionConfig>, locationData?: { provincia?: string; localidad?: string; apellido1?: string; apellido2?: string }): Promise<string> {
+  async start(
+    label: string = '',
+    fusionConfig?: Partial<GeoFusionConfig>,
+    locationData?: {
+      provincia?: string
+      localidad?: string
+      apellido1?: string
+      apellido2?: string
+    }
+  ): Promise<string> {
     if (this.state === 'running') {
       throw new Error('Ya hay una sesión en curso')
     }
@@ -146,7 +162,8 @@ export class SessionService extends EventEmitter {
     if (fusionConfig) {
       if (fusionConfig.triggerMode !== undefined) merged.triggerMode = fusionConfig.triggerMode
       if (fusionConfig.intervalMs !== undefined) merged.intervalMs = fusionConfig.intervalMs
-      if (fusionConfig.minDistanceMeters !== undefined) merged.minDistanceMeters = fusionConfig.minDistanceMeters
+      if (fusionConfig.minDistanceMeters !== undefined)
+        merged.minDistanceMeters = fusionConfig.minDistanceMeters
       if (fusionConfig.testMode !== undefined) merged.testMode = fusionConfig.testMode
     }
 

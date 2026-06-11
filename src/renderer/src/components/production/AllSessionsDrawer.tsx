@@ -127,12 +127,15 @@ export default function AllSessionsDrawer({
                     </div>
 
                     <div className="session-actions">
-                      {onDelete && (
-                        confirmDeleteId === session.id ? (
+                      {onDelete &&
+                        (confirmDeleteId === session.id ? (
                           <div className="drawer-delete-confirm-group">
                             <button
                               className="btn-delete-confirm btn-delete-accept"
-                              onClick={() => { onDelete(session.id); setConfirmDeleteId(null) }}
+                              onClick={() => {
+                                onDelete(session.id)
+                                setConfirmDeleteId(null)
+                              }}
                               title="Confirmar eliminación"
                               aria-label="Confirmar eliminación"
                             >
@@ -156,8 +159,7 @@ export default function AllSessionsDrawer({
                           >
                             🗑
                           </button>
-                        )
-                      )}
+                        ))}
                       {onLoadSession && (
                         <button
                           className="action-btn action-btn-load"

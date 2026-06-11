@@ -7,7 +7,11 @@ import archiver from 'archiver'
 import { PassThrough } from 'stream'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
-import type { ISessionRepository, PersistedSession, SessionStats } from '../../shared/services/ISessionRepository'
+import type {
+  ISessionRepository,
+  PersistedSession,
+  SessionStats
+} from '../../shared/services/ISessionRepository'
 import { encrypt, decrypt, isEncrypted } from './CryptoService'
 
 /**
@@ -529,7 +533,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           stoppedAt: rowMap.stoppedAt ? this.isoToUnix(rowMap.stoppedAt as string) : null,
           sampleCount: rowMap.sampleCount as number,
           instrument: rowMap.instrument ? JSON.parse(rowMap.instrument as string) : null,
-          correctionFactor: rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null,
+          correctionFactor:
+            rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null,
           provincia: rowMap.provincia as string | undefined,
           localidad: rowMap.localidad as string | undefined,
           apellido1: rowMap.apellido1 as string | undefined,
@@ -941,9 +946,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
   /**
    * Obtener estadísticas pre-calculadas de sesión
    */
-  async getSessionStats(
-    sessionId: string
-  ): Promise<SessionStats | null> {
+  async getSessionStats(sessionId: string): Promise<SessionStats | null> {
     await this.initialize()
     const db = this.ensureDb()
 

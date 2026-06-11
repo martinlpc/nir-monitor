@@ -50,9 +50,7 @@ describe('ReconnectController', () => {
   })
 
   it('retries on failure and stops on success', async () => {
-    connectFn
-      .mockRejectedValueOnce(new Error('fail'))
-      .mockResolvedValueOnce(true)
+    connectFn.mockRejectedValueOnce(new Error('fail')).mockResolvedValueOnce(true)
     controller.start('COM1')
 
     await vi.advanceTimersByTimeAsync(1000)

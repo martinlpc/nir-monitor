@@ -74,9 +74,20 @@ declare global {
           format: 'geojson' | 'xlsx' | 'kmz',
           label: string
         ) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>
+        importGeoJSON: () => Promise<{
+          success: boolean
+          sessionId?: string
+          canceled?: boolean
+          error?: string
+        }>
         getStats: (sessionId: string) => Promise<{
           success: boolean
-          stats?: { avgCorrected: number; maxCorrected: number; minCorrected: number; pointCount: number } | null
+          stats?: {
+            avgCorrected: number
+            maxCorrected: number
+            minCorrected: number
+            pointCount: number
+          } | null
           error?: string
         }>
         getPointsInBounds: (
@@ -88,7 +99,13 @@ declare global {
         ) => Promise<{ success: boolean; points?: GeoTimestamp[]; error?: string }>
         onSample: (cb: (point: GeoTimestamp) => void) => () => void
         onStarted: (
-          cb: (data: { sessionId: string; startedAt: number; label: string; correctionFactor: number | null; instrument: InstrumentInfo | null }) => void
+          cb: (data: {
+            sessionId: string
+            startedAt: number
+            label: string
+            correctionFactor: number | null
+            instrument: InstrumentInfo | null
+          }) => void
         ) => () => void
         onStopped: (cb: (data: SessionSummary) => void) => () => void
         onAlert: (cb: (data: { message: string }) => void) => () => void

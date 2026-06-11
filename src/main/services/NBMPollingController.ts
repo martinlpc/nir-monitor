@@ -4,12 +4,7 @@ export const DEFAULT_MAX_CONSECUTIVE_READ_FAILURES = 8
 export const NBM_POLL_INTERVAL_MS = 200
 
 export interface NBMPollingCallbacks {
-  onSample: (sample: {
-    rss: number
-    unit: string
-    battery: number
-    timestamp: number
-  }) => void
+  onSample: (sample: { rss: number; unit: string; battery: number; timestamp: number }) => void
   onMaxFailuresExceeded: (port: string, message: string) => void
 }
 

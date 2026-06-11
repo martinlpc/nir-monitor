@@ -3,7 +3,11 @@ import * as path from 'path'
 import { app } from 'electron'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
-import type { ISessionRepository, PersistedSession, SessionStats } from '../../shared/services/ISessionRepository'
+import type {
+  ISessionRepository,
+  PersistedSession,
+  SessionStats
+} from '../../shared/services/ISessionRepository'
 
 /**
  * File-based session persistence
@@ -195,7 +199,8 @@ export class FileSessionRepository implements ISessionRepository {
   async getSessionStats(sessionId: string): Promise<SessionStats | null> {
     try {
       const points = await this.getSessionPoints(sessionId)
-      if (points.length === 0) return { avgCorrected: 0, maxCorrected: 0, minCorrected: 0, pointCount: 0 }
+      if (points.length === 0)
+        return { avgCorrected: 0, maxCorrected: 0, minCorrected: 0, pointCount: 0 }
 
       const values = points.map((p) => p.correctedMeasurement)
       return {
