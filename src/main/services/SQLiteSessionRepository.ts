@@ -13,6 +13,7 @@ import type {
   SessionStats
 } from '../../shared/services/ISessionRepository'
 import { encrypt, decrypt, isEncrypted } from './CryptoService'
+import { electricFieldToMepPercent } from '../../shared/emfConversion'
 
 /**
  * SQLite-based session persistence using sql.js (WASM)
@@ -809,10 +810,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
-    const stats = await this.getSessionStats(sessionId)
 
     // Generar KML
-    const kml = this.buildKML(metadata, points, stats)
+    const kml = this.buildKML(metadata, points)
 
     // Comprimir a KMZ (ZIP con doc.kml)
     return new Promise((resolve, reject) => {
@@ -832,75 +832,118 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
   private buildKML(
     metadata: SessionSummary,
-    points: GeoTimestamp[],
-    stats: { avgCorrected: number; maxCorrected: number; minCorrected: number; pointCount: number } | null
+    points: GeoTimestamp[]
   ): string {
     const escXml = (s: string): string =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const esc = (s: string | null | undefined): string => escXml(s ?? '')
 
-    // Escala de color según valor relativo (verde → amarillo → rojo)
-    const measurementValues = points.map((p) => p.emf.rawMeasurement)
-    const minCorrected = stats?.minCorrected ?? Math.min(...measurementValues)
-    const maxCorrected = stats?.maxCorrected ?? Math.max(...measurementValues)
-    const range = maxCorrected - minCorrected || 1
+    // Colores fijos por umbral de % MEP (coincide con intensityPalette.ts en renderer)
+    const INTENSITY_LEVELS: { maxPercent: number; hex: string }[] = [
+      { maxPercent: 1, hex: '#73C2FB' },
+      { maxPercent: 2, hex: '#1E90FF' },
+      { maxPercent: 4, hex: '#2A52BE' },
+      { maxPercent: 8, hex: '#90EE90' },
+      { maxPercent: 15, hex: '#32CD32' },
+      { maxPercent: 20, hex: '#008000' },
+      { maxPercent: 35, hex: '#FFDF00' },
+      { maxPercent: 50, hex: '#FFA500' },
+      { maxPercent: 250, hex: '#FF4500' }
+    ]
+    const OVER_100_HEX = '#FF0000'
 
-    const measurementToColor = (value: number): string => {
-      const t = Math.max(0, Math.min(1, (value - minCorrected) / range))
-      // KML uses aabbggrr (alpha, blue, green, red)
-      const r = Math.round(255 * t)
-      const g = Math.round(255 * (1 - t))
-      const hex = (n: number) => n.toString(16).padStart(2, '0')
-      return `ff${hex(0)}${hex(g)}${hex(r)}`
+    const hexToKmlColor = (hex: string, alpha = '7f'): string => {
+      const r = hex.slice(1, 3)
+      const g = hex.slice(3, 5)
+      const b = hex.slice(5, 7)
+      return `${alpha}${b}${g}${r}`
     }
 
-    // Generar estilos únicos
-    const styles = new Map<string, string>()
-    points.forEach((p) => {
-      const color = measurementToColor(p.emf.rawMeasurement)
-      if (!styles.has(color)) {
-        styles.set(color, `style_${styles.size}`)
+    const pointToHex = (valueVm: number): string => {
+      const percent = electricFieldToMepPercent(valueVm)
+      for (const level of INTENSITY_LEVELS) {
+        if (percent <= level.maxPercent) return level.hex
       }
-    })
+      return OVER_100_HEX
+    }
 
-    const stylesKml = Array.from(styles.entries())
-      .map(
-        ([color, id]) => `
-    <Style id="${id}">
+    // Recolectar colores únicos de puntos y segmentos
+    const pointColors = points.map((p) => pointToHex(p.correctedMeasurement))
+    const segColors: string[] = []
+    for (let i = 0; i < points.length - 1; i++) {
+      segColors.push(pointToHex(points[i].correctedMeasurement))
+    }
+    const allUniqueHex = [...new Set([...pointColors, ...segColors])]
+
+    const iconStyles = allUniqueHex
+      .map((hex, i) => {
+        const kmlColor = hexToKmlColor(hex)
+        return `
+    <Style id="icon_${i}">
       <IconStyle>
-        <color>${color}</color>
-        <scale>0.6</scale>
+        <color>${kmlColor}</color>
+        <scale>1.2</scale>
         <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
       </IconStyle>
     </Style>`
-      )
+      })
       .join('')
 
-    const placemarks = points
+    const segStyles = allUniqueHex
+      .map((hex, i) => {
+        const kmlColor = hexToKmlColor(hex)
+        return `
+    <Style id="seg_${i}">
+      <LineStyle><color>${kmlColor}</color><width>3</width></LineStyle>
+    </Style>`
+      })
+      .join('')
+
+    const hexToStyleId = (hex: string, prefix: string): string =>
+      `${prefix}_${allUniqueHex.indexOf(hex)}`
+
+    // Puntos de medición con nuevo formato de descripción
+    const pointPlacemarks = points
       .map((p) => {
-        const color = measurementToColor(p.emf.rawMeasurement)
-        const styleId = styles.get(color)!
-        const dt = new Date(p.timestamp).toISOString()
+        const hex = pointToHex(p.correctedMeasurement)
+        const fecha = new Date(p.timestamp).toLocaleDateString('es-AR')
+        const hora = new Date(p.timestamp).toLocaleTimeString('es-AR')
+        const mepPct = electricFieldToMepPercent(p.correctedMeasurement)
         const rssU = metadata.correctionFactor != null ? p.correctedMeasurement.toFixed(2) : ''
         return `
     <Placemark>
-      <name>${escXml(p.emf.rawMeasurement + ' ' + p.emf.unit)}</name>
-      <description>${escXml(dt)}</description>
-      <styleUrl>#${styleId}</styleUrl>
-      <TimeStamp><when>${dt}</when></TimeStamp>
+      <description>Fecha: ${esc(fecha)}
+Hora: ${esc(hora)}
+Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
+% MEP: ${mepPct.toFixed(1)}%</description>
+      <styleUrl>#${hexToStyleId(hex, 'icon')}</styleUrl>
+      <TimeStamp><when>${new Date(p.timestamp).toISOString()}</when></TimeStamp>
       <Point><coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0}</coordinates></Point>
       <ExtendedData>
         <Data name="rawMeasurement"><value>${p.emf.rawMeasurement}</value></Data>
         <Data name="correctedMeasurement"><value>${rssU}</value></Data>
-        <Data name="unit"><value>${escXml(p.emf.unit)}</value></Data>
+        <Data name="unit"><value>${esc(p.emf.unit)}</value></Data>
       </ExtendedData>
     </Placemark>`
       })
       .join('')
 
-    // Línea de recorrido
-    const lineCoords = points
-      .map((p) => `${p.position.lon},${p.position.lat},${p.position.alt ?? 0}`)
-      .join(' ')
+    // Segmentos coloreados entre pares consecutivos (como en el mapa de la app)
+    const segmentPlacemarks = points.length < 2 ? '' : points
+      .slice(0, -1)
+      .map((p, i) => {
+        const next = points[i + 1]
+        const hex = pointToHex(p.correctedMeasurement)
+        return `
+    <Placemark>
+      <styleUrl>#${hexToStyleId(hex, 'seg')}</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0} ${next.position.lon},${next.position.lat},${next.position.alt ?? 0}</coordinates>
+      </LineString>
+    </Placemark>`
+      })
+      .join('')
 
     const startDate = new Date(metadata.startedAt).toLocaleString('es-AR')
     const endDate = metadata.stoppedAt
@@ -909,9 +952,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     const inst = metadata.instrument
     const instrumentDesc = inst
-      ? `\nMedidor: ${inst.meter.brand} ${inst.meter.model} (S/N: ${inst.meter.serial})` +
-        `\nÚltima calibración: ${inst.meter.lastCalibrationDate ?? 'N/A'}` +
-        `\nSonda: ${inst.probe.brand} ${inst.probe.model} (S/N: ${inst.probe.serial})` +
+      ? `\nMedidor: ${esc(inst.meter.brand)} ${esc(inst.meter.model)} (S/N: ${esc(inst.meter.serial)})` +
+        `\nÚltima calibración: ${esc(inst.meter.lastCalibrationDate)}` +
+        `\nSonda: ${esc(inst.probe.brand)} ${esc(inst.probe.model)} (S/N: ${esc(inst.probe.serial)})` +
         `\nFactor de corrección: ${metadata.correctionFactor ?? 'N/A'}`
       : ''
 
@@ -920,24 +963,15 @@ export class SQLiteSessionRepository implements ISessionRepository {
 <Document>
   <name>${escXml(metadata.label)}</name>
   <description>Sesión: ${escXml(metadata.label)}\nInicio: ${startDate}\nFin: ${endDate}\nPuntos: ${metadata.sampleCount}${instrumentDesc}</description>
-  ${stylesKml}
-  <Style id="lineStyle">
-    <LineStyle><color>ff0000ff</color><width>2</width></LineStyle>
-  </Style>
+  ${iconStyles}
+  ${segStyles}
   <Folder>
     <name>Recorrido</name>
-    <Placemark>
-      <name>Trayecto</name>
-      <styleUrl>#lineStyle</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>${lineCoords}</coordinates>
-      </LineString>
-    </Placemark>
+    ${segmentPlacemarks}
   </Folder>
   <Folder>
     <name>Puntos de medición</name>
-    ${placemarks}
+    ${pointPlacemarks}
   </Folder>
 </Document>
 </kml>`
