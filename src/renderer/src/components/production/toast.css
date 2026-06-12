@@ -25,31 +25,37 @@
 }
 
 .toast--error {
-  background: #1c1010;
-  color: #fca5a5;
-  border: 1px solid #7f1d1d;
-  border-left: 5px solid #ef4444;
+  background: var(--nir-toast-bg-error);
+  color: var(--nir-danger);
+  border: 1px solid var(--nir-danger);
+  border-left: 5px solid var(--nir-danger);
 }
 
 .toast--warning {
-  background: #1c1810;
-  color: #fbbf24;
-  border: 1px solid #78350f;
+  background: var(--nir-toast-bg-warn);
+  color: var(--nir-accent);
+  border: 1px solid var(--nir-accent);
   border-left: 5px solid var(--nir-accent);
 }
 
 .toast--info {
-  background: #0f172a;
-  color: #93c5fd;
-  border: 1px solid #1e3a5f;
+  background: var(--nir-toast-bg-info);
+  color: var(--nir-blue);
+  border: 1px solid var(--nir-blue);
   border-left: 5px solid var(--nir-blue);
 }
 
 .toast--done {
-  background: #0f1a12;
-  color: #86efac;
-  border: 1px solid #14532d;
+  background: var(--nir-toast-bg-success);
+  color: #4ade80;
+  border: 1px solid #4ade80;
   border-left: 5px solid #4ade80;
+}
+
+[data-theme='soft'] .toast--done {
+  color: #34c759;
+  border-color: #34c759;
+  border-left-color: #34c759;
 }
 
 .toast__icon {

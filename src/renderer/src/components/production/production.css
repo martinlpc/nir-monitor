@@ -38,9 +38,9 @@
   top: 28px;
   right: 28px;
   z-index: 1000;
-  background: rgba(30, 30, 40, 0.85);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background: var(--nir-input-bg);
+  border: 1px solid var(--nir-danger);
+  color: var(--nir-danger);
   padding: 6px 14px;
   border-radius: 6px;
   font-size: 12px;
@@ -53,15 +53,19 @@
 }
 
 .map-clear-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(255, 59, 48, 0.1);
+  border-color: var(--nir-danger);
 }
 
 .map-clear-btn:active {
-  background: rgba(239, 68, 68, 0.3);
+  background: rgba(255, 59, 48, 0.2);
 }
 
 .map-container.map-maximized {
+  flex: 1;
+}
+
+.map-container.map-table-maximized {
   flex: 1;
 }
 
@@ -82,7 +86,7 @@
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.5rem 1rem 1rem;
-  border-bottom: 1px solid rgba(114, 186, 255, 0.1);
+  border-bottom: 1px solid var(--nir-border-blue);
 }
 
 .panel-header h2 {
@@ -97,8 +101,8 @@
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
   border-radius: 6px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
   color: var(--nir-text);
   cursor: pointer;
   transition: all 150ms ease;
@@ -107,8 +111,8 @@
 }
 
 .btn-scan:hover:not(:disabled) {
-  background: rgba(114, 186, 255, 0.15);
-  border-color: rgba(114, 186, 255, 0.4);
+  background: var(--nir-border-blue);
+  border-color: var(--nir-border-blue-hover);
 }
 
 .btn-scan:disabled {
@@ -209,11 +213,17 @@
 
 .device-status {
   font-size: 0.65rem;
-  color: var(--nir-text-muted);
-  background: rgba(0, 0, 0, 0.3);
-  padding: 1px 5px;
+  font-weight: 600;
+  padding: 1px 6px;
   border-radius: 3px;
   white-space: nowrap;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--nir-text-muted);
+}
+
+[data-theme='soft'] .device-status {
+  background: rgba(0, 0, 0, 0.06);
+  color: #8e8e93;
 }
 
 .device-info {
@@ -258,7 +268,7 @@
 
 .device-info-separator {
   height: 1px;
-  background: rgba(114, 186, 255, 0.1);
+  background: var(--nir-border-blue);
   margin: 2px 0;
 }
 
@@ -278,7 +288,7 @@
   padding: 0.3rem;
   font-size: 0.8rem;
   border-radius: 5px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
+  border: 1px solid var(--nir-border-blue);
   cursor: pointer;
   transition: all 150ms ease;
   line-height: 1.2;
@@ -311,8 +321,8 @@
   padding: 0.3rem;
   font-size: 0.7rem;
   border-radius: 5px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
   color: var(--nir-text);
   cursor: pointer;
   transition: all 150ms ease;
@@ -320,19 +330,19 @@
 }
 
 .btn-connect:hover:not(:disabled) {
-  background: rgba(114, 186, 255, 0.15);
-  border-color: rgba(114, 186, 255, 0.4);
+  background: var(--nir-border-blue);
+  border-color: var(--nir-border-blue-hover);
 }
 
 .btn-disconnect:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(255, 59, 48, 0.08);
+  border-color: rgba(255, 59, 48, 0.3);
   color: var(--nir-danger);
 }
 
 .btn-connect.primary {
-  background: linear-gradient(135deg, var(--nir-accent), #f36f45);
-  color: #1b120d;
+  background: linear-gradient(135deg, var(--nir-accent), var(--nir-accent-warm));
+  color: #ffffff;
   border: none;
 }
 
@@ -345,8 +355,8 @@
 .session-controls {
   flex-shrink: 0;
   padding: 1rem;
-  border-top: 1px solid rgba(114, 186, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid var(--nir-border-blue);
+  background: var(--nir-overlay-bg);
 }
 
 .session-controls h3 {
@@ -362,16 +372,16 @@
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
-  border-top: 1px solid rgba(114, 186, 255, 0.1);
-  background: rgba(15, 26, 46, 0.8);
+  border-top: 1px solid var(--nir-border-blue);
+  background: var(--nir-panel-footer-bg);
 }
 
 .session-name-input {
   padding: 0.55rem 0.75rem;
   font-size: 0.85rem;
   border-radius: 6px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
   color: var(--nir-text);
   outline: none;
   transition:
@@ -385,8 +395,8 @@
 }
 
 .session-name-input:focus {
-  border-color: rgba(114, 186, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(114, 186, 255, 0.1);
+  border-color: var(--nir-blue);
+  box-shadow: 0 0 0 2px var(--nir-border-blue);
 }
 
 .uncertainty-warning {
@@ -406,8 +416,8 @@
   cursor: pointer;
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
   transition: all 150ms ease;
   font-size: 0.9rem;
   color: var(--nir-text);
@@ -415,8 +425,8 @@
 
 .test-mode-checkbox:hover input:not(:disabled) ~ span,
 .test-mode-checkbox:hover {
-  background: rgba(114, 186, 255, 0.15);
-  border-color: rgba(114, 186, 255, 0.4);
+  background: var(--nir-border-blue);
+  border-color: var(--nir-border-blue-hover);
 }
 
 .test-mode-checkbox input {
@@ -444,9 +454,9 @@
   font-size: 0.9rem;
   color: var(--nir-blue);
   padding: 0.5rem 0.6rem;
-  background: rgba(72, 187, 255, 0.1);
+  background: var(--nir-border-blue);
   border-radius: 6px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
+  border: 1px solid var(--nir-border-blue);
 }
 
 .button-group {
@@ -460,16 +470,16 @@
   padding: 0.6rem;
   font-size: 0.8rem;
   border-radius: 6px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
   color: var(--nir-text);
   cursor: pointer;
   transition: all 150ms ease;
 }
 
 .btn-session:hover:not(:disabled) {
-  background: rgba(114, 186, 255, 0.15);
-  border-color: rgba(114, 186, 255, 0.4);
+  background: var(--nir-border-blue);
+  border-color: var(--nir-border-blue-hover);
 }
 
 .btn-session.primary {
@@ -608,11 +618,15 @@
   overflow: hidden;
 }
 
+[data-theme='soft'] .side-panel {
+  border-right-color: rgba(60, 60, 67, 0.12);
+}
+
 .panel-tabs {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid rgba(114, 186, 255, 0.1);
-  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--nir-border-blue);
+  background: var(--nir-overlay-bg);
   flex-shrink: 0;
 }
 
@@ -634,13 +648,13 @@
 
 .tab-button:hover {
   color: var(--nir-text);
-  background: rgba(114, 186, 255, 0.05);
+  background: var(--nir-border-blue);
 }
 
 .tab-button.active {
   color: var(--nir-blue);
   border-bottom-color: var(--nir-blue);
-  background: rgba(114, 186, 255, 0.1);
+  background: var(--nir-border-blue-hover);
 }
 
 .panel-content {
@@ -673,26 +687,31 @@
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.75rem;
-  background: rgba(23, 34, 75, 0.5);
+  background: var(--nir-card-bg);
   border-radius: 8px;
-  border: 1px solid rgba(114, 186, 255, 0.15);
+  border: 1px solid var(--nir-border-blue);
 }
 
 .trigger-mode-label {
   font-size: 0.75rem;
-  color: var(--nir-text-muted);
+  color: var(--nir-text);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
+  opacity: 0.75;
 }
 
 .toggle-switch {
   position: relative;
   display: flex;
-  background: rgba(15, 23, 42, 0.9);
+  background: var(--nir-overlay-bg);
   border-radius: 20px;
   padding: 3px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
+  border: 1px solid var(--nir-table-border);
+}
+
+[data-theme='soft'] .toggle-switch {
+  border-color: rgba(60, 60, 67, 0.2);
 }
 
 .toggle-option {
@@ -700,7 +719,7 @@
   padding: 0.5rem 0.75rem;
   border: none;
   background: transparent;
-  color: #64748b;
+  color: var(--nir-text-muted);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -726,7 +745,7 @@
 }
 
 .toggle-option.active {
-  color: #0f172a;
+  color: var(--nir-text);
   font-weight: 600;
 }
 
@@ -736,10 +755,11 @@
   left: 2px;
   width: calc(50% - 4px);
   height: calc(100% - 4px);
-  background: #e2e8f0;
+  background: var(--nir-blue);
   border-radius: 18px;
   transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
+  opacity: 0.85;
 }
 
 [data-active='time'] .toggle-slider {
@@ -759,16 +779,16 @@
   padding: 0.35rem 0.5rem;
   font-size: 0.85rem;
   border-radius: 4px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
   color: var(--nir-text);
   outline: none;
   text-align: center;
 }
 
 .trigger-value-input:focus {
-  border-color: rgba(114, 186, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(114, 186, 255, 0.1);
+  border-color: var(--nir-border-blue-hover);
+  box-shadow: 0 0 0 2px var(--nir-border-blue);
 }
 
 .trigger-value-input::-webkit-inner-spin-button {
@@ -789,8 +809,8 @@
 }
 
 .modal-card {
-  background: linear-gradient(135deg, #1a1f3a 0%, #2a1f3a 100%);
-  border: 1px solid rgba(255, 176, 94, 0.15);
+  background: var(--nir-modal-bg);
+  border: 1px solid var(--nir-border-blue);
   border-radius: 16px;
   padding: 2rem;
   width: 420px;
@@ -802,13 +822,13 @@
   margin: 0 0 0.25rem;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #f1f5f9;
+  color: var(--nir-modal-text);
 }
 
 .modal-subtitle {
   margin: 0 0 1.5rem;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--nir-text-muted);
 }
 
 .modal-form {
@@ -836,22 +856,22 @@
   padding: 0.6rem 0.75rem;
   font-size: 0.9rem;
   border-radius: 8px;
-  border: 1px solid rgba(114, 186, 255, 0.2);
-  background: rgba(23, 34, 75, 0.7);
-  color: #f1f5f9;
+  border: 1px solid var(--nir-border-blue);
+  background: var(--nir-input-bg);
+  color: var(--nir-modal-text);
   outline: none;
   transition: border-color 0.15s;
 }
 
 .modal-select:focus,
 .modal-input:focus {
-  border-color: rgba(114, 186, 255, 0.5);
-  box-shadow: 0 0 0 2px rgba(114, 186, 255, 0.1);
+  border-color: var(--nir-blue);
+  box-shadow: 0 0 0 2px var(--nir-border-blue);
 }
 
 .modal-select option {
-  background: #1a1f3a;
-  color: #f1f5f9;
+  background: var(--nir-modal-select-bg);
+  color: var(--nir-modal-text);
 }
 
 .modal-select:disabled {
