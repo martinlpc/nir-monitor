@@ -185,14 +185,35 @@ export function registerSessionServiceHandlers(
         return { success: false, error: 'Repository not available' }
       }
 
-      const filterMap = {
-        geojson: { name: 'GeoJSON cifrado', extensions: ['geojson.enc'] },
-        xlsx: { name: 'Excel', extensions: ['xlsx'] },
-        kmz: { name: 'Google Earth KMZ', extensions: ['kmz'] }
-      }
-
       const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
       const defaultName = `${safeLabel}.${format === 'geojson' ? 'geojson.enc' : format}`
+
+      // XLSX: selector de carpeta, 2-3 archivos
+      if (format === 'xlsx') {
+        const folderResult = await dialog.showOpenDialog(_window, {
+          title: 'Seleccionar carpeta para exportar XLSX',
+          properties: ['openDirectory']
+        })
+
+        if (folderResult.canceled || !folderResult.filePaths?.[0]) {
+          return { success: false, canceled: true }
+        }
+
+        const folderPath = folderResult.filePaths[0]
+
+        try {
+          const filePaths = await repository.exportAsXLSX(sessionId, folderPath, label)
+          return { success: true, filePaths }
+        } catch (err) {
+          return { success: false, error: (err as Error).message }
+        }
+      }
+
+      // GeoJSON / KMZ: selector de archivo único
+      const filterMap = {
+        geojson: { name: 'GeoJSON cifrado', extensions: ['geojson.enc'] },
+        kmz: { name: 'Google Earth KMZ', extensions: ['kmz'] }
+      }
 
       const result = await dialog.showSaveDialog(_window, {
         title: `Exportar sesión como ${format.toUpperCase()}`,
@@ -209,15 +230,12 @@ export function registerSessionServiceHandlers(
           const data = await repository.exportAsGeoJSON(sessionId)
           const encrypted = encryptBuffer(Buffer.from(data, 'utf-8'))
           fs.writeFileSync(result.filePath, encrypted)
-        } else if (format === 'xlsx') {
-          const buffer = await repository.exportAsXLSX(sessionId)
-          fs.writeFileSync(result.filePath, buffer)
         } else if (format === 'kmz') {
           const buffer = await repository.exportAsKMZ(sessionId)
           fs.writeFileSync(result.filePath, buffer)
         }
 
-        return { success: true, filePath: result.filePath }
+        return { success: true, filePaths: [result.filePath] }
       } catch (err) {
         return { success: false, error: (err as Error).message }
       }

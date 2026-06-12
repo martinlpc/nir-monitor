@@ -153,8 +153,12 @@ const api = {
       sessionId: string,
       format: 'geojson' | 'xlsx' | 'kmz',
       label: string
-    ): Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }> =>
-      ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT, sessionId, format, label),
+    ): Promise<{
+      success: boolean
+      filePaths?: string[]
+      canceled?: boolean
+      error?: string
+    }> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT, sessionId, format, label),
 
     importGeoJSON: (): Promise<{
       success: boolean

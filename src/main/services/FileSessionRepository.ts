@@ -298,7 +298,7 @@ export class FileSessionRepository implements ISessionRepository {
     return JSON.stringify(geojson, null, 2)
   }
 
-  async exportAsXLSX(_sessionId: string): Promise<Buffer> {
+  async exportAsXLSX(_sessionId: string, _folderPath: string, _label: string): Promise<string[]> {
     throw new Error('XLSX export is not supported by FileSessionRepository')
   }
 

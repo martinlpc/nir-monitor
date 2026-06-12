@@ -315,7 +315,7 @@ export default function ProductionShell(): React.JSX.Element {
               .exportSession(sessionId, format, found.label)
               .then((result) => {
                 if (!result.canceled) {
-                  console.log(`[ProductionShell] Exported to: ${result.filePath}`)
+                  console.log(`[ProductionShell] Exported to: ${result.filePaths?.join(', ')}`)
                 }
               })
               .catch((err) => {

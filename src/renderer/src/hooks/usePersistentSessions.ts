@@ -142,14 +142,14 @@ export function usePersistentSessions() {
       sessionId: string,
       format: 'geojson' | 'xlsx' | 'kmz',
       label: string
-    ): Promise<{ filePath?: string; canceled?: boolean }> => {
+    ): Promise<{ filePaths?: string[]; canceled?: boolean }> => {
       try {
         const result = await window.api.session.export(sessionId, format, label)
         if (result.canceled) {
           return { canceled: true }
         }
-        if (result.success && result.filePath) {
-          return { filePath: result.filePath }
+        if (result.success && result.filePaths && result.filePaths.length > 0) {
+          return { filePaths: result.filePaths }
         }
         throw new Error(result.error || `Failed to export as ${format}`)
       } catch (err) {

@@ -73,7 +73,12 @@ declare global {
           sessionId: string,
           format: 'geojson' | 'xlsx' | 'kmz',
           label: string
-        ) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }>
+        ) => Promise<{
+          success: boolean
+          filePaths?: string[]
+          canceled?: boolean
+          error?: string
+        }>
         importGeoJSON: () => Promise<{
           success: boolean
           sessionId?: string

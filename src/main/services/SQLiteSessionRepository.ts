@@ -701,108 +701,262 @@ export class SQLiteSessionRepository implements ISessionRepository {
     return csv
   }
 
-  async exportAsXLSX(sessionId: string): Promise<Buffer> {
+  async exportAsXLSX(sessionId: string, folderPath: string, label: string): Promise<string[]> {
     const session = await this.getSession(sessionId)
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
-    const stats = await this.getSessionStats(sessionId)
+    const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
 
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'NIR Monitor'
-    workbook.created = new Date()
+    const templateDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'plantillas')
+      : path.join(app.getAppPath(), 'resources', 'plantillas')
 
-    // ── Hoja 1: Resumen ──
-    const summarySheet = workbook.addWorksheet('Resumen')
+    const generatedFiles: string[] = []
 
-    const headerStyle: Partial<ExcelJS.Style> = {
-      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
-      alignment: { horizontal: 'left' }
+    const buildFooter = (): string => {
+      const inst = metadata.instrument
+      return inst
+        ? `Instrumento utilizado: Medidor de RNI marca ${inst.meter.brand} modelo ${inst.meter.model} numero de serie ${inst.meter.serial} + sonda marca ${inst.probe.brand} modelo ${inst.probe.model} numero de serie ${inst.probe.serial}`
+        : ''
     }
 
-    summarySheet.columns = [
-      { header: 'Campo', key: 'field', width: 25 },
-      { header: 'Valor', key: 'value', width: 40 }
-    ]
-    summarySheet.getRow(1).eachCell((cell) => {
-      cell.style = headerStyle
-    })
+    const numberFmt = '#,##0.00'
 
-    const durationMs = metadata.stoppedAt ? metadata.stoppedAt - metadata.startedAt : 0
-    const durationMin = (durationMs / 60000).toFixed(1)
+    // ── Helper: carga plantilla y rellena datos ──
+    const fillFromTemplate = async (
+      templateName: string,
+      outputName: string,
+      dataStartRow: number,
+      writeRow: (row: ExcelJS.Row, point: GeoTimestamp, idx: number) => void,
+      filterEndCol: number,
+      labelSuffix?: string,
+      footerFontSize?: number
+    ): Promise<string> => {
+      const templatePath = path.join(templateDir, templateName)
+      if (!fs.existsSync(templatePath)) {
+        throw new Error(`Plantilla no encontrada: ${templatePath}`)
+      }
 
-    const instrument = metadata.instrument
-    const correctionFactor = metadata.correctionFactor
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.worksheets[0]
 
-    summarySheet.addRows([
-      { field: 'Etiqueta', value: metadata.label },
-      { field: 'ID de sesión', value: metadata.id },
-      { field: 'Inicio', value: new Date(metadata.startedAt).toLocaleString('es-AR') },
-      {
-        field: 'Fin',
-        value: metadata.stoppedAt ? new Date(metadata.stoppedAt).toLocaleString('es-AR') : 'N/A'
-      },
-      { field: 'Duración (min)', value: durationMin },
-      { field: 'Cantidad de puntos', value: metadata.sampleCount },
-      { field: '', value: '' },
-      { field: 'Medidor - Marca', value: instrument?.meter.brand ?? '' },
-      { field: 'Medidor - Modelo', value: instrument?.meter.model ?? '' },
-      { field: 'Medidor - Nro. de serie', value: instrument?.meter.serial ?? '' },
-      { field: 'Medidor - Última calibración', value: instrument?.meter.lastCalibrationDate ?? '' },
-      { field: '', value: '' },
-      { field: 'Sonda - Marca', value: instrument?.probe.brand ?? '' },
-      { field: 'Sonda - Modelo', value: instrument?.probe.model ?? '' },
-      { field: 'Sonda - Nro. de serie', value: instrument?.probe.serial ?? '' },
-      { field: '', value: '' },
-      {
-        field: 'Factor de corrección aplicado',
-        value: correctionFactor != null ? correctionFactor : 'N/A'
-      },
-      { field: '', value: '' },
-      { field: 'Promedio corregido', value: stats?.avgCorrected?.toFixed(2) ?? 'N/A' },
-      { field: 'Máximo corregido', value: stats?.maxCorrected?.toFixed(2) ?? 'N/A' },
-      { field: 'Mínimo corregido', value: stats?.minCorrected?.toFixed(2) ?? 'N/A' }
-    ])
+      // Actualizar título si la plantilla tiene merge en esa fila
+      if (labelSuffix !== undefined) {
+        const mergedRow = templateName === 'Modelo_reporte_P.xlsx' ? 9 : 7
+        ws.getCell(mergedRow, 1).value = `Tabla de mediciones — ${label}${labelSuffix}`
+      }
 
-    // ── Hoja 2: Datos ──
-    const dataSheet = workbook.addWorksheet('Datos')
+      // Escribir datos
+      let dataIdx = 0
+      for (const point of points) {
+        const row = ws.getRow(dataStartRow + dataIdx)
+        writeRow(row, point, dataIdx)
+        dataIdx++
+      }
 
-    dataSheet.columns = [
-      { header: 'Seq#', key: 'sequenceNumber', width: 6 },
-      { header: 'Fecha/Hora', key: 'datetime', width: 22 },
-      { header: 'Latitud', key: 'lat', width: 14 },
-      { header: 'Longitud', key: 'lon', width: 14 },
-      { header: 'Altitud (m)', key: 'alt', width: 12 },
-      { header: 'Raw (V/m)', key: 'rawMeasurement', width: 14 },
-      { header: 'Corrected (V/m)', key: 'correctedMeasurement', width: 18 },
-      { header: 'Unidad', key: 'unit', width: 12 }
-    ]
-    dataSheet.getRow(1).eachCell((cell) => {
-      cell.style = headerStyle
-    })
+      // Autofiltro
+      const headerRow = dataStartRow - 1
+      const lastDataRow = headerRow + points.length
+      if (points.length > 0) {
+        ws.autoFilter = {
+          from: { row: headerRow, column: 1 },
+          to: { row: lastDataRow, column: filterEndCol }
+        }
+      }
 
-    points.forEach((point) => {
-      dataSheet.addRow({
-        sequenceNumber: point.sequenceNumber,
-        datetime: new Date(point.timestamp).toLocaleString('es-AR'),
-        lat: point.position.lat,
-        lon: point.position.lon,
-        alt: point.position.alt ?? 0,
-        rawMeasurement: point.emf.rawMeasurement.toFixed(2),
-        correctedMeasurement: point.correctedMeasurement.toFixed(2),
-        unit: point.emf.unit
-      })
-    })
+      // Footer
+      const footerText = buildFooter()
+      const fSize = footerFontSize ?? 9
 
-    // Auto-filtro en hoja de datos
-    dataSheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: points.length + 1, column: 8 }
+      // Blank separator row (lastDataRow + 1) intentionally left empty
+
+      let curRow = lastDataRow + 2
+      if (footerText) {
+        const footerRow = ws.getRow(curRow)
+        footerRow.getCell(1).value = footerText
+        footerRow.getCell(1).font = { italic: true, size: fSize }
+        ws.mergeCells(curRow, 1, curRow, filterEndCol)
+        curRow++
+      }
+
+      // Version line
+      const versionRow = ws.getRow(curRow)
+      versionRow.getCell(1).value = `Generado con RNI Monitor v${app.getVersion()}`
+      versionRow.getCell(1).font = { italic: true, size: 9 }
+      ws.mergeCells(curRow, 1, curRow, filterEndCol)
+
+      const filePath = path.join(folderPath, `${safeLabel}_${outputName}`)
+      await wb.xlsx.writeFile(filePath)
+      return filePath
     }
 
-    const buffer = await workbook.xlsx.writeBuffer()
-    return Buffer.from(buffer)
+    // ═══════════════════════════════════════
+    // 1. reporte.xlsx — 16 cols, all points
+    // ═══════════════════════════════════════
+    {
+      const filePath = await fillFromTemplate(
+        'Modelo_reporte.xlsx',
+        'reporte.xlsx',
+        10,
+        (row, point) => {
+          const probe = metadata.instrument?.probe
+          const date = new Date(point.timestamp)
+          const cf = metadata.correctionFactor
+
+          row.getCell(1).value = point.sequenceNumber
+          row.getCell(2).value = date.toLocaleDateString('es-AR')
+          row.getCell(3).value = date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+          row.getCell(4).value = point.position.lat.toFixed(6)
+          row.getCell(5).value = point.position.lon.toFixed(6)
+          row.getCell(6).value = probe?.model ?? ''
+          row.getCell(7).value = probe?.serial ?? ''
+          row.getCell(8).value = probe?.calibrationDate ?? ''
+          row.getCell(9).value = cf != null ? Number(cf.toFixed(4)) : null
+          row.getCell(9).numFmt = numberFmt
+          row.getCell(9).alignment = { horizontal: 'right' }
+          row.getCell(10).value = Number(point.correctedMeasurement.toFixed(2))
+          row.getCell(10).numFmt = numberFmt
+          row.getCell(10).alignment = { horizontal: 'right' }
+          row.getCell(11).value = point.emf.unit
+          row.getCell(12).value = 'Max Hold'
+          // cols 13-16: Fuentes — blank
+        },
+        16,
+        ''
+      )
+      generatedFiles.push(filePath)
+    }
+
+    // ═══════════════════════════════════════
+    // 2. reporte_p.xlsx — 8 cols, all points
+    // ═══════════════════════════════════════
+    {
+      const filePath = await fillFromTemplate(
+        'Modelo_reporte_P.xlsx',
+        'reporte_p.xlsx',
+        12,
+        (row, point) => {
+          const date = new Date(point.timestamp)
+          const mepPct = electricFieldToMepPercent(point.correctedMeasurement)
+
+          row.getCell(1).value = ''
+          row.getCell(2).value = point.sequenceNumber
+          row.getCell(3).value = date.toLocaleDateString('es-AR')
+          row.getCell(4).value = date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+          row.getCell(5).value = point.position.lat.toFixed(6)
+          row.getCell(6).value = point.position.lon.toFixed(6)
+          row.getCell(7).value = Number(mepPct.toFixed(2))
+          row.getCell(7).numFmt = numberFmt
+          row.getCell(7).alignment = { horizontal: 'right' }
+        },
+        7,
+        undefined,
+        7
+      )
+      generatedFiles.push(filePath)
+    }
+
+    // ═══════════════════════════════════════
+    // 3. averif.xlsx — solo MEP >= 50%
+    // ═══════════════════════════════════════
+    const averifPoints = points.filter(
+      (p) => electricFieldToMepPercent(p.correctedMeasurement) >= 50
+    )
+
+    if (averifPoints.length > 0) {
+      const templatePath = path.join(templateDir, 'Modelo_averif.xlsx')
+      if (!fs.existsSync(templatePath)) {
+        throw new Error(`Plantilla no encontrada: ${templatePath}`)
+      }
+
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.worksheets[0]
+
+      // Título
+      ws.getCell(7, 1).value = `Tabla de mediciones — ${label} (A verificar)`
+
+      // Datos desde fila 10
+      let idx = 0
+      for (const point of averifPoints) {
+        const probe = metadata.instrument?.probe
+        const date = new Date(point.timestamp)
+        const row = ws.getRow(10 + idx)
+
+        row.getCell(1).value = point.sequenceNumber
+        row.getCell(2).value = date.toLocaleDateString('es-AR')
+        row.getCell(3).value = date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+        row.getCell(4).value = point.position.lat.toFixed(6)
+        row.getCell(5).value = point.position.lon.toFixed(6)
+        row.getCell(6).value = probe?.model ?? ''
+        row.getCell(7).value = probe?.serial ?? ''
+        row.getCell(8).value = probe?.calibrationDate ?? ''
+        row.getCell(9).value =
+          metadata.correctionFactor != null
+            ? Number(metadata.correctionFactor.toFixed(4))
+            : null
+        row.getCell(9).numFmt = numberFmt
+        row.getCell(9).alignment = { horizontal: 'right' }
+        row.getCell(10).value = Number(point.correctedMeasurement.toFixed(2))
+        row.getCell(10).numFmt = numberFmt
+        row.getCell(10).alignment = { horizontal: 'right' }
+        // cols 11-16 blank (MaxHold Manual, c/incert, Fuentes)
+        idx++
+      }
+
+      // Autofiltro
+      const lastDataRow = 9 + averifPoints.length
+      if (averifPoints.length > 0) {
+        ws.autoFilter = {
+          from: { row: 9, column: 1 },
+          to: { row: lastDataRow, column: 16 }
+        }
+      }
+
+      // Footer
+      const footerText = buildFooter()
+
+      // Blank separator row (lastDataRow + 1) intentionally left empty
+
+      let curRow = lastDataRow + 2
+      if (footerText) {
+        const footerRow = ws.getRow(curRow)
+        footerRow.getCell(1).value = footerText
+        footerRow.getCell(1).font = { italic: true, size: 9 }
+        ws.mergeCells(curRow, 1, curRow, 16)
+        curRow++
+      }
+
+      // Version line
+      const versionRow = ws.getRow(curRow)
+      versionRow.getCell(1).value = `Generado con RNI Monitor v${app.getVersion()}`
+      versionRow.getCell(1).font = { italic: true, size: 9 }
+      ws.mergeCells(curRow, 1, curRow, 16)
+
+      const filePath = path.join(folderPath, `${safeLabel}_averif.xlsx`)
+      await wb.xlsx.writeFile(filePath)
+      generatedFiles.push(filePath)
+    }
+
+    console.log('[exportAsXLSX] Generated files:', generatedFiles)
+    return generatedFiles
   }
 
   async exportAsKMZ(sessionId: string): Promise<Buffer> {

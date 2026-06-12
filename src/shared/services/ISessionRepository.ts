@@ -65,9 +65,13 @@ export interface ISessionRepository {
   exportAsGeoJSON(sessionId: string): Promise<string>
 
   /**
-   * Exportar sesión como XLSX (reporte con hojas de resumen y datos)
+   * Exportar sesión como XLSX (3 archivos ENACOM: reporte, reporte_p, averif)
+   * @param sessionId ID de la sesión
+   * @param folderPath Carpeta destino
+   * @param label Etiqueta para nombres de archivo
+   * @returns Lista de rutas de archivos generados
    */
-  exportAsXLSX(sessionId: string): Promise<Buffer>
+  exportAsXLSX(sessionId: string, folderPath: string, label: string): Promise<string[]>
 
   /**
    * Exportar sesión como KMZ (KML comprimido para Google Earth)
