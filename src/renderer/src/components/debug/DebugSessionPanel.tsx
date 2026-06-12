@@ -28,7 +28,10 @@ export default function DebugSessionPanel({
 
       <label className="field">
         <span>Etiqueta</span>
-        <input value={state.sessionLabel} onChange={(event) => onSessionLabelChange(event.target.value)} />
+        <input
+          value={state.sessionLabel}
+          onChange={(event) => onSessionLabelChange(event.target.value)}
+        />
       </label>
 
       <div className="field-row">
@@ -70,7 +73,7 @@ export default function DebugSessionPanel({
           label="Ultima muestra"
           value={
             state.lastSample
-              ? `${state.lastSample.emf.rss} ${state.lastSample.emf.unit} @ ${state.lastSample.position.lat.toFixed(5)}, ${state.lastSample.position.lon.toFixed(5)}`
+              ? `${state.lastSample.emf.rawMeasurement} ${state.lastSample.emf.unit} @ ${state.lastSample.position.lat.toFixed(5)}, ${state.lastSample.position.lon.toFixed(5)}`
               : 'sin muestras'
           }
         />
@@ -86,4 +89,3 @@ export default function DebugSessionPanel({
     </article>
   )
 }
-

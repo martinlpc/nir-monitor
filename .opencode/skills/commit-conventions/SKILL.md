@@ -13,17 +13,17 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ### Types
 
-| Type     | Usage                                      |
-|----------|--------------------------------------------|
-| `feat`   | New feature                                |
-| `fix`    | Bug fix                                    |
-| `refactor` | Code change that neither fixes nor adds  |
-| `perf`   | Performance improvement                    |
-| `test`   | Adding or fixing tests                     |
-| `docs`   | Documentation only                         |
-| `style`  | Formatting, lint, missing semicolons       |
-| `chore`  | Build, deps, CI, config                    |
-| `ci`     | CI pipeline changes                        |
+| Type       | Usage                                   |
+| ---------- | --------------------------------------- |
+| `feat`     | New feature                             |
+| `fix`      | Bug fix                                 |
+| `refactor` | Code change that neither fixes nor adds |
+| `perf`     | Performance improvement                 |
+| `test`     | Adding or fixing tests                  |
+| `docs`     | Documentation only                      |
+| `style`    | Formatting, lint, missing semicolons    |
+| `chore`    | Build, deps, CI, config                 |
+| `ci`       | CI pipeline changes                     |
 
 ## Reglas
 
@@ -39,18 +39,23 @@ Use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 feat: add correction factor TSV loader with validation
 ```
+
 ```
 fix: prevent crash on empty serial port list
 ```
+
 ```
 refactor: extract Haversine distance to shared util
 ```
+
 ```
 feat(db): batch geo_points inserts every 30s
 ```
+
 ```
 fix(export): encode KMZ icons in base64 to avoid broken paths
 ```
+
 ```
 chore: bump electron from 42.0.0 to 42.1.0
 ```

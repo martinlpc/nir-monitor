@@ -7,6 +7,7 @@ Archivo principal: `src/main/index.ts`
 Archivo orquestador: `src/main/application/Application.ts`
 
 ## Entry point (app.whenReady)
+
 ```
 1. Set app user model ID (Windows)
 2. Watch window shortcuts (F12 devtools, Ctrl+R)
@@ -18,6 +19,7 @@ Archivo orquestador: `src/main/application/Application.ts`
 ```
 
 ## BrowserWindow config
+
 - size: 900x670
 - preload: `src/preload/index.js`
 - sandbox: false
@@ -25,6 +27,7 @@ Archivo orquestador: `src/main/application/Application.ts`
 - Linux icon from `resources/icon.png`
 
 ## App lifecycle
+
 ```
 app.whenReady -> createServices() -> createWindow() -> setupIPC()
                                                   -> deviceManager.initialize()
@@ -37,12 +40,14 @@ app.on('activate') (macOS) -> recreate window + setupIPC
 ```
 
 ## Modos
+
 - Dev: carga `ELECTRON_RENDERER_URL` (hot reload)
 - Production: carga `renderer/index.html` empaquetado
 - Debug: `NIR_APP_MODE=debug` -> agrega `?debug=1` a la URL
 - Simulacion: `NIR_SIMULATION=true` -> drivers simulados
 
 ## ServiceFactory (inyeccion manual)
+
 ```
 createServices():
   scanner (real o simulado)
@@ -57,5 +62,6 @@ setupSessionWiring(deviceManager, sessionService):
 ```
 
 ## Application.shutdown()
+
 1. Detener sesion activa si existe
 2. Desconectar todos los dispositivos

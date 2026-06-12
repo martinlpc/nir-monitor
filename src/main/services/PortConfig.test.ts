@@ -56,6 +56,10 @@ describe('PortConfig', () => {
 
   it('uses custom configPath for save when provided', () => {
     savePortConfig({ gps: 'COM8' }, '/custom/path/ports.json')
-    expect(mockWriteFileSync).toHaveBeenCalledWith('/custom/path/ports.json', expect.any(String), 'utf-8')
+    expect(mockWriteFileSync).toHaveBeenCalledWith(
+      '/custom/path/ports.json',
+      expect.any(String),
+      'utf-8'
+    )
   })
 })

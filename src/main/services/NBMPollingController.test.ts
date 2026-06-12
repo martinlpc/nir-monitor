@@ -10,18 +10,22 @@ const defaultSample: NBM550Sample = {
   timestamp: Date.now()
 }
 
-function createMockDriver(overrides: {
-  isConnected?: boolean
-  readBattery?: number | null
-  readMeasurement?: NBM550Sample | null
-} = {}) {
+function createMockDriver(
+  overrides: {
+    isConnected?: boolean
+    readBattery?: number | null
+    readMeasurement?: NBM550Sample | null
+  } = {}
+) {
   return {
     meta: { port: 'COM1' },
     isConnected: vi.fn().mockReturnValue(overrides.isConnected ?? true),
     readBattery: vi.fn().mockResolvedValue(overrides.readBattery ?? 100),
-    readMeasurement: vi.fn().mockResolvedValue(
-      overrides.readMeasurement === undefined ? defaultSample : overrides.readMeasurement
-    )
+    readMeasurement: vi
+      .fn()
+      .mockResolvedValue(
+        overrides.readMeasurement === undefined ? defaultSample : overrides.readMeasurement
+      )
   } as unknown as NBM550Driver
 }
 
@@ -54,9 +58,7 @@ describe('NBMPollingController', () => {
 
     await vi.waitFor(() => expect(driver.readMeasurement).toHaveBeenCalled(), { timeout: 1000 })
 
-    expect(onSample).toHaveBeenCalledWith(
-      expect.objectContaining({ rss: 12.5, unit: 'V/m' })
-    )
+    expect(onSample).toHaveBeenCalledWith(expect.objectContaining({ rss: 12.5, unit: 'V/m' }))
   })
 
   it('stops polling and clears state', () => {

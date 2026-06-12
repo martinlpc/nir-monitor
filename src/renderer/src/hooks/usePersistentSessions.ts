@@ -115,20 +115,41 @@ export function usePersistentSessions() {
     }
   }, [])
 
+  // Importar GeoJSON (cifrado o plano)
+  const importGeoJSON = useCallback(async (): Promise<{
+    sessionId?: string
+    canceled?: boolean
+  }> => {
+    try {
+      const result = await window.api.session.importGeoJSON()
+      if (result.canceled) {
+        return { canceled: true }
+      }
+      if (result.success && result.sessionId) {
+        await loadSessions()
+        return { sessionId: result.sessionId }
+      }
+      throw new Error(result.error || 'Failed to import GeoJSON')
+    } catch (err) {
+      console.error('[usePersistentSessions] Error importing GeoJSON:', err)
+      throw err
+    }
+  }, [loadSessions])
+
   // Exportar con diálogo nativo (GeoJSON, XLSX, KMZ)
   const exportSession = useCallback(
     async (
       sessionId: string,
       format: 'geojson' | 'xlsx' | 'kmz',
       label: string
-    ): Promise<{ filePath?: string; canceled?: boolean }> => {
+    ): Promise<{ filePaths?: string[]; canceled?: boolean }> => {
       try {
         const result = await window.api.session.export(sessionId, format, label)
         if (result.canceled) {
           return { canceled: true }
         }
-        if (result.success && result.filePath) {
-          return { filePath: result.filePath }
+        if (result.success && result.filePaths && result.filePaths.length > 0) {
+          return { filePaths: result.filePaths }
         }
         throw new Error(result.error || `Failed to export as ${format}`)
       } catch (err) {
@@ -144,9 +165,9 @@ export function usePersistentSessions() {
     async (
       sessionId: string
     ): Promise<{
-      avgRss: number
-      maxRss: number
-      minRss: number
+      avgCorrected: number
+      maxCorrected: number
+      minCorrected: number
       pointCount: number
     } | null> => {
       try {
@@ -209,6 +230,7 @@ export function usePersistentSessions() {
     exportGeoJSON,
     exportCSV,
     exportSession,
+    importGeoJSON,
     getStats,
     getPointsInBounds,
 

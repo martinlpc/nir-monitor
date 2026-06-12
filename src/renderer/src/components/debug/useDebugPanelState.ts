@@ -63,7 +63,7 @@ export function useDebugPanelState(): { state: DebugPanelState; actions: DebugPa
       setLastSample(point)
       appendLog(
         'sample',
-        `rss=${point.emf.rss} ${point.emf.unit} @ ${point.position.lat.toFixed(6)}, ${point.position.lon.toFixed(6)}`
+        `rss=${point.emf.rawMeasurement} ${point.emf.unit} @ ${point.position.lat.toFixed(6)}, ${point.position.lon.toFixed(6)}`
       )
     })
 

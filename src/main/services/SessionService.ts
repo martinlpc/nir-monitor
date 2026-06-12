@@ -1,8 +1,5 @@
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import * as fs from 'fs'
-import * as path from 'path'
-import { app } from 'electron'
 import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
@@ -11,7 +8,10 @@ import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 import { getLoadedUncertainty } from '../ipc/SettingsHandler'
 import { loadAppConfig } from './AppConfig'
-import { resolveCorrectionFactor as resolveCFFromFile, findFactor } from '../uncertainty/correctionFactor'
+import {
+  resolveCorrectionFactor as resolveCFFromFile,
+  findFactor
+} from '../uncertainty/correctionFactor'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -52,13 +52,17 @@ export class SessionService extends EventEmitter {
   private syncCorrectionFactorFromProbe(probeModel: string | null): void {
     const resolved = this.resolveCorrectionFactor(probeModel)
     this.correctionFactor = resolved
-    this.fusion.setUncertaintyFactor(resolved ?? 1)
+    this.fusion.setCorrectionFactor(resolved ?? 1)
     console.log(
       `[SessionService] Correction factor sync -> probe=${probeModel ?? 'N/A'}, factor=${resolved ?? 1}`
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository, private readonly simulationMode: boolean = false) {
+  constructor(
+    fusion: GeoFusionService,
+    repository?: ISessionRepository,
+    private readonly simulationMode: boolean = false
+  ) {
     super()
     this.fusion = fusion
     this.repository = repository || null
@@ -115,7 +119,16 @@ export class SessionService extends EventEmitter {
 
   // ── Ciclo de sesión ───────────────────────────────────────
 
-  async start(label: string = '', fusionConfig?: Partial<GeoFusionConfig>, locationData?: { provincia?: string; localidad?: string; apellido1?: string; apellido2?: string }): Promise<string> {
+  async start(
+    label: string = '',
+    fusionConfig?: Partial<GeoFusionConfig>,
+    locationData?: {
+      provincia?: string
+      localidad?: string
+      apellido1?: string
+      apellido2?: string
+    }
+  ): Promise<string> {
     if (this.state === 'running') {
       throw new Error('Ya hay una sesión en curso')
     }
@@ -149,7 +162,8 @@ export class SessionService extends EventEmitter {
     if (fusionConfig) {
       if (fusionConfig.triggerMode !== undefined) merged.triggerMode = fusionConfig.triggerMode
       if (fusionConfig.intervalMs !== undefined) merged.intervalMs = fusionConfig.intervalMs
-      if (fusionConfig.minDistanceMeters !== undefined) merged.minDistanceMeters = fusionConfig.minDistanceMeters
+      if (fusionConfig.minDistanceMeters !== undefined)
+        merged.minDistanceMeters = fusionConfig.minDistanceMeters
       if (fusionConfig.testMode !== undefined) merged.testMode = fusionConfig.testMode
     }
 
@@ -275,26 +289,6 @@ export class SessionService extends EventEmitter {
       } catch (err) {
         console.error(`[SessionService] Failed to finalize session: ${err}`)
         // No throw - sesión termina pero sin persistencia
-      }
-    }
-
-    // Generar GeoJSON en el Escritorio
-    if (this.repository && this.currentSessionId && this.localidad) {
-      try {
-        const desktop = app.getPath('desktop')
-        const startDate = new Date(this.startedAt)
-        const fecha = startDate.toISOString().slice(0, 10)
-        const hora = startDate.toTimeString().slice(0, 8).replace(/:/g, '')
-        const loc = this.localidad
-          .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
-          .replace(/\s+/g, '-')
-        const filename = `${loc}_${fecha}_${hora}.geojson`
-        const filepath = path.join(desktop, filename)
-        const geojson = await this.repository.exportAsGeoJSON(this.currentSessionId)
-        fs.writeFileSync(filepath, geojson, 'utf-8')
-        console.log(`[SessionService] GeoJSON saved to desktop: ${filepath}`)
-      } catch (err) {
-        console.warn('[SessionService] Failed to save GeoJSON to desktop:', err)
       }
     }
 

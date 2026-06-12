@@ -6,9 +6,7 @@ export function normalizeProbeName(name: string): string {
   return name.toUpperCase().replace(/[^A-Z0-9]/g, '')
 }
 
-export function parseUncertaintyFile(
-  content: string
-): Array<{ name: string; factor: number }> {
+export function parseUncertaintyFile(content: string): Array<{ name: string; factor: number }> {
   const lines = content.split(/\r?\n/).filter((l) => l.trim().length > 0)
   if (lines.length <= 1) return []
   const sep = guessSeparator(lines[0])

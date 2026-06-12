@@ -236,7 +236,9 @@ export class DeviceManager extends EventEmitter {
   // -- Init drivers ---------------------------------------------
 
   private async initNBM(port: string): Promise<void> {
-    console.log(`[DeviceManager] initNBM starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`)
+    console.log(
+      `[DeviceManager] initNBM starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`
+    )
     this.nbmIntentionalDisconnect = false
     this.nbm = this.simulationMode
       ? new SimulatedNBM550Driver({ port })
@@ -276,7 +278,9 @@ export class DeviceManager extends EventEmitter {
   }
 
   private async initGPS(port: string): Promise<void> {
-    console.log(`[DeviceManager] initGPS starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`)
+    console.log(
+      `[DeviceManager] initGPS starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`
+    )
     this.gpsIntentionalDisconnect = false
     this.gps = this.simulationMode
       ? new SimulatedGPSDriver({ port })

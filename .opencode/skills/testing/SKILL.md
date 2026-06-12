@@ -10,6 +10,7 @@ description: Testing conventions for nir-monitor — Vitest, coverage thresholds
 - Provider: v8
 
 ## Mocking serialport
+
 ```typescript
 import { vi } from 'vitest'
 
@@ -18,18 +19,29 @@ vi.mock('serialport', () => {
   class MockSerialPort extends EE {
     path: string
     baudRate: number
-    constructor(options: any) { super(); this.path = options.path; this.baudRate = options.baudRate }
-    write() { return true }
-    close() { this.emit('close') }
+    constructor(options: any) {
+      super()
+      this.path = options.path
+      this.baudRate = options.baudRate
+    }
+    write() {
+      return true
+    }
+    close() {
+      this.emit('close')
+    }
   }
   class MockReadlineParser extends require('stream').Transform {
-    _transform(chunk: any, _: any, cb: any) { cb(null, chunk) }
+    _transform(chunk: any, _: any, cb: any) {
+      cb(null, chunk)
+    }
   }
   return { SerialPort: MockSerialPort, ReadlineParser: MockReadlineParser }
 })
 ```
 
 ## Mocking Electron IPC
+
 ```typescript
 vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), on: vi.fn(), removeAllListeners: vi.fn() },
@@ -41,6 +53,7 @@ vi.mock('electron', () => ({
 ```
 
 ## Comandos
+
 - `npm test` -> vitest run
 - `npm run test:watch` -> watch mode
 - `npm run test:coverage` -> con reporte HTML

@@ -25,7 +25,16 @@ interface MapViewProps {
   focusSessionBounds?: { north: number; south: number; east: number; west: number } | null
 }
 
-export default function MapView({ geoData, isSessionActive = false, followPosition = true, onFollowPositionChange, maximized = false, onToggleMaximize, loadedSessions = [], focusSessionBounds = null }: MapViewProps): React.JSX.Element {
+export default function MapView({
+  geoData,
+  isSessionActive = false,
+  followPosition = true,
+  onFollowPositionChange,
+  maximized = false,
+  onToggleMaximize,
+  loadedSessions = [],
+  focusSessionBounds = null
+}: MapViewProps): React.JSX.Element {
   const { position: livePosition, lastKnownPosition } = useGpsPosition()
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
@@ -41,7 +50,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           [pts[i].position.lat, pts[i].position.lon],
           [pts[i + 1].position.lat, pts[i + 1].position.lon]
         ],
-        color: getIntensityColor(pts[i].rssWithUncertainty)
+        color: getIntensityColor(pts[i].correctedMeasurement)
       })
     }
     return segments
@@ -61,7 +70,7 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
               [pts[i].position.lat, pts[i].position.lon],
               [pts[i + 1].position.lat, pts[i + 1].position.lon]
             ],
-            color: getIntensityColor(pts[i].rssWithUncertainty)
+            color: getIntensityColor(pts[i].correctedMeasurement)
           })
         }
         return { sessionId: session.id, segments }
@@ -83,18 +92,22 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
                 : `${geoData.trackPoints.length} muestras registradas`}
           </p>
         </div>
-        <div className="map-view__meta">
-        </div>
+        <div className="map-view__meta"></div>
       </div>
 
       <div className="map-view__canvas">
-        <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} scrollWheelZoom className="map-leaflet">
+        <MapContainer
+          center={DEFAULT_CENTER}
+          zoom={DEFAULT_ZOOM}
+          scrollWheelZoom
+          className="map-leaflet"
+        >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
+            attribution="&copy; OpenStreetMap contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <SyncMapView 
-            geoData={geoData} 
+          <SyncMapView
+            geoData={geoData}
             followPosition={followPosition}
             livePosition={livePosition}
             isSessionActive={isSessionActive}
@@ -112,12 +125,18 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
           ))}
           {loadedSegments.map((session) =>
             session.segments.map((seg) => (
-              <Polyline key={seg.key} positions={seg.positions} color={seg.color} weight={3} opacity={0.85} />
+              <Polyline
+                key={seg.key}
+                positions={seg.positions}
+                color={seg.color}
+                weight={3}
+                opacity={0.85}
+              />
             ))
           )}
           {/* Renderizar todos los puntos de medición como marcadores */}
           {geoData.allPoints.map((point) => {
-            const pointColor = getIntensityColor(point.rssWithUncertainty)
+            const pointColor = getIntensityColor(point.correctedMeasurement)
             return (
               <CircleMarker
                 key={point.id}
@@ -131,15 +150,16 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
                 }}
               >
                 <Popup>
-                  Valor final: {point.rssWithUncertainty.toFixed(2)} {point.emf.unit}
+                  Valor final: {(point.correctedMeasurement ?? 0).toFixed(2)}{' '}
+                  {point.emf?.unit ?? 'V/m'}
                   <br />
-                  Medido: {point.emf.rss.toFixed(2)} {point.emf.unit}
+                  Medido: {(point.emf?.rawMeasurement ?? 0).toFixed(2)} {point.emf?.unit ?? 'V/m'}
                   <br />
-                  Lat: {point.position.lat.toFixed(6)}
+                  Lat: {(point.position?.lat ?? 0).toFixed(6)}
                   <br />
-                  Lon: {point.position.lon.toFixed(6)}
+                  Lon: {(point.position?.lon ?? 0).toFixed(6)}
                   <br />
-                  Alt: {point.position.alt.toFixed(1)} m
+                  Alt: {(point.position?.alt ?? 0).toFixed(1)} m
                   <br />
                   {new Date(point.timestamp).toLocaleTimeString()}
                 </Popup>
@@ -199,9 +219,10 @@ export default function MapView({ geoData, isSessionActive = false, followPositi
               }}
             >
               <Popup>
-                {lastPoint.emf.rss.toFixed(2)} {lastPoint.emf.unit}
+                {(lastPoint.emf?.rawMeasurement ?? 0).toFixed(2)} {lastPoint.emf?.unit ?? 'V/m'}
                 <br />
-                {lastPoint.position.lat.toFixed(6)}, {lastPoint.position.lon.toFixed(6)}
+                {(lastPoint.position?.lat ?? 0).toFixed(6)},{' '}
+                {(lastPoint.position?.lon ?? 0).toFixed(6)}
                 <br />
                 Posicion GPS real
               </Popup>

@@ -31,7 +31,7 @@ export default function SyncMapView({
       // Sesión acaba de terminar
       // Desmarcar checkbox
       onFollowPositionChange?.(false)
-      
+
       // Centrar en bounds
       if (geoData.bounds) {
         const bounds = new LatLngBounds([

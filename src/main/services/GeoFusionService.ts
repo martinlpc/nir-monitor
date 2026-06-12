@@ -29,7 +29,7 @@ export class GeoFusionService extends EventEmitter {
   private lastSavedPosition: GeoPosition | null = null
   private timeTimer: NodeJS.Timeout | null = null
   private capturing: boolean = false
-  private uncertaintyFactor: number = 1
+  private correctionFactor: number = 1
   private sequenceNumber: number = 0 // incrementa cada captura en una sesión
 
   constructor(config: GeoFusionConfig = DEFAULT_FUSION_CONFIG) {
@@ -47,8 +47,8 @@ export class GeoFusionService extends EventEmitter {
     this._gps = driver
   }
 
-  setUncertaintyFactor(factor: number): void {
-    this.uncertaintyFactor = factor
+  setCorrectionFactor(factor: number): void {
+    this.correctionFactor = factor
   }
 
   // ── API pública ───────────────────────────────────────────
@@ -104,9 +104,7 @@ export class GeoFusionService extends EventEmitter {
   }
 
   updateConfig(config: Partial<GeoFusionConfig>): void {
-    const clean = Object.fromEntries(
-      Object.entries(config).filter(([_, v]) => v !== undefined)
-    )
+    const clean = Object.fromEntries(Object.entries(config).filter(([_, v]) => v !== undefined))
     this.config = { ...this.config, ...clean }
   }
 
@@ -166,7 +164,9 @@ export class GeoFusionService extends EventEmitter {
     if (this.lastSavedPosition) {
       const dist = haversineMeters(this.lastSavedPosition, currentPosition)
       if (dist < this.config.minDistanceMeters) {
-        console.log(`[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`)
+        console.log(
+          `[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`
+        )
         return
       }
     }
@@ -216,7 +216,7 @@ export class GeoFusionService extends EventEmitter {
       }
 
       this.sequenceNumber++
-      const rssWithUncertainty = sample.rss * this.uncertaintyFactor
+      const correctedMeasurement = sample.rss * this.correctionFactor
 
       const geoTimestamp: GeoTimestamp = {
         id: uuidv4(),
@@ -226,14 +226,14 @@ export class GeoFusionService extends EventEmitter {
         position: { ...position },
         emf: {
           deviceId: 'nbm550',
-          rss: sample.rss,
+          rawMeasurement: sample.rss,
           unit: sample.unit as EMFSample['unit']
         },
-        rssWithUncertainty
+        correctedMeasurement
       }
 
       console.log(
-        `[GeoFusionService] capture(): Emitting point [#${this.sequenceNumber}] lat=${position.lat}, lon=${position.lon}, rss=${sample.rss} (factor=${this.uncertaintyFactor}, adjusted=${rssWithUncertainty})`
+        `[GeoFusionService] capture(): Emitting point [#${this.sequenceNumber}] lat=${position.lat}, lon=${position.lon}, raw=${sample.rss} (factor=${this.correctionFactor}, corrected=${correctedMeasurement})`
       )
       this.lastSavedPosition = { ...position }
       this.emit('point', geoTimestamp)

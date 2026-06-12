@@ -153,14 +153,30 @@ const api = {
       sessionId: string,
       format: 'geojson' | 'xlsx' | 'kmz',
       label: string
-    ): Promise<{ success: boolean; filePath?: string; canceled?: boolean; error?: string }> =>
-      ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT, sessionId, format, label),
+    ): Promise<{
+      success: boolean
+      filePaths?: string[]
+      canceled?: boolean
+      error?: string
+    }> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT, sessionId, format, label),
+
+    importGeoJSON: (): Promise<{
+      success: boolean
+      sessionId?: string
+      canceled?: boolean
+      error?: string
+    }> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_IMPORT_GEOJSON),
 
     getStats: (
       sessionId: string
     ): Promise<{
       success: boolean
-      stats?: { avgRss: number; maxRss: number; minRss: number; pointCount: number } | null
+      stats?: {
+        avgCorrected: number
+        maxCorrected: number
+        minCorrected: number
+        pointCount: number
+      } | null
       error?: string
     }> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_STATS, sessionId),
 
@@ -186,10 +202,24 @@ const api = {
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_SAMPLE, handler)
     },
 
-    onStarted: (cb: (data: { sessionId: string; startedAt: number; label: string; correctionFactor: number | null; instrument: InstrumentInfo | null }) => void) => {
+    onStarted: (
+      cb: (data: {
+        sessionId: string
+        startedAt: number
+        label: string
+        correctionFactor: number | null
+        instrument: InstrumentInfo | null
+      }) => void
+    ) => {
       const handler = (
         _: IpcRendererEvent,
-        data: { sessionId: string; startedAt: number; label: string; correctionFactor: number | null; instrument: InstrumentInfo | null }
+        data: {
+          sessionId: string
+          startedAt: number
+          label: string
+          correctionFactor: number | null
+          instrument: InstrumentInfo | null
+        }
       ) => cb(data)
       ipcRenderer.on(IPC_EVENTS.SESSION_STARTED, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STARTED, handler)

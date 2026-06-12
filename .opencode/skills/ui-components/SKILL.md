@@ -6,6 +6,7 @@ description: React component structure — debug panels, production shell, map v
 Root: `src/renderer/src/components/`
 
 ## Modo Debug (`?debug=1`)
+
 - `debug/DebugPanel.tsx` — panel principal debug (tabs)
 - `debug/DebugDevicesPanel.tsx` — estado de dispositivos
 - `debug/DebugSessionPanel.tsx` — sesion activa
@@ -16,6 +17,7 @@ Root: `src/renderer/src/components/`
 - Hooks: `useDebugDevices`, `useDebugGps`, `useDebugLogs`, `useDebugPanelState`
 
 ## Modo Production
+
 - `production/ProductionShell.tsx` — layout principal con tabs
 - `production/DevicesPanel.tsx` — estado de dispositivos
 - `production/useDeviceCardState.ts` — hook de estado
@@ -28,19 +30,23 @@ Root: `src/renderer/src/components/`
 - `production/Toast.tsx` + `ToastProvider.tsx` — notificaciones toast
 
 ## Mapas
+
 - `map/MapView.tsx` — componente Leaflet principal
 - `map/SyncMapView.tsx` — sincronizado con sesion activa
 - `map/MaximizeControl.tsx` — boton de pantalla completa
 - `map/PanControl.tsx` — control de paneo
 
 ## Modales
+
 - `SessionStartModal.tsx` — modal de inicio de sesion (config trigger, datos de ubicacion)
 
 ## App
+
 - `App.tsx` — entry point: detecta debug mode y renderiza DebugPanel o ProductionShell
 - `ErrorBoundary.tsx` — error boundary global
 
 ## Hooks
+
 - `src/renderer/src/hooks/useDevices.ts` — estado de dispositivos
 - `src/renderer/src/hooks/useSession.ts` — sesion activa
 - `src/renderer/src/hooks/useGeoData.ts` — datos geograficos para el mapa
@@ -49,5 +55,6 @@ Root: `src/renderer/src/components/`
 - `src/renderer/src/hooks/useMultipleSessions.ts` — multiples sesiones en mapa
 
 ## IPC bridge
+
 - `src/preload/index.ts` — `window.api` expuesto via contextBridge
 - Namespaces: `api.ports`, `api.devices`, `api.gps`, `api.nbm`, `api.session`, `api.settings`

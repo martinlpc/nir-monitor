@@ -26,12 +26,24 @@ function parseArgs(): CLIOptions {
 
   for (let i = 0; i < args.length; i++) {
     switch (args[i]) {
-      case '--nbm':  opts.nbm = args[++i]; break
-      case '--gps':  opts.gps = args[++i]; break
-      case '--rate': opts.rate = parseInt(args[++i], 10); break
-      case '--count': opts.count = parseInt(args[++i], 10); break
-      case '--cf':   opts.cf = parseFloat(args[++i]); break
-      case '--uncertainty-file': opts.uncertaintyFile = args[++i]; break
+      case '--nbm':
+        opts.nbm = args[++i]
+        break
+      case '--gps':
+        opts.gps = args[++i]
+        break
+      case '--rate':
+        opts.rate = parseInt(args[++i], 10)
+        break
+      case '--count':
+        opts.count = parseInt(args[++i], 10)
+        break
+      case '--cf':
+        opts.cf = parseFloat(args[++i])
+        break
+      case '--uncertainty-file':
+        opts.uncertaintyFile = args[++i]
+        break
       case '--help':
       case '-h':
         printHelp()
@@ -88,8 +100,10 @@ async function waitForFix(gps: GPSDriver): Promise<boolean> {
     if (gps.isPositionValid()) return true
     const state = gps.getState()
     const elapsed = Math.round((Date.now() - start) / 1000)
-    process.stdout.write(`\r⏳ Esperando fix GPS... ${elapsed}s  (satélites: ${state.satelliteCount})   `)
-    await new Promise(r => setTimeout(r, 1000))
+    process.stdout.write(
+      `\r⏳ Esperando fix GPS... ${elapsed}s  (satélites: ${state.satelliteCount})   `
+    )
+    await new Promise((r) => setTimeout(r, 1000))
   }
   console.log()
   return false
@@ -125,13 +139,13 @@ async function main(): Promise<void> {
   }
 
   if (!nbmPort) {
-    const ports = (await SerialPort.list()).map(p => p.path)
+    const ports = (await SerialPort.list()).map((p) => p.path)
     console.error('❌ NBM-550 no detectado')
     console.error('   Puertos disponibles:', ports.join(', ') || '(ninguno)')
     process.exit(1)
   }
   if (!gpsPort) {
-    const ports = (await SerialPort.list()).map(p => p.path)
+    const ports = (await SerialPort.list()).map((p) => p.path)
     console.error('❌ GPS no detectado')
     console.error('   Puertos disponibles:', ports.join(', ') || '(ninguno)')
     process.exit(1)
@@ -145,7 +159,12 @@ async function main(): Promise<void> {
   // ── Conectar ──
   try {
     console.log('\n🔌 Conectando NBM-550...')
-    const nbmConfig: NBM550Config = { port: nbmPort, baudRate: NBM_BAUD, pollIntervalMs: opts.rate, unit: 'V/m' }
+    const nbmConfig: NBM550Config = {
+      port: nbmPort,
+      baudRate: NBM_BAUD,
+      pollIntervalMs: opts.rate,
+      unit: 'V/m'
+    }
     nbm = new NBM550Driver(nbmConfig)
     await nbm.connect()
     console.log('   ✅ NBM-550 conectado')
@@ -161,10 +180,14 @@ async function main(): Promise<void> {
         opts.cf = resolved
         console.log(`   ✅ CF desde archivo de incertidumbre: ${resolved}`)
       } else {
-        console.log(`   ⚠️  No se encontró factor para "${probeModel}" en ${opts.uncertaintyFile}, usando --cf ${opts.cf}`)
+        console.log(
+          `   ⚠️  No se encontró factor para "${probeModel}" en ${opts.uncertaintyFile}, usando --cf ${opts.cf}`
+        )
       }
     } else if (probeModel && !opts.uncertaintyFile) {
-      console.log(`   ℹ️  Usando --cf ${opts.cf}. Pasa --uncertainty-file para auto-resolver según sonda`)
+      console.log(
+        `   ℹ️  Usando --cf ${opts.cf}. Pasa --uncertainty-file para auto-resolver según sonda`
+      )
     }
 
     console.log('\n🔌 Conectando GPS...')
@@ -188,7 +211,9 @@ async function main(): Promise<void> {
     process.exit(1)
   }
   const fixInfo = gps.getState()
-  console.log(`   ✅ Fix GPS: ${fixInfo.fixType}, ${fixInfo.satelliteCount} satélites, posición: ${fixInfo.position?.lat?.toFixed(4)}, ${fixInfo.position?.lon?.toFixed(4)}\n`)
+  console.log(
+    `   ✅ Fix GPS: ${fixInfo.fixType}, ${fixInfo.satelliteCount} satélites, posición: ${fixInfo.position?.lat?.toFixed(4)}, ${fixInfo.position?.lon?.toFixed(4)}\n`
+  )
 
   // ── Bucle de captura ──
   console.log('─'.repeat(70))
@@ -216,7 +241,7 @@ async function main(): Promise<void> {
       }
 
       seq++
-      const rssWithUncertainty = Math.round(sample.rss * opts.cf * 100) / 100
+      const correctedMeasurement = Math.round(sample.rss * opts.cf * 100) / 100
 
       const point: GeoTimestamp = {
         id: uuidv4(),
@@ -226,10 +251,10 @@ async function main(): Promise<void> {
         position: { ...position },
         emf: {
           deviceId: 'nbm550',
-          rss: sample.rss,
+          rawMeasurement: sample.rss,
           unit: sample.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
         },
-        rssWithUncertainty
+        correctedMeasurement
       }
 
       points.push(point)
@@ -241,11 +266,12 @@ async function main(): Promise<void> {
         // non-fatal
       }
 
-      const line =  `[${String(seq).padStart(3, '0')}] ${fmtTime(point.timestamp)}  ` +
+      const line =
+        `[${String(seq).padStart(3, '0')}] ${fmtTime(point.timestamp)}  ` +
         `${point.position.lat.toFixed(6)}, ${point.position.lon.toFixed(6)}` +
         `${point.position.alt != null ? `, ${point.position.alt.toFixed(0)}m` : ''}  →  ` +
-        `${point.emf.rss.toFixed(2)} ${point.emf.unit}` +
-        `  (corr: ${rssWithUncertainty.toFixed(2)} | cf: ${opts.cf})`
+        `${point.emf.rawMeasurement.toFixed(2)} ${point.emf.unit}` +
+        `  (corr: ${correctedMeasurement.toFixed(2)} | cf: ${opts.cf})`
 
       console.log(line)
 
@@ -256,7 +282,9 @@ async function main(): Promise<void> {
 
       setTimeout(capture, opts.rate)
     } catch (err) {
-      console.log(`   ⚠️  [${fmtTime(Date.now())}] Error lectura NBM: ${err instanceof Error ? err.message : err}`)
+      console.log(
+        `   ⚠️  [${fmtTime(Date.now())}] Error lectura NBM: ${err instanceof Error ? err.message : err}`
+      )
       setTimeout(capture, opts.rate)
     }
   }
@@ -276,21 +304,19 @@ async function main(): Promise<void> {
 
   // Esperar a que termine (o Ctrl+C)
   while (running) {
-    await new Promise(r => setTimeout(r, 200))
+    await new Promise((r) => setTimeout(r, 200))
   }
 
   // ── Cleanup ──
   console.log('\n🔌 Desconectando...')
-  await Promise.all([
-    nbm.disconnect().catch(() => {}),
-    gps.disconnect().catch(() => {})
-  ])
+  await Promise.all([nbm.disconnect().catch(() => {}), gps.disconnect().catch(() => {})])
   console.log('   ✅ Desconectado\n')
 
   // ── Resumen ──
-  const duration = points.length > 0
-    ? ((points[points.length - 1].timestamp - points[0].timestamp) / 1000).toFixed(1)
-    : '0'
+  const duration =
+    points.length > 0
+      ? ((points[points.length - 1].timestamp - points[0].timestamp) / 1000).toFixed(1)
+      : '0'
 
   console.log('─'.repeat(70))
   console.log(`\n📊 RESUMEN`)
@@ -298,12 +324,18 @@ async function main(): Promise<void> {
   console.log(`   Puntos:    ${points.length}`)
   console.log(`   Duración:  ${duration}s`)
   if (points.length > 0) {
-    const rssValues = points.map(p => p.emf.rss)
-    const avg = rssValues.reduce((a, b) => a + b, 0) / rssValues.length
-    console.log(`   RSS:       min ${Math.min(...rssValues).toFixed(2)}  /  max ${Math.max(...rssValues).toFixed(2)}  /  avg ${avg.toFixed(2)} V/m`)
+    const rawValues = points.map((p) => p.emf.rawMeasurement)
+    const avg = rawValues.reduce((a, b) => a + b, 0) / rawValues.length
+    console.log(
+      `   Raw:       min ${Math.min(...rawValues).toFixed(2)}  /  max ${Math.max(...rawValues).toFixed(2)}  /  avg ${avg.toFixed(2)} V/m`
+    )
     console.log(`   CF:        ${opts.cf}`)
-    console.log(`   Primer:    ${fmtTime(points[0].timestamp)}  ${points[0].position.lat.toFixed(4)}, ${points[0].position.lon.toFixed(4)}`)
-    console.log(`   Último:    ${fmtTime(points[points.length - 1].timestamp)}  ${points[points.length - 1].position.lat.toFixed(4)}, ${points[points.length - 1].position.lon.toFixed(4)}`)
+    console.log(
+      `   Primer:    ${fmtTime(points[0].timestamp)}  ${points[0].position.lat.toFixed(4)}, ${points[0].position.lon.toFixed(4)}`
+    )
+    console.log(
+      `   Último:    ${fmtTime(points[points.length - 1].timestamp)}  ${points[points.length - 1].position.lat.toFixed(4)}, ${points[points.length - 1].position.lon.toFixed(4)}`
+    )
 
     // Mostrar primer punto como GeoJSON
     console.log(`\n   Primer punto como GeoJSON:`)
@@ -318,8 +350,8 @@ async function main(): Promise<void> {
         sequenceNumber: points[0].sequenceNumber,
         sessionId: points[0].sessionId,
         timestamp: points[0].timestamp,
-        rss: points[0].emf.rss,
-        rssWithUncertainty: points[0].rssWithUncertainty,
+        rawMeasurement: points[0].emf.rawMeasurement,
+        correctedMeasurement: points[0].correctedMeasurement,
         unit: points[0].emf.unit
       }
     }
@@ -328,7 +360,7 @@ async function main(): Promise<void> {
   console.log(`\n✅ Test completado\n`)
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error('\n❌ Error fatal:', err instanceof Error ? err.message : err)
   process.exit(1)
 })

@@ -6,6 +6,13 @@ export interface PersistedSession {
   points: GeoTimestamp[]
 }
 
+export interface SessionStats {
+  avgCorrected: number
+  maxCorrected: number
+  minCorrected: number
+  pointCount: number
+}
+
 export interface ISessionRepository {
   /**
    * Guardar sesión completada (metadatos + puntos)
@@ -58,14 +65,34 @@ export interface ISessionRepository {
   exportAsGeoJSON(sessionId: string): Promise<string>
 
   /**
-   * Exportar sesión como XLSX (reporte con hojas de resumen y datos)
+   * Exportar sesión como XLSX (3 archivos ENACOM: reporte, reporte_p, averif)
+   * @param sessionId ID de la sesión
+   * @param folderPath Carpeta destino
+   * @param label Etiqueta para nombres de archivo
+   * @returns Lista de rutas de archivos generados
    */
-  exportAsXLSX(sessionId: string): Promise<Buffer>
+  exportAsXLSX(sessionId: string, folderPath: string, label: string): Promise<string[]>
 
   /**
    * Exportar sesión como KMZ (KML comprimido para Google Earth)
    */
   exportAsKMZ(sessionId: string): Promise<Buffer>
+
+  /**
+   * Obtener estadísticas pre-calculadas de una sesión
+   */
+  getSessionStats(sessionId: string): Promise<SessionStats | null>
+
+  /**
+   * Buscar puntos dentro de un bounding box geográfico
+   */
+  getPointsInBounds(
+    sessionId: string,
+    north: number,
+    south: number,
+    east: number,
+    west: number
+  ): Promise<GeoTimestamp[]>
 
   /**
    * Exportar sesión como CSV

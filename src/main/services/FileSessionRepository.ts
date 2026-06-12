@@ -3,7 +3,11 @@ import * as path from 'path'
 import { app } from 'electron'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
-import type { ISessionRepository, PersistedSession } from '../../shared/services/ISessionRepository'
+import type {
+  ISessionRepository,
+  PersistedSession,
+  SessionStats
+} from '../../shared/services/ISessionRepository'
 
 /**
  * File-based session persistence
@@ -192,12 +196,52 @@ export class FileSessionRepository implements ISessionRepository {
     }
   }
 
+  async getSessionStats(sessionId: string): Promise<SessionStats | null> {
+    try {
+      const points = await this.getSessionPoints(sessionId)
+      if (points.length === 0)
+        return { avgCorrected: 0, maxCorrected: 0, minCorrected: 0, pointCount: 0 }
+
+      const values = points.map((p) => p.correctedMeasurement)
+      return {
+        avgCorrected: values.reduce((a, b) => a + b, 0) / values.length,
+        maxCorrected: Math.max(...values),
+        minCorrected: Math.min(...values),
+        pointCount: values.length
+      }
+    } catch (err) {
+      console.error(`Error computing stats for session ${sessionId}:`, err)
+      return null
+    }
+  }
+
+  async getPointsInBounds(
+    sessionId: string,
+    north: number,
+    south: number,
+    east: number,
+    west: number
+  ): Promise<GeoTimestamp[]> {
+    try {
+      const all = await this.getSessionPoints(sessionId)
+      return all.filter(
+        (p) =>
+          p.position.lat >= south &&
+          p.position.lat <= north &&
+          p.position.lon >= west &&
+          p.position.lon <= east
+      )
+    } catch (err) {
+      console.error(`Error querying bounds for session ${sessionId}:`, err)
+      return []
+    }
+  }
+
   async exportAsGeoJSON(sessionId: string): Promise<string> {
     const session = await this.getSession(sessionId)
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
-    const uncertainty = metadata.uncertainty
     const instrument = metadata.instrument
 
     const features = points.map((point) => ({
@@ -211,8 +255,8 @@ export class FileSessionRepository implements ISessionRepository {
         sequenceNumber: point.sequenceNumber,
         sessionId: point.sessionId,
         timestamp: point.timestamp,
-        rss: point.emf.rss,
-        rssWithUncertainty: point.rssWithUncertainty,
+        rawMeasurement: point.emf.rawMeasurement,
+        correctedMeasurement: point.correctedMeasurement,
         unit: point.emf.unit
       }
     }))
@@ -246,7 +290,7 @@ export class FileSessionRepository implements ISessionRepository {
               }
             }
           : null,
-        uncertainty: uncertainty ?? null
+        correctionFactor: metadata.correctionFactor ?? null
       },
       features
     }
@@ -254,7 +298,7 @@ export class FileSessionRepository implements ISessionRepository {
     return JSON.stringify(geojson, null, 2)
   }
 
-  async exportAsXLSX(_sessionId: string): Promise<Buffer> {
+  async exportAsXLSX(_sessionId: string, _folderPath: string, _label: string): Promise<string[]> {
     throw new Error('XLSX export is not supported by FileSessionRepository')
   }
 
@@ -278,8 +322,8 @@ export class FileSessionRepository implements ISessionRepository {
       'Latitude',
       'Longitude',
       'Altitude',
-      'RSS (medido)',
-      'RSS (corregido)',
+      'Raw (V/m)',
+      'Corrected (V/m)',
       'Unit'
     ]
 
@@ -291,8 +335,8 @@ export class FileSessionRepository implements ISessionRepository {
       point.position.lat.toFixed(8),
       point.position.lon.toFixed(8),
       point.position.alt?.toFixed(2) || 'N/A',
-      point.emf.rss.toFixed(2),
-      point.rssWithUncertainty.toFixed(2),
+      point.emf.rawMeasurement.toFixed(2),
+      point.correctedMeasurement.toFixed(2),
       point.emf.unit
     ])
 
@@ -317,8 +361,8 @@ export class FileSessionRepository implements ISessionRepository {
         sequenceNumber: point.sequenceNumber,
         sessionId: point.sessionId,
         timestamp: point.timestamp,
-        rss: point.emf.rss,
-        rssWithUncertainty: point.rssWithUncertainty,
+        rawMeasurement: point.emf.rawMeasurement,
+        correctedMeasurement: point.correctedMeasurement,
         unit: point.emf.unit
       }
     }))
@@ -340,8 +384,8 @@ export class FileSessionRepository implements ISessionRepository {
         sequenceNumber: number
         sessionId: string
         timestamp: number
-        rss: number
-        rssWithUncertainty: number
+        rawMeasurement: number
+        correctedMeasurement: number
         unit: string
       }
     }[]
@@ -358,10 +402,10 @@ export class FileSessionRepository implements ISessionRepository {
       },
       emf: {
         deviceId: 'nbm550',
-        rss: feature.properties.rss,
+        rawMeasurement: feature.properties.rawMeasurement,
         unit: feature.properties.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
       },
-      rssWithUncertainty: feature.properties.rssWithUncertainty
+      correctedMeasurement: feature.properties.correctedMeasurement
     }))
   }
 }

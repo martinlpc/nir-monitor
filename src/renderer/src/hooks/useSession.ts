@@ -12,8 +12,8 @@ export interface SessionState {
 
 function deriveCorrectionFactorFromPoints(points: GeoTimestamp[]): number | null {
   for (const point of points) {
-    const measured = point.emf.rss
-    const corrected = point.rssWithUncertainty
+    const measured = point.emf.rawMeasurement
+    const corrected = point.correctedMeasurement
     if (measured > 0 && Number.isFinite(measured) && Number.isFinite(corrected)) {
       const factor = corrected / measured
       if (Number.isFinite(factor) && factor > 0) {
@@ -64,7 +64,8 @@ export function useSession() {
           testMode: options?.testMode || false
         }
         if (options?.triggerMode) config.triggerMode = options.triggerMode
-        if (options?.minDistanceMeters !== undefined) config.minDistanceMeters = options.minDistanceMeters
+        if (options?.minDistanceMeters !== undefined)
+          config.minDistanceMeters = options.minDistanceMeters
         if (options?.intervalMs !== undefined) config.intervalMs = options.intervalMs
         if (options?.provincia) config.provincia = options.provincia
         if (options?.localidad) config.localidad = options.localidad

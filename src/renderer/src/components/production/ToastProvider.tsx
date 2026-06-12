@@ -15,7 +15,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const timers = useRef<Record<string, NodeJS.Timeout>>({})
 
   const dismiss = useCallback((id: string) => {
-    setToasts(ts => ts.filter(t => t.id !== id))
+    setToasts((ts) => ts.filter((t) => t.id !== id))
     if (timers.current[id]) {
       clearTimeout(timers.current[id])
       delete timers.current[id]
@@ -24,14 +24,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const notify = useCallback((toast: Omit<ToastData, 'id'>) => {
     const id = `${Date.now()}-${toastId++}`
-    setToasts(ts => [...ts, { ...toast, id }])
+    setToasts((ts) => [...ts, { ...toast, id }])
   }, [])
 
   // IPC listener
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' || window.location.search.includes('debug')) {
-        // @ts-ignore asd
-        window.__notify = notify
+      // @ts-ignore asd
+      window.__notify = notify
     }
     const handler = (_: unknown, payload: { message: string; type: ToastType }) => {
       notify({ message: payload.message, type: payload.type })
@@ -42,7 +42,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Timers
   useEffect(() => {
-    toasts.forEach(toast => {
+    toasts.forEach((toast) => {
       if (toast.type === 'error') return // requiere confirmación manual
       if (timers.current[toast.id]) return
       const timeout = toast.type === 'info' ? 3000 : 5000
@@ -58,7 +58,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ToastContext.Provider value={{ notify, dismiss }}>
       {children}
       <div className="toast-stack">
-        {toasts.map(toast => (
+        {toasts.map((toast) => (
           <Toast key={toast.id} {...toast} onClose={() => dismiss(toast.id)} />
         ))}
       </div>

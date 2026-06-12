@@ -18,21 +18,23 @@ const OUTPUT = path.resolve(__dirname, '..', 'src/renderer/src/data/provincias-l
 
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`HTTP ${res.statusCode} for ${url}`))
-        return
-      }
-      let data = ''
-      res.on('data', (chunk) => (data += chunk))
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(data))
-        } catch (e) {
-          reject(new Error(`JSON parse error for ${url}: ${e.message}`))
+    https
+      .get(url, (res) => {
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode} for ${url}`))
+          return
         }
+        let data = ''
+        res.on('data', (chunk) => (data += chunk))
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data))
+          } catch (e) {
+            reject(new Error(`JSON parse error for ${url}: ${e.message}`))
+          }
+        })
       })
-    }).on('error', reject)
+      .on('error', reject)
   })
 }
 
@@ -69,7 +71,9 @@ async function main() {
     if (!grouped.has(pId)) {
       grouped.set(pId, { nombre: pName, localidades: new Set() })
     }
-    grouped.get(pId).localidades.add(loc.nombre.charAt(0).toUpperCase() + loc.nombre.slice(1).toLowerCase())
+    grouped
+      .get(pId)
+      .localidades.add(loc.nombre.charAt(0).toUpperCase() + loc.nombre.slice(1).toLowerCase())
   }
 
   // Manually add CABA as a single entry
@@ -80,13 +84,16 @@ async function main() {
 
   // Convert to sorted compact array
   const result = []
-  const sortedIds = ['02', ...Array.from(grouped.keys()).filter(k => k !== '02').sort()]
+  const sortedIds = [
+    '02',
+    ...Array.from(grouped.keys())
+      .filter((k) => k !== '02')
+      .sort()
+  ]
   for (const id of sortedIds) {
     const g = grouped.get(id)
     if (!g) continue
-    const sortedLocalidades = Array.from(g.localidades).sort((a, b) =>
-      a.localeCompare(b, 'es')
-    )
+    const sortedLocalidades = Array.from(g.localidades).sort((a, b) => a.localeCompare(b, 'es'))
     result.push({
       n: g.nombre,
       l: sortedLocalidades

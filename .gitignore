@@ -6,3 +6,6 @@ out
 *.log*
 *.tsbuildinfo
 src/main/scripts/showMockSessionFactors.ts
+.env
+coverage
+PLAN.md

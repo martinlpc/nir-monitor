@@ -39,9 +39,7 @@ function buildProvincias(data: { localidades: RawLocalidad[] }): ProvinciaEntry[
     grouped.get(provName)!.add(loc.nombre)
   }
 
-  const entries = Array.from(grouped.entries()).sort((a, b) =>
-    a[0].localeCompare(b[0], 'es')
-  )
+  const entries = Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0], 'es'))
 
   const cabaIdx = entries.findIndex(([name]) => name === CABA_NAME)
   if (cabaIdx > 0) {
@@ -58,7 +56,12 @@ function buildProvincias(data: { localidades: RawLocalidad[] }): ProvinciaEntry[
 const provincias = buildProvincias(rawData as { localidades: RawLocalidad[] })
 
 interface SessionStartModalProps {
-  onConfirm: (data: { provincia: string; localidad: string; apellido1: string; apellido2: string }) => void
+  onConfirm: (data: {
+    provincia: string
+    localidad: string
+    apellido1: string
+    apellido2: string
+  }) => void
   onCancel: () => void
 }
 

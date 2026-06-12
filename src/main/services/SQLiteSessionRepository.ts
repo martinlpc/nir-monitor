@@ -7,26 +7,39 @@ import archiver from 'archiver'
 import { PassThrough } from 'stream'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
-import type { ISessionRepository, PersistedSession } from '../../shared/services/ISessionRepository'
+import type {
+  ISessionRepository,
+  PersistedSession,
+  SessionStats
+} from '../../shared/services/ISessionRepository'
+import { encrypt, decrypt, isEncrypted } from './CryptoService'
+import { electricFieldToMepPercent } from '../../shared/emfConversion'
 
 /**
  * SQLite-based session persistence using sql.js (WASM)
  * Schema:
  * - sessions: metadata (id, label, startedAt, stoppedAt, sampleCount)
  * - geo_points: individual points (sessionId, position, emf data)
- * - session_stats: pre-calculated statistics (avg_rss, max_rss, etc.)
+ * - session_stats: pre-calculated statistics (avgCorrected, maxCorrected, etc.)
  */
 export class SQLiteSessionRepository implements ISessionRepository {
   private db: SqlJsDatabase | null = null
-  private dbPath: string
+  private dbPath: string = ''
   private initialized = false
   private initPromise: Promise<void> | null = null
   private pendingPoints = 0
   private flushInterval: ReturnType<typeof setInterval> | null = null
   private readonly FLUSH_EVERY_N_POINTS = 10
   private readonly FLUSH_INTERVAL_MS = 30_000
+  private readonly isTestMode: boolean
 
-  constructor() {
+  constructor(options?: { testDb?: SqlJsDatabase }) {
+    if (options?.testDb) {
+      this.db = options.testDb
+      this.isTestMode = true
+      return
+    }
+    this.isTestMode = false
     try {
       const dataPath = app.getPath('userData')
       this.dbPath = path.join(dataPath, 'sessions.db')
@@ -61,6 +74,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   private async initialize(): Promise<void> {
     if (this.initialized) return
+    if (this.isTestMode) {
+      this.initialized = true
+      return
+    }
     if (this.initPromise) return this.initPromise
 
     this.initPromise = this._initialize()
@@ -78,9 +95,16 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       // Cargar BD existente si existe
       let data: Uint8Array | undefined
-      if (fs.existsSync(this.dbPath)) {
+      if (!this.isTestMode && fs.existsSync(this.dbPath)) {
         try {
-          data = fs.readFileSync(this.dbPath)
+          const raw = fs.readFileSync(this.dbPath)
+          if (isEncrypted(raw)) {
+            const decrypted = decrypt(raw)
+            data = new Uint8Array(decrypted)
+          } else {
+            // Legacy plain SQLite — migracion automatica a cifrado
+            data = new Uint8Array(raw)
+          }
         } catch (err) {
           console.warn('[SQLiteSessionRepository] Could not read existing database:', err)
         }
@@ -134,8 +158,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           lat REAL NOT NULL,
           lon REAL NOT NULL,
           alt REAL,
-          rss REAL NOT NULL,
-          rssWithUncertainty REAL NOT NULL,
+          rawMeasurement REAL NOT NULL,
+          correctedMeasurement REAL NOT NULL,
           unit TEXT NOT NULL
         )
       `)
@@ -143,9 +167,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
       this.db.run(`
         CREATE TABLE IF NOT EXISTS session_stats (
           sessionId TEXT PRIMARY KEY,
-          avgRss REAL,
-          maxRss REAL,
-          minRss REAL,
+          avgCorrected REAL,
+          maxCorrected REAL,
+          minCorrected REAL,
           pointCount INTEGER,
           computedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
@@ -177,11 +201,13 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   private save(): void {
     if (!this.db) return
+    if (this.isTestMode) return
     try {
       const data = this.db.export()
       const buffer = Buffer.from(data)
+      const encrypted = encrypt(buffer)
       fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
-      fs.writeFileSync(this.dbPath, buffer)
+      fs.writeFileSync(this.dbPath, encrypted)
     } catch (err) {
       console.error('[SQLiteSessionRepository] Save failed:', err)
     }
@@ -215,7 +241,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       for (const point of points) {
         db.run(
           `INSERT INTO geo_points 
-           (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rss, rssWithUncertainty, unit)
+           (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             point.id,
@@ -225,19 +251,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
             point.position.lat,
             point.position.lon,
             point.position.alt,
-            point.emf.rss,
-            point.rssWithUncertainty,
+            point.emf.rawMeasurement,
+            point.correctedMeasurement,
             point.emf.unit
           ]
         )
       }
 
-      // Calcular y guardar estadísticas (usando rssWithUncertainty)
+      // Calcular y guardar estadísticas (usando correctedMeasurement)
       const statsResult = db.exec(
         `SELECT
-          AVG(rssWithUncertainty) as avgRss,
-          MAX(rssWithUncertainty) as maxRss,
-          MIN(rssWithUncertainty) as minRss,
+          AVG(correctedMeasurement) as avgCorrected,
+          MAX(correctedMeasurement) as maxCorrected,
+          MIN(correctedMeasurement) as minCorrected,
           COUNT(*) as pointCount
         FROM geo_points
         WHERE sessionId = ?`,
@@ -246,17 +272,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       const stats = statsResult[0]?.values[0]
         ? {
-            avgRss: statsResult[0].values[0][0] as number | null,
-            maxRss: statsResult[0].values[0][1] as number | null,
-            minRss: statsResult[0].values[0][2] as number | null,
+            avgCorrected: statsResult[0].values[0][0] as number | null,
+            maxCorrected: statsResult[0].values[0][1] as number | null,
+            minCorrected: statsResult[0].values[0][2] as number | null,
             pointCount: statsResult[0].values[0][3] as number
           }
-        : { avgRss: null, maxRss: null, minRss: null, pointCount: 0 }
+        : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
 
       db.run(
-        `INSERT INTO session_stats (sessionId, avgRss, maxRss, minRss, pointCount)
+        `INSERT INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
          VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, stats.avgRss, stats.maxRss, stats.minRss, stats.pointCount]
+        [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
       )
 
       this.save()
@@ -309,7 +335,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       db.run(
         `INSERT INTO geo_points
-         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rss, rssWithUncertainty, unit)
+         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           point.id,
@@ -319,8 +345,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           point.position.lat,
           point.position.lon,
           point.position.alt,
-          point.emf.rss,
-          point.rssWithUncertainty,
+          point.emf.rawMeasurement,
+          point.correctedMeasurement,
           point.emf.unit
         ]
       )
@@ -360,12 +386,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
         ]
       )
 
-      // Calcular y guardar estadísticas (usando rssWithUncertainty)
+      // Calcular y guardar estadísticas (usando correctedMeasurement)
       const statsResult = db.exec(
         `SELECT
-          AVG(rssWithUncertainty) as avgRss,
-          MAX(rssWithUncertainty) as maxRss,
-          MIN(rssWithUncertainty) as minRss,
+          AVG(correctedMeasurement) as avgCorrected,
+          MAX(correctedMeasurement) as maxCorrected,
+          MIN(correctedMeasurement) as minCorrected,
           COUNT(*) as pointCount
         FROM geo_points
         WHERE sessionId = ?`,
@@ -374,17 +400,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       const stats = statsResult[0]?.values[0]
         ? {
-            avgRss: statsResult[0].values[0][0] as number | null,
-            maxRss: statsResult[0].values[0][1] as number | null,
-            minRss: statsResult[0].values[0][2] as number | null,
+            avgCorrected: statsResult[0].values[0][0] as number | null,
+            maxCorrected: statsResult[0].values[0][1] as number | null,
+            minCorrected: statsResult[0].values[0][2] as number | null,
             pointCount: statsResult[0].values[0][3] as number
           }
-        : { avgRss: null, maxRss: null, minRss: null, pointCount: 0 }
+        : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
 
       db.run(
-        `INSERT OR REPLACE INTO session_stats (sessionId, avgRss, maxRss, minRss, pointCount)
+        `INSERT OR REPLACE INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
          VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, stats.avgRss, stats.maxRss, stats.minRss, stats.pointCount]
+        [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
       )
 
       this.stopFlushTimer()
@@ -470,10 +496,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
           },
           emf: {
             deviceId: 'nbm550',
-            rss: rowMap.rss as number,
+            rawMeasurement: rowMap.rawMeasurement as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          rssWithUncertainty: rowMap.rssWithUncertainty as number
+          correctedMeasurement: rowMap.correctedMeasurement as number
         }
       })
 
@@ -490,7 +516,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     try {
       const result = db.exec(
-        `SELECT id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument
+        `SELECT id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument,
+          provincia, localidad, apellido1, apellido2
          FROM sessions
          ORDER BY startedAt DESC`
       )
@@ -507,7 +534,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
           stoppedAt: rowMap.stoppedAt ? this.isoToUnix(rowMap.stoppedAt as string) : null,
           sampleCount: rowMap.sampleCount as number,
           instrument: rowMap.instrument ? JSON.parse(rowMap.instrument as string) : null,
-          correctionFactor: rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null
+          correctionFactor:
+            rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null,
+          provincia: rowMap.provincia as string | undefined,
+          localidad: rowMap.localidad as string | undefined,
+          apellido1: rowMap.apellido1 as string | undefined,
+          apellido2: rowMap.apellido2 as string | undefined
         } as SessionSummary
       })
     } catch (err) {
@@ -521,6 +553,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const db = this.ensureDb()
 
     try {
+      db.run('DELETE FROM geo_points WHERE sessionId = ?', [sessionId])
+      db.run('DELETE FROM session_stats WHERE sessionId = ?', [sessionId])
       db.run('DELETE FROM sessions WHERE id = ?', [sessionId])
       this.save()
       console.log(`[SQLiteSessionRepository] Session ${sessionId} deleted`)
@@ -548,19 +582,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
         return {
           id: rowMap.id as string,
           sessionId: rowMap.sessionId as string,
-          timestamp: rowMap.timestamp as number,
+          sequenceNumber: rowMap.sequenceNumber as number,
+          timestamp: this.isoToUnix(rowMap.timestamp as string),
           position: {
             lat: rowMap.lat as number,
             lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0,
-            hdop: (rowMap.hdop as number) || 0
+            alt: (rowMap.alt as number) || 0
           },
           emf: {
             deviceId: 'nbm550',
-            rss: rowMap.rss as number,
+            rawMeasurement: rowMap.rawMeasurement as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          interpolated: (rowMap.interpolated as number) === 1
+          correctedMeasurement: rowMap.correctedMeasurement as number
         }
       })
     } catch (err) {
@@ -587,8 +621,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         sequenceNumber: point.sequenceNumber,
         timestamp: point.timestamp,
         datetime: new Date(point.timestamp).toISOString(),
-        rss: point.emf.rss,
-        rssWithUncertainty: point.rssWithUncertainty,
+        rawMeasurement: point.emf.rawMeasurement,
+        correctedMeasurement: point.correctedMeasurement,
         unit: point.emf.unit
       }
     }))
@@ -625,9 +659,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
         correctionFactor: correctionFactor,
         stats: stats
           ? {
-              avgRss: stats.avgRss,
-              maxRss: stats.maxRss,
-              minRss: stats.minRss,
+              avgCorrected: stats.avgCorrected,
+              maxCorrected: stats.maxCorrected,
+              minCorrected: stats.minCorrected,
               pointCount: stats.pointCount
             }
           : null
@@ -647,8 +681,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       'Latitude',
       'Longitude',
       'Altitude (m)',
-      'RSS (medido)',
-      'RSS (corregido)',
+      'Raw (V/m)',
+      'Corrected (V/m)',
       'Unit'
     ]
 
@@ -658,8 +692,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       point.position.lat.toFixed(8),
       point.position.lon.toFixed(8),
       point.position.alt?.toFixed(2) || 'N/A',
-      point.emf.rss.toFixed(2),
-      point.rssWithUncertainty.toFixed(2),
+      point.emf.rawMeasurement.toFixed(2),
+      point.correctedMeasurement.toFixed(2),
       point.emf.unit
     ])
 
@@ -667,108 +701,262 @@ export class SQLiteSessionRepository implements ISessionRepository {
     return csv
   }
 
-  async exportAsXLSX(sessionId: string): Promise<Buffer> {
+  async exportAsXLSX(sessionId: string, folderPath: string, label: string): Promise<string[]> {
     const session = await this.getSession(sessionId)
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
-    const stats = await this.getSessionStats(sessionId)
+    const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
 
-    const workbook = new ExcelJS.Workbook()
-    workbook.creator = 'NIR Monitor'
-    workbook.created = new Date()
+    const templateDir = app.isPackaged
+      ? path.join(process.resourcesPath, 'plantillas')
+      : path.join(app.getAppPath(), 'resources', 'plantillas')
 
-    // ── Hoja 1: Resumen ──
-    const summarySheet = workbook.addWorksheet('Resumen')
+    const generatedFiles: string[] = []
 
-    const headerStyle: Partial<ExcelJS.Style> = {
-      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } },
-      alignment: { horizontal: 'left' }
+    const buildFooter = (): string => {
+      const inst = metadata.instrument
+      return inst
+        ? `Instrumento utilizado: Medidor de RNI marca ${inst.meter.brand} modelo ${inst.meter.model} numero de serie ${inst.meter.serial} + sonda marca ${inst.probe.brand} modelo ${inst.probe.model} numero de serie ${inst.probe.serial}`
+        : ''
     }
 
-    summarySheet.columns = [
-      { header: 'Campo', key: 'field', width: 25 },
-      { header: 'Valor', key: 'value', width: 40 }
-    ]
-    summarySheet.getRow(1).eachCell((cell) => {
-      cell.style = headerStyle
-    })
+    const numberFmt = '#,##0.00'
 
-    const durationMs = metadata.stoppedAt ? metadata.stoppedAt - metadata.startedAt : 0
-    const durationMin = (durationMs / 60000).toFixed(1)
+    // ── Helper: carga plantilla y rellena datos ──
+    const fillFromTemplate = async (
+      templateName: string,
+      outputName: string,
+      dataStartRow: number,
+      writeRow: (row: ExcelJS.Row, point: GeoTimestamp, idx: number) => void,
+      filterEndCol: number,
+      labelSuffix?: string,
+      footerFontSize?: number
+    ): Promise<string> => {
+      const templatePath = path.join(templateDir, templateName)
+      if (!fs.existsSync(templatePath)) {
+        throw new Error(`Plantilla no encontrada: ${templatePath}`)
+      }
 
-    const instrument = metadata.instrument
-    const correctionFactor = metadata.correctionFactor
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.worksheets[0]
 
-    summarySheet.addRows([
-      { field: 'Etiqueta', value: metadata.label },
-      { field: 'ID de sesión', value: metadata.id },
-      { field: 'Inicio', value: new Date(metadata.startedAt).toLocaleString('es-AR') },
-      {
-        field: 'Fin',
-        value: metadata.stoppedAt ? new Date(metadata.stoppedAt).toLocaleString('es-AR') : 'N/A'
-      },
-      { field: 'Duración (min)', value: durationMin },
-      { field: 'Cantidad de puntos', value: metadata.sampleCount },
-      { field: '', value: '' },
-      { field: 'Medidor - Marca', value: instrument?.meter.brand ?? '' },
-      { field: 'Medidor - Modelo', value: instrument?.meter.model ?? '' },
-      { field: 'Medidor - Nro. de serie', value: instrument?.meter.serial ?? '' },
-      { field: 'Medidor - Última calibración', value: instrument?.meter.lastCalibrationDate ?? '' },
-      { field: '', value: '' },
-      { field: 'Sonda - Marca', value: instrument?.probe.brand ?? '' },
-      { field: 'Sonda - Modelo', value: instrument?.probe.model ?? '' },
-      { field: 'Sonda - Nro. de serie', value: instrument?.probe.serial ?? '' },
-      { field: '', value: '' },
-      {
-        field: 'Factor de corrección aplicado',
-        value: correctionFactor != null ? correctionFactor : 'N/A'
-      },
-      { field: '', value: '' },
-      { field: 'RSS promedio', value: stats?.avgRss?.toFixed(2) ?? 'N/A' },
-      { field: 'RSS máximo', value: stats?.maxRss?.toFixed(2) ?? 'N/A' },
-      { field: 'RSS mínimo', value: stats?.minRss?.toFixed(2) ?? 'N/A' }
-    ])
+      // Actualizar título si la plantilla tiene merge en esa fila
+      if (labelSuffix !== undefined) {
+        const mergedRow = templateName === 'Modelo_reporte_P.xlsx' ? 9 : 7
+        ws.getCell(mergedRow, 1).value = `Tabla de mediciones — ${label}${labelSuffix}`
+      }
 
-    // ── Hoja 2: Datos ──
-    const dataSheet = workbook.addWorksheet('Datos')
+      // Escribir datos
+      let dataIdx = 0
+      for (const point of points) {
+        const row = ws.getRow(dataStartRow + dataIdx)
+        writeRow(row, point, dataIdx)
+        dataIdx++
+      }
 
-    dataSheet.columns = [
-      { header: 'Seq#', key: 'sequenceNumber', width: 6 },
-      { header: 'Fecha/Hora', key: 'datetime', width: 22 },
-      { header: 'Latitud', key: 'lat', width: 14 },
-      { header: 'Longitud', key: 'lon', width: 14 },
-      { header: 'Altitud (m)', key: 'alt', width: 12 },
-      { header: 'RSS medido (V/m)', key: 'rss', width: 14 },
-      { header: 'RSS corregido (V/m)', key: 'rssWithUncertainty', width: 18 },
-      { header: 'Unidad', key: 'unit', width: 12 }
-    ]
-    dataSheet.getRow(1).eachCell((cell) => {
-      cell.style = headerStyle
-    })
+      // Autofiltro
+      const headerRow = dataStartRow - 1
+      const lastDataRow = headerRow + points.length
+      if (points.length > 0) {
+        ws.autoFilter = {
+          from: { row: headerRow, column: 1 },
+          to: { row: lastDataRow, column: filterEndCol }
+        }
+      }
 
-    points.forEach((point, i) => {
-      dataSheet.addRow({
-        sequenceNumber: point.sequenceNumber,
-        datetime: new Date(point.timestamp).toLocaleString('es-AR'),
-        lat: point.position.lat,
-        lon: point.position.lon,
-        alt: point.position.alt ?? 0,
-        rss: point.emf.rss.toFixed(2),
-        rssWithUncertainty: point.rssWithUncertainty.toFixed(2),
-        unit: point.emf.unit
-      })
-    })
+      // Footer
+      const footerText = buildFooter()
+      const fSize = footerFontSize ?? 9
 
-    // Auto-filtro en hoja de datos
-    dataSheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: points.length + 1, column: 8 }
+      // Blank separator row (lastDataRow + 1) intentionally left empty
+
+      let curRow = lastDataRow + 2
+      if (footerText) {
+        const footerRow = ws.getRow(curRow)
+        footerRow.getCell(1).value = footerText
+        footerRow.getCell(1).font = { italic: true, size: fSize }
+        ws.mergeCells(curRow, 1, curRow, filterEndCol)
+        curRow++
+      }
+
+      // Version line
+      const versionRow = ws.getRow(curRow)
+      versionRow.getCell(1).value = `Generado con RNI Monitor v${app.getVersion()}`
+      versionRow.getCell(1).font = { italic: true, size: 9 }
+      ws.mergeCells(curRow, 1, curRow, filterEndCol)
+
+      const filePath = path.join(folderPath, `${safeLabel}_${outputName}`)
+      await wb.xlsx.writeFile(filePath)
+      return filePath
     }
 
-    const buffer = await workbook.xlsx.writeBuffer()
-    return Buffer.from(buffer)
+    // ═══════════════════════════════════════
+    // 1. reporte.xlsx — 16 cols, all points
+    // ═══════════════════════════════════════
+    {
+      const filePath = await fillFromTemplate(
+        'Modelo_reporte.xlsx',
+        'reporte.xlsx',
+        10,
+        (row, point) => {
+          const probe = metadata.instrument?.probe
+          const date = new Date(point.timestamp)
+          const cf = metadata.correctionFactor
+
+          row.getCell(1).value = point.sequenceNumber
+          row.getCell(2).value = date.toLocaleDateString('es-AR')
+          row.getCell(3).value = date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+          row.getCell(4).value = point.position.lat.toFixed(6)
+          row.getCell(5).value = point.position.lon.toFixed(6)
+          row.getCell(6).value = probe?.model ?? ''
+          row.getCell(7).value = probe?.serial ?? ''
+          row.getCell(8).value = probe?.calibrationDate ?? ''
+          row.getCell(9).value = cf != null ? Number(cf.toFixed(4)) : null
+          row.getCell(9).numFmt = numberFmt
+          row.getCell(9).alignment = { horizontal: 'right' }
+          row.getCell(10).value = Number(point.correctedMeasurement.toFixed(2))
+          row.getCell(10).numFmt = numberFmt
+          row.getCell(10).alignment = { horizontal: 'right' }
+          row.getCell(11).value = point.emf.unit
+          row.getCell(12).value = 'Max Hold'
+          // cols 13-16: Fuentes — blank
+        },
+        16,
+        ''
+      )
+      generatedFiles.push(filePath)
+    }
+
+    // ═══════════════════════════════════════
+    // 2. reporte_p.xlsx — 8 cols, all points
+    // ═══════════════════════════════════════
+    {
+      const filePath = await fillFromTemplate(
+        'Modelo_reporte_P.xlsx',
+        'reporte_p.xlsx',
+        12,
+        (row, point) => {
+          const date = new Date(point.timestamp)
+          const mepPct = electricFieldToMepPercent(point.correctedMeasurement)
+
+          row.getCell(1).value = ''
+          row.getCell(2).value = point.sequenceNumber
+          row.getCell(3).value = date.toLocaleDateString('es-AR')
+          row.getCell(4).value = date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+          row.getCell(5).value = point.position.lat.toFixed(6)
+          row.getCell(6).value = point.position.lon.toFixed(6)
+          row.getCell(7).value = Number(mepPct.toFixed(2))
+          row.getCell(7).numFmt = numberFmt
+          row.getCell(7).alignment = { horizontal: 'right' }
+        },
+        7,
+        undefined,
+        7
+      )
+      generatedFiles.push(filePath)
+    }
+
+    // ═══════════════════════════════════════
+    // 3. averif.xlsx — solo MEP >= 50%
+    // ═══════════════════════════════════════
+    const averifPoints = points.filter(
+      (p) => electricFieldToMepPercent(p.correctedMeasurement) >= 50
+    )
+
+    if (averifPoints.length > 0) {
+      const templatePath = path.join(templateDir, 'Modelo_averif.xlsx')
+      if (!fs.existsSync(templatePath)) {
+        throw new Error(`Plantilla no encontrada: ${templatePath}`)
+      }
+
+      const wb = new ExcelJS.Workbook()
+      await wb.xlsx.readFile(templatePath)
+      const ws = wb.worksheets[0]
+
+      // Título
+      ws.getCell(7, 1).value = `Tabla de mediciones — ${label} (A verificar)`
+
+      // Datos desde fila 10
+      let idx = 0
+      for (const point of averifPoints) {
+        const probe = metadata.instrument?.probe
+        const date = new Date(point.timestamp)
+        const row = ws.getRow(10 + idx)
+
+        row.getCell(1).value = point.sequenceNumber
+        row.getCell(2).value = date.toLocaleDateString('es-AR')
+        row.getCell(3).value = date.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+          })
+        row.getCell(4).value = point.position.lat.toFixed(6)
+        row.getCell(5).value = point.position.lon.toFixed(6)
+        row.getCell(6).value = probe?.model ?? ''
+        row.getCell(7).value = probe?.serial ?? ''
+        row.getCell(8).value = probe?.calibrationDate ?? ''
+        row.getCell(9).value =
+          metadata.correctionFactor != null
+            ? Number(metadata.correctionFactor.toFixed(4))
+            : null
+        row.getCell(9).numFmt = numberFmt
+        row.getCell(9).alignment = { horizontal: 'right' }
+        row.getCell(10).value = Number(point.correctedMeasurement.toFixed(2))
+        row.getCell(10).numFmt = numberFmt
+        row.getCell(10).alignment = { horizontal: 'right' }
+        // cols 11-16 blank (MaxHold Manual, c/incert, Fuentes)
+        idx++
+      }
+
+      // Autofiltro
+      const lastDataRow = 9 + averifPoints.length
+      if (averifPoints.length > 0) {
+        ws.autoFilter = {
+          from: { row: 9, column: 1 },
+          to: { row: lastDataRow, column: 16 }
+        }
+      }
+
+      // Footer
+      const footerText = buildFooter()
+
+      // Blank separator row (lastDataRow + 1) intentionally left empty
+
+      let curRow = lastDataRow + 2
+      if (footerText) {
+        const footerRow = ws.getRow(curRow)
+        footerRow.getCell(1).value = footerText
+        footerRow.getCell(1).font = { italic: true, size: 9 }
+        ws.mergeCells(curRow, 1, curRow, 16)
+        curRow++
+      }
+
+      // Version line
+      const versionRow = ws.getRow(curRow)
+      versionRow.getCell(1).value = `Generado con RNI Monitor v${app.getVersion()}`
+      versionRow.getCell(1).font = { italic: true, size: 9 }
+      ws.mergeCells(curRow, 1, curRow, 16)
+
+      const filePath = path.join(folderPath, `${safeLabel}_averif.xlsx`)
+      await wb.xlsx.writeFile(filePath)
+      generatedFiles.push(filePath)
+    }
+
+    console.log('[exportAsXLSX] Generated files:', generatedFiles)
+    return generatedFiles
   }
 
   async exportAsKMZ(sessionId: string): Promise<Buffer> {
@@ -776,10 +964,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
-    const stats = await this.getSessionStats(sessionId)
 
     // Generar KML
-    const kml = this.buildKML(metadata, points, stats)
+    const kml = this.buildKML(metadata, points)
 
     // Comprimir a KMZ (ZIP con doc.kml)
     return new Promise((resolve, reject) => {
@@ -799,77 +986,118 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
   private buildKML(
     metadata: SessionSummary,
-    points: GeoTimestamp[],
-    stats: { avgRss: number; maxRss: number; minRss: number; pointCount: number } | null
+    points: GeoTimestamp[]
   ): string {
     const escXml = (s: string): string =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    const esc = (s: string | null | undefined): string => escXml(s ?? '')
 
-    // Escala de color según RSS relativo (verde → amarillo → rojo)
-    const rssValues = points.map((p) => p.emf.rss)
-    const minRss = stats?.minRss ?? Math.min(...rssValues)
-    const maxRss = stats?.maxRss ?? Math.max(...rssValues)
-    const range = maxRss - minRss || 1
+    // Colores fijos por umbral de % MEP (coincide con intensityPalette.ts en renderer)
+    const INTENSITY_LEVELS: { maxPercent: number; hex: string }[] = [
+      { maxPercent: 1, hex: '#73C2FB' },
+      { maxPercent: 2, hex: '#1E90FF' },
+      { maxPercent: 4, hex: '#2A52BE' },
+      { maxPercent: 8, hex: '#90EE90' },
+      { maxPercent: 15, hex: '#32CD32' },
+      { maxPercent: 20, hex: '#008000' },
+      { maxPercent: 35, hex: '#FFDF00' },
+      { maxPercent: 50, hex: '#FFA500' },
+      { maxPercent: 250, hex: '#FF4500' }
+    ]
+    const OVER_100_HEX = '#FF0000'
 
-    const rssToColor = (rss: number): string => {
-      const t = Math.max(0, Math.min(1, (rss - minRss) / range))
-      // KML uses aabbggrr (alpha, blue, green, red)
-      const r = Math.round(255 * t)
-      const g = Math.round(255 * (1 - t))
-      const hex = (n: number) => n.toString(16).padStart(2, '0')
-      return `ff${hex(0)}${hex(g)}${hex(r)}`
+    const hexToKmlColor = (hex: string, alpha = '7f'): string => {
+      const r = hex.slice(1, 3)
+      const g = hex.slice(3, 5)
+      const b = hex.slice(5, 7)
+      return `${alpha}${b}${g}${r}`
     }
 
-    // Generar estilos únicos
-    const styles = new Map<string, string>()
-    points.forEach((p) => {
-      const color = rssToColor(p.emf.rss)
-      if (!styles.has(color)) {
-        styles.set(color, `style_${styles.size}`)
+    const pointToHex = (valueVm: number): string => {
+      const percent = electricFieldToMepPercent(valueVm)
+      for (const level of INTENSITY_LEVELS) {
+        if (percent <= level.maxPercent) return level.hex
       }
-    })
+      return OVER_100_HEX
+    }
 
-    const stylesKml = Array.from(styles.entries())
-      .map(
-        ([color, id]) => `
-    <Style id="${id}">
+    // Recolectar colores únicos de puntos y segmentos
+    const pointColors = points.map((p) => pointToHex(p.correctedMeasurement))
+    const segColors: string[] = []
+    for (let i = 0; i < points.length - 1; i++) {
+      segColors.push(pointToHex(points[i].correctedMeasurement))
+    }
+    const allUniqueHex = [...new Set([...pointColors, ...segColors])]
+
+    const iconStyles = allUniqueHex
+      .map((hex, i) => {
+        const kmlColor = hexToKmlColor(hex)
+        return `
+    <Style id="icon_${i}">
       <IconStyle>
-        <color>${color}</color>
-        <scale>0.6</scale>
+        <color>${kmlColor}</color>
+        <scale>1.2</scale>
         <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
       </IconStyle>
     </Style>`
-      )
+      })
       .join('')
 
-    const placemarks = points
+    const segStyles = allUniqueHex
+      .map((hex, i) => {
+        const kmlColor = hexToKmlColor(hex)
+        return `
+    <Style id="seg_${i}">
+      <LineStyle><color>${kmlColor}</color><width>3</width></LineStyle>
+    </Style>`
+      })
+      .join('')
+
+    const hexToStyleId = (hex: string, prefix: string): string =>
+      `${prefix}_${allUniqueHex.indexOf(hex)}`
+
+    // Puntos de medición con nuevo formato de descripción
+    const pointPlacemarks = points
       .map((p) => {
-        const color = rssToColor(p.emf.rss)
-        const styleId = styles.get(color)!
-        const dt = new Date(p.timestamp).toISOString()
-        const rssU = metadata.uncertainty != null ? p.emf.rss + metadata.uncertainty : ''
+        const hex = pointToHex(p.correctedMeasurement)
+        const fecha = new Date(p.timestamp).toLocaleDateString('es-AR')
+        const hora = new Date(p.timestamp).toLocaleTimeString('es-AR')
+        const mepPct = electricFieldToMepPercent(p.correctedMeasurement)
+        const rssU = metadata.correctionFactor != null ? p.correctedMeasurement.toFixed(2) : ''
         return `
     <Placemark>
-      <name>${escXml(p.emf.rss + ' ' + p.emf.unit)}</name>
-      <description>${escXml(dt)}</description>
-      <styleUrl>#${styleId}</styleUrl>
-      <TimeStamp><when>${dt}</when></TimeStamp>
+      <description>Fecha: ${esc(fecha)}
+Hora: ${esc(hora)}
+Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
+% MEP: ${mepPct.toFixed(1)}%</description>
+      <styleUrl>#${hexToStyleId(hex, 'icon')}</styleUrl>
+      <TimeStamp><when>${new Date(p.timestamp).toISOString()}</when></TimeStamp>
       <Point><coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0}</coordinates></Point>
       <ExtendedData>
-        <Data name="rss"><value>${p.emf.rss}</value></Data>
-        <Data name="rssWithUncertainty"><value>${rssU}</value></Data>
-        <Data name="unit"><value>${escXml(p.emf.unit)}</value></Data>
-        <Data name="hdop"><value>${p.position.hdop ?? 0}</value></Data>
-        <Data name="interpolated"><value>${p.interpolated}</value></Data>
+        <Data name="rawMeasurement"><value>${p.emf.rawMeasurement}</value></Data>
+        <Data name="correctedMeasurement"><value>${rssU}</value></Data>
+        <Data name="unit"><value>${esc(p.emf.unit)}</value></Data>
       </ExtendedData>
     </Placemark>`
       })
       .join('')
 
-    // Línea de recorrido
-    const lineCoords = points
-      .map((p) => `${p.position.lon},${p.position.lat},${p.position.alt ?? 0}`)
-      .join(' ')
+    // Segmentos coloreados entre pares consecutivos (como en el mapa de la app)
+    const segmentPlacemarks = points.length < 2 ? '' : points
+      .slice(0, -1)
+      .map((p, i) => {
+        const next = points[i + 1]
+        const hex = pointToHex(p.correctedMeasurement)
+        return `
+    <Placemark>
+      <styleUrl>#${hexToStyleId(hex, 'seg')}</styleUrl>
+      <LineString>
+        <tessellate>1</tessellate>
+        <coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0} ${next.position.lon},${next.position.lat},${next.position.alt ?? 0}</coordinates>
+      </LineString>
+    </Placemark>`
+      })
+      .join('')
 
     const startDate = new Date(metadata.startedAt).toLocaleString('es-AR')
     const endDate = metadata.stoppedAt
@@ -878,10 +1106,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     const inst = metadata.instrument
     const instrumentDesc = inst
-      ? `\nMedidor: ${inst.meter.brand} ${inst.meter.model} (S/N: ${inst.meter.serial})` +
-        `\nÚltima calibración: ${inst.meter.lastCalibrationDate ?? 'N/A'}` +
-        `\nSonda: ${inst.probe.brand} ${inst.probe.model} (S/N: ${inst.probe.serial})` +
-        `\nIncertidumbre: ${metadata.uncertainty ?? 'N/A'}`
+      ? `\nMedidor: ${esc(inst.meter.brand)} ${esc(inst.meter.model)} (S/N: ${esc(inst.meter.serial)})` +
+        `\nÚltima calibración: ${esc(inst.meter.lastCalibrationDate)}` +
+        `\nSonda: ${esc(inst.probe.brand)} ${esc(inst.probe.model)} (S/N: ${esc(inst.probe.serial)})` +
+        `\nFactor de corrección: ${metadata.correctionFactor ?? 'N/A'}`
       : ''
 
     return `<?xml version="1.0" encoding="UTF-8"?>
@@ -889,24 +1117,15 @@ export class SQLiteSessionRepository implements ISessionRepository {
 <Document>
   <name>${escXml(metadata.label)}</name>
   <description>Sesión: ${escXml(metadata.label)}\nInicio: ${startDate}\nFin: ${endDate}\nPuntos: ${metadata.sampleCount}${instrumentDesc}</description>
-  ${stylesKml}
-  <Style id="lineStyle">
-    <LineStyle><color>ff0000ff</color><width>2</width></LineStyle>
-  </Style>
+  ${iconStyles}
+  ${segStyles}
   <Folder>
     <name>Recorrido</name>
-    <Placemark>
-      <name>Trayecto</name>
-      <styleUrl>#lineStyle</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>${lineCoords}</coordinates>
-      </LineString>
-    </Placemark>
+    ${segmentPlacemarks}
   </Folder>
   <Folder>
     <name>Puntos de medición</name>
-    ${placemarks}
+    ${pointPlacemarks}
   </Folder>
 </Document>
 </kml>`
@@ -915,15 +1134,13 @@ export class SQLiteSessionRepository implements ISessionRepository {
   /**
    * Obtener estadísticas pre-calculadas de sesión
    */
-  async getSessionStats(
-    sessionId: string
-  ): Promise<{ avgRss: number; maxRss: number; minRss: number; pointCount: number } | null> {
+  async getSessionStats(sessionId: string): Promise<SessionStats | null> {
     await this.initialize()
     const db = this.ensureDb()
 
     try {
       const result = db.exec(
-        `SELECT avgRss, maxRss, minRss, pointCount FROM session_stats WHERE sessionId = ?`,
+        `SELECT avgCorrected, maxCorrected, minCorrected, pointCount FROM session_stats WHERE sessionId = ?`,
         [sessionId]
       )
 
@@ -934,9 +1151,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
       const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
 
       return {
-        avgRss: rowMap.avgRss as number,
-        maxRss: rowMap.maxRss as number,
-        minRss: rowMap.minRss as number,
+        avgCorrected: rowMap.avgCorrected as number,
+        maxCorrected: rowMap.maxCorrected as number,
+        minCorrected: rowMap.minCorrected as number,
         pointCount: rowMap.pointCount as number
       }
     } catch (err) {
@@ -976,19 +1193,19 @@ export class SQLiteSessionRepository implements ISessionRepository {
         return {
           id: rowMap.id as string,
           sessionId: rowMap.sessionId as string,
-          timestamp: rowMap.timestamp as number,
+          sequenceNumber: rowMap.sequenceNumber as number,
+          timestamp: this.isoToUnix(rowMap.timestamp as string),
           position: {
             lat: rowMap.lat as number,
             lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0,
-            hdop: (rowMap.hdop as number) || 0
+            alt: (rowMap.alt as number) || 0
           },
           emf: {
             deviceId: 'nbm550',
-            rss: rowMap.rss as number,
+            rawMeasurement: rowMap.rawMeasurement as number,
             unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
           },
-          interpolated: (rowMap.interpolated as number) === 1
+          correctedMeasurement: rowMap.correctedMeasurement as number
         }
       })
     } catch (err) {
@@ -1003,7 +1220,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
   close(): void {
     this.stopFlushTimer()
     if (this.db) {
-      this.save()
+      if (!this.isTestMode) this.save()
       this.db.close()
       this.db = null
       this.initialized = false

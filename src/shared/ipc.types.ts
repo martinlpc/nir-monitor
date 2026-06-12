@@ -34,6 +34,10 @@ export interface IPCHandlers {
   'session:stop': { request: void; response: SessionSummary }
   'session:list': { request: void; response: SessionSummary | null }
   'export:geojson': { request: { sessionId: string }; response: string } // filepath
+  'session:import-geojson': {
+    request: void
+    response: { success: boolean; sessionId?: string; error?: string }
+  }
 }
 
 export interface InstrumentInfo {
