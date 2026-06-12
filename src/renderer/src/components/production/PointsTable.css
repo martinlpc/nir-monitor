@@ -10,7 +10,7 @@
     flex-wrap: wrap;
     gap: 8px;
     font-size: 11px;
-    color: #8fa8c6;
+    color: var(--nir-text-muted);
     margin-top: 1px;
     margin-bottom: 0;
     min-height: 0;
@@ -19,20 +19,20 @@
 .device-model,
 .probe-model {
     font-weight: 500;
-    color: #b4c4d9;
+    color: var(--nir-table-text);
 }
 
 .device-serial,
 .probe-serial {
     font-family: 'Monaco', 'Courier New', monospace;
-    color: #8fa8c6;
+    color: var(--nir-text-muted);
     margin-left: 2px;
 }
 
 .points-table-container {
     padding: 16px;
-    background: rgba(15, 26, 46, 0.8);
-    border-top: 1px solid rgba(114, 186, 255, 0.1);
+    background: var(--nir-panel-end);
+    border-top: 1px solid var(--nir-table-border);
     flex: 2;
     min-height: 0;
     overflow: hidden;
@@ -43,13 +43,81 @@
 .points-table-header {
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid rgba(114, 186, 255, 0.2);
+    border-bottom: 1px solid var(--nir-border-blue);
 }
 
 .points-table-title {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     gap: 8px;
+}
+
+.table-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.btn-font-size {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid var(--nir-border-blue);
+    border-radius: 4px;
+    background: var(--nir-input-bg);
+    color: var(--nir-text);
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 150ms ease;
+    line-height: 1;
+}
+
+.btn-font-size:hover:not(:disabled) {
+    background: var(--nir-border-blue);
+    border-color: var(--nir-border-blue-hover);
+}
+
+.btn-font-size:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.font-size-label {
+    font-size: 10px;
+    color: var(--nir-text-muted);
+    min-width: 22px;
+    text-align: center;
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.btn-maximize {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid var(--nir-border-blue);
+    border-radius: 4px;
+    background: var(--nir-input-bg);
+    color: var(--nir-text);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 150ms ease;
+    line-height: 1;
+    margin-left: 4px;
+}
+
+.btn-maximize:hover {
+    background: var(--nir-border-blue);
+    border-color: var(--nir-border-blue-hover);
 }
 
 .points-table-container h3 {
@@ -73,23 +141,28 @@
 }
 
 .session-name {
-    color: #72baff;
+    color: var(--nir-blue);
     font-weight: 500;
 }
 
 .session-id {
-    color: rgba(114, 186, 255, 0.6);
+    color: var(--nir-blue);
+    opacity: 0.6;
     font-family: 'Courier New', monospace;
     font-size: 11px;
     padding: 2px 6px;
-    background: rgba(114, 186, 255, 0.1);
+    background: var(--nir-border-blue);
     border-radius: 3px;
     cursor: help;
 }
 
 .session-id:hover {
-    background: rgba(114, 186, 255, 0.15);
-    color: rgba(114, 186, 255, 0.8);
+    background: var(--nir-border-blue-hover);
+    opacity: 1;
+}
+
+.points-table-container.table-maximized {
+    flex: 3;
 }
 
 .table-wrapper {
@@ -104,12 +177,12 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 11px;
-    background: rgba(7, 16, 28, 0.72);
+    background: var(--nir-table-bg);
     table-layout: fixed;
 }
 
 .points-table thead {
-    background: rgba(23, 34, 75, 0.7);
+    background: var(--nir-table-header-bg);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -125,7 +198,7 @@
     padding: 6px 8px;
     font-weight: 500;
     border-bottom: 1px solid var(--nir-border-blue);
-    border-right: 1px solid rgba(114, 186, 255, 0.2);
+    border-right: 1px solid var(--nir-table-border);
     color: var(--nir-text);
 }
 
@@ -172,9 +245,9 @@
 .points-table td {
     padding: 6px 8px;
     font-weight: 500;
-    border-bottom: 1px solid rgba(180, 203, 232, 0.08);
-    border-right: 1px solid rgba(114, 186, 255, 0.1);
-    color: #b4c4d9;
+    border-bottom: 1px solid var(--nir-table-border);
+    border-right: 1px solid var(--nir-table-border);
+    color: var(--nir-table-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -226,7 +299,7 @@
 }
 
 .points-table tbody tr:hover {
-    background-color: rgba(114, 186, 255, 0.08);
+    background-color: var(--nir-border-blue);
 }
 
 .points-table tbody tr.row-placeholder {
@@ -234,7 +307,7 @@
 }
 
 .points-table tbody tr.row-placeholder:nth-child(odd) {
-    background-color: rgba(12, 22, 37, 0.5);
+    background-color: var(--nir-table-row-alt);
 }
 
 .points-table tbody tr.row-placeholder:hover {
@@ -261,7 +334,7 @@
 
 
 .cell-interp {
-    color: #d4a574;
+    color: var(--nir-accent);
     font-weight: 500;
 }
 

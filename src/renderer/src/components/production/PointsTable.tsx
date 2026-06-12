@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
 import { formatTimestamp } from '../../utils/formatters'
 import {
@@ -8,6 +9,32 @@ import {
 } from '../../utils/intensityPalette'
 import './PointsTable.css'
 
+const FONT_SIZE_KEY = 'nir-table-font-size'
+const DEFAULT_FONT_SIZE = 11
+const MIN_FONT_SIZE = 8
+const MAX_FONT_SIZE = 20
+
+function getStoredFontSize(): number {
+  try {
+    const stored = localStorage.getItem(FONT_SIZE_KEY)
+    if (stored !== null) {
+      const n = Number(stored)
+      if (Number.isFinite(n) && n >= MIN_FONT_SIZE && n <= MAX_FONT_SIZE) return n
+    }
+  } catch {
+    /* noop */
+  }
+  return DEFAULT_FONT_SIZE
+}
+
+function storeFontSize(size: number): void {
+  try {
+    localStorage.setItem(FONT_SIZE_KEY, String(size))
+  } catch {
+    /* noop */
+  }
+}
+
 interface PointsTableProps {
   points: GeoTimestamp[]
   sessionId?: string | null
@@ -17,6 +44,8 @@ interface PointsTableProps {
   deviceSerial?: string | null
   probeModel?: string | null
   probeSerial?: string | null
+  tableMaximized?: boolean
+  onToggleMaximizeTable?: () => void
 }
 
 export default function PointsTable({
@@ -27,8 +56,18 @@ export default function PointsTable({
   deviceModel,
   deviceSerial,
   probeModel,
-  probeSerial
+  probeSerial,
+  tableMaximized,
+  onToggleMaximizeTable
 }: PointsTableProps): React.JSX.Element {
+  const [fontSize, setFontSize] = useState(getStoredFontSize)
+
+  useEffect(() => {
+    storeFontSize(fontSize)
+  }, [fontSize])
+
+  const increaseFont = () => setFontSize((s) => Math.min(s + 1, MAX_FONT_SIZE))
+  const decreaseFont = () => setFontSize((s) => Math.max(s - 1, MIN_FONT_SIZE))
   const deriveFactorFromPoint = (point: GeoTimestamp): number | null => {
     const measured = point.emf.rawMeasurement
     const corrected = point.correctedMeasurement
@@ -46,7 +85,7 @@ export default function PointsTable({
   const thresholdExceeded = sessionExceedsThreshold(points.map((p) => p.correctedMeasurement))
 
   return (
-    <div className="points-table-container">
+    <div className={`points-table-container ${tableMaximized ? 'table-maximized' : ''}`}>
       <div className="points-table-header">
         <div className="points-table-title">
           <h3>
@@ -60,35 +99,66 @@ export default function PointsTable({
               </span>
             )}
           </h3>
-          {(sessionLabel || sessionId) && (
-            <div className="session-info">
-              <div className="session-label-block">
-                <span className="session-name">{sessionLabel}</span>
-                {(deviceModel || deviceSerial || probeModel || probeSerial) && (
-                  <span className="session-devices">
-                    {deviceModel && <span className="device-model">Equipo: {deviceModel}</span>}
-                    {deviceSerial && <span className="device-serial">SN: {deviceSerial}</span>}
-                    {probeModel && (
-                      <span className="probe-model" style={{ marginLeft: 8 }}>
-                        Sonda: {probeModel}
-                      </span>
-                    )}
-                    {probeSerial && <span className="probe-serial">SN: {probeSerial}</span>}
-                  </span>
-                )}
-              </div>
-              <span style={{ flex: 1 }} />
-              {sessionId && (
-                <span className="session-id" title={sessionId}>
-                  {sessionId.substring(0, 8)}...
+          <div className="table-toolbar">
+            <button
+              className="btn-font-size"
+              onClick={decreaseFont}
+              disabled={fontSize <= MIN_FONT_SIZE}
+              title="Reducir tamaño de fuente"
+              aria-label="Reducir tamaño de fuente"
+            >
+              A−
+            </button>
+            <span className="font-size-label">{fontSize}px</span>
+            <button
+              className="btn-font-size"
+              onClick={increaseFont}
+              disabled={fontSize >= MAX_FONT_SIZE}
+              title="Aumentar tamaño de fuente"
+              aria-label="Aumentar tamaño de fuente"
+            >
+              A+
+            </button>
+            {onToggleMaximizeTable && (
+              <button
+                className="btn-maximize"
+                onClick={onToggleMaximizeTable}
+                title={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
+                aria-label={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
+              >
+                {tableMaximized ? '⊡' : '⊞'}
+              </button>
+            )}
+          </div>
+        </div>
+        {(sessionLabel || sessionId) && (
+          <div className="session-info">
+            <div className="session-label-block">
+              <span className="session-name">{sessionLabel}</span>
+              {(deviceModel || deviceSerial || probeModel || probeSerial) && (
+                <span className="session-devices">
+                  {deviceModel && <span className="device-model">Equipo: {deviceModel}</span>}
+                  {deviceSerial && <span className="device-serial">SN: {deviceSerial}</span>}
+                  {probeModel && (
+                    <span className="probe-model" style={{ marginLeft: 8 }}>
+                      Sonda: {probeModel}
+                    </span>
+                  )}
+                  {probeSerial && <span className="probe-serial">SN: {probeSerial}</span>}
                 </span>
               )}
             </div>
-          )}
-        </div>
+            <span style={{ flex: 1 }} />
+            {sessionId && (
+              <span className="session-id" title={sessionId}>
+                {sessionId.substring(0, 8)}...
+              </span>
+            )}
+          </div>
+        )}
       </div>
       <div className="table-wrapper">
-        <table className="points-table">
+        <table className="points-table" style={{ fontSize }}>
           <thead>
             <tr>
               <th>#</th>
