@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { NmeaEntry } from './types'
 
-export function useDebugGps() {
+export function useDebugGps(): {
+  gpsFix: boolean
+  gpsText: string
+  nmeaLines: NmeaEntry[]
+  clearNmeaLines: () => void
+} {
   const [gpsFix, setGpsFix] = useState(false)
   const [gpsText, setGpsText] = useState('Sin datos')
   const [nmeaLines, setNmeaLines] = useState<NmeaEntry[]>([])

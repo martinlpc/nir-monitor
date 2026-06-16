@@ -66,8 +66,8 @@ export default function PointsTable({
     storeFontSize(fontSize)
   }, [fontSize])
 
-  const increaseFont = () => setFontSize((s) => Math.min(s + 1, MAX_FONT_SIZE))
-  const decreaseFont = () => setFontSize((s) => Math.max(s - 1, MIN_FONT_SIZE))
+  const increaseFont = (): void => setFontSize((s) => Math.min(s + 1, MAX_FONT_SIZE))
+  const decreaseFont = (): void => setFontSize((s) => Math.max(s - 1, MIN_FONT_SIZE))
   const deriveFactorFromPoint = (point: GeoTimestamp): number | null => {
     const measured = point.emf.rawMeasurement
     const corrected = point.correctedMeasurement

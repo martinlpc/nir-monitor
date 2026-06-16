@@ -56,8 +56,8 @@ export class DeviceManager extends EventEmitter {
           this.nbm = null
         }
         await new Promise((r) => setTimeout(r, 800))
-        await this.initNBM(port)
-        return this.nbm?.isConnected() ?? false
+        const nbmDriver = await this.initNBM(port)
+        return nbmDriver?.isConnected() ?? false
       },
       onStatus: (deviceId, status) => this.emit('device:status', { deviceId, status })
     })
@@ -73,8 +73,8 @@ export class DeviceManager extends EventEmitter {
           this.gps = null
         }
         await new Promise((r) => setTimeout(r, 800))
-        await this.initGPS(port)
-        return this.gps?.isConnected() ?? false
+        const gpsDriver = await this.initGPS(port)
+        return gpsDriver?.isConnected() ?? false
       },
       onStatus: (deviceId, status) => this.emit('device:status', { deviceId, status })
     })
@@ -235,7 +235,7 @@ export class DeviceManager extends EventEmitter {
 
   // -- Init drivers ---------------------------------------------
 
-  private async initNBM(port: string): Promise<void> {
+  private async initNBM(port: string): Promise<NBM550Driver | SimulatedNBM550Driver> {
     console.log(
       `[DeviceManager] initNBM starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`
     )
@@ -275,9 +275,11 @@ export class DeviceManager extends EventEmitter {
     } catch (err) {
       console.error(`[DeviceManager] NBM connect failed:`, err)
     }
+
+    return this.nbm!
   }
 
-  private async initGPS(port: string): Promise<void> {
+  private async initGPS(port: string): Promise<GPSDriver | SimulatedGPSDriver> {
     console.log(
       `[DeviceManager] initGPS starting on port ${port}${this.simulationMode ? ' (simulado)' : ''}`
     )
@@ -325,7 +327,7 @@ export class DeviceManager extends EventEmitter {
       try {
         await this.gps.connect()
         console.log(`[DeviceManager] GPS connected successfully`)
-        return
+        return this.gps
       } catch (err) {
         console.error(`[DeviceManager] GPS connect failed (attempt ${attempt}/${maxRetries}):`, err)
         if (attempt < maxRetries) {
@@ -333,5 +335,7 @@ export class DeviceManager extends EventEmitter {
         }
       }
     }
+
+    return this.gps!
   }
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { SerialPortScanner, type DriverFactories } from './SerialPortScanner'
+import { SerialPortScanner } from './SerialPortScanner'
+import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
+import type { GPSDriver } from '../devices/gps/GPSDriver'
 
 const { serialPortListMock } = vi.hoisted(() => {
   const serialPortListMock = vi.fn()
@@ -10,7 +12,22 @@ vi.mock('serialport', () => ({
   SerialPort: { list: serialPortListMock }
 }))
 
-function fakeNBM(port: string, shouldSucceed = true) {
+interface FakeNBMDriver {
+  quickProbe: ReturnType<typeof vi.fn>
+  disconnect: ReturnType<typeof vi.fn>
+  removeAllListeners: ReturnType<typeof vi.fn>
+  on: ReturnType<typeof vi.fn>
+}
+
+interface FakeGPSDriver {
+  connect: ReturnType<typeof vi.fn>
+  disconnect: ReturnType<typeof vi.fn>
+  removeAllListeners: ReturnType<typeof vi.fn>
+  once: ReturnType<typeof vi.fn>
+  on: ReturnType<typeof vi.fn>
+}
+
+function fakeNBM(_port: string, shouldSucceed = true): FakeNBMDriver {
   return {
     quickProbe: vi.fn(async () => {
       if (!shouldSucceed) throw new Error('probe failed')
@@ -18,10 +35,10 @@ function fakeNBM(port: string, shouldSucceed = true) {
     disconnect: vi.fn(async () => {}),
     removeAllListeners: vi.fn(),
     on: vi.fn()
-  } as unknown as any
+  }
 }
 
-function fakeGPS(port: string, shouldRespond = true) {
+function fakeGPS(_port: string, shouldRespond = true): FakeGPSDriver {
   const listeners: Record<string, Array<(...args: unknown[]) => void>> = {}
 
   return {
@@ -47,7 +64,7 @@ function fakeGPS(port: string, shouldRespond = true) {
       if (!listeners[event]) listeners[event] = []
       listeners[event].push(fn)
     })
-  } as unknown as any
+  }
 }
 
 beforeEach(() => {
@@ -69,7 +86,7 @@ describe('SerialPortScanner', () => {
 
   it('probeNBM returns true when quickProbe succeeds', async () => {
     const scanner = new SerialPortScanner({
-      createNBM: () => fakeNBM('COM3', true)
+      createNBM: () => fakeNBM('COM3', true) as unknown as NBM550Driver
     })
     const result = await scanner.probeNBM('COM3')
     expect(result).toBe(true)
@@ -77,7 +94,7 @@ describe('SerialPortScanner', () => {
 
   it('probeNBM returns false when quickProbe fails', async () => {
     const scanner = new SerialPortScanner({
-      createNBM: () => fakeNBM('COM3', false)
+      createNBM: () => fakeNBM('COM3', false) as unknown as NBM550Driver
     })
     const result = await scanner.probeNBM('COM3')
     expect(result).toBe(false)
@@ -85,7 +102,7 @@ describe('SerialPortScanner', () => {
 
   it('probeGPS returns true when NMEA received', async () => {
     const scanner = new SerialPortScanner({
-      createGPS: () => fakeGPS('COM4', true)
+      createGPS: () => fakeGPS('COM4', true) as unknown as GPSDriver
     })
 
     const result = await scanner.probeGPS('COM4', 5000)
@@ -95,7 +112,7 @@ describe('SerialPortScanner', () => {
   it('probeGPS returns false on timeout', async () => {
     vi.useFakeTimers()
     const scanner = new SerialPortScanner({
-      createGPS: () => fakeGPS('COM4', false)
+      createGPS: () => fakeGPS('COM4', false) as unknown as GPSDriver
     })
 
     const probePromise = scanner.probeGPS('COM4', 5000)

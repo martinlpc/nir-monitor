@@ -54,7 +54,6 @@ async function testNBMSimple(portPath: string): Promise<void> {
     // Paso 4: Setup listener
     console.log(`\n4️⃣  Esperando respuesta del NBM...`)
     let responses: string[] = []
-    let done = false
 
     port.on('data', (data) => {
       const text = data.toString('utf-8').trim()

@@ -9,3 +9,4 @@ src/main/scripts/showMockSessionFactors.ts
 .env
 coverage
 PLAN.md
+lint-errors.txt

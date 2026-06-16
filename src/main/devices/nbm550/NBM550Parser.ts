@@ -54,7 +54,8 @@ export class NBM550Parser {
         unit: this.unit,
         battery
       }
-    } catch (err) {
+    } catch (err: unknown) {
+      void err
       return null
     }
   }
@@ -75,7 +76,8 @@ export class NBM550Parser {
         return null
       }
       return battery
-    } catch (err) {
+    } catch (err: unknown) {
+      void err
       return null
     }
   }

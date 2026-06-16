@@ -1,5 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import { createServices } from '../factories/ServiceFactory'
+import type { DeviceManager } from '../services/DeviceManager'
+import type { SessionService } from '../services/SessionService'
 
 /**
  * Smoke tests para verificar que la integración de servicios funciona.
@@ -9,13 +11,13 @@ import { createServices } from '../factories/ServiceFactory'
  */
 
 describe('IPC Integration: Services Smoke Tests', () => {
-  let deviceManager: any
-  let sessionService: any
+  let deviceManager: DeviceManager
+  let sessionService: SessionService
 
   beforeEach(() => {
     const services = createServices()
-    deviceManager = services.deviceManager as any
-    sessionService = services.sessionService as any
+    deviceManager = services.deviceManager
+    sessionService = services.sessionService
   })
 
   it('should create services without crashing', () => {
@@ -33,7 +35,7 @@ describe('IPC Integration: Services Smoke Tests', () => {
     try {
       const state = sessionService.getState?.()
       expect(state).toBeDefined()
-    } catch (err) {
+    } catch {
       // OK
     }
   })
@@ -42,7 +44,7 @@ describe('IPC Integration: Services Smoke Tests', () => {
     for (let i = 0; i < 3; i++) {
       try {
         await deviceManager.scan?.()
-      } catch (err) {
+      } catch {
         // OK
       }
     }

@@ -30,20 +30,14 @@ export function useGpsCardInfo(enabled: boolean): GpsInfo {
 }
 
 export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo {
-  const [nbmInfo, setNbmInfo] = useState<NBMInfo>({})
-
-  useEffect(() => {
-    if (enabled && (status === 'disconnected' || status === 'error')) {
-      setNbmInfo({})
-    }
-  }, [enabled, status])
+  const [liveData, setLiveData] = useState<NBMInfo>({})
 
   // Fetch probe info when connected
   useEffect(() => {
     if (!enabled || status !== 'connected') return
     window.api.settings.getProbeInfo().then((res) => {
       if (res.success && res.probeInfo) {
-        setNbmInfo((prev) => ({
+        setLiveData((prev) => ({
           ...prev,
           probeModel: res.probeInfo!.model,
           probeSerial: res.probeInfo!.serial,
@@ -54,10 +48,10 @@ export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo 
   }, [enabled, status])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || status !== 'connected') return
 
     const unsubscribe = window.api.nbm.onSample((data) => {
-      setNbmInfo((prev) => ({
+      setLiveData((prev) => ({
         ...prev,
         rss: data.rss,
         unit: data.unit,
@@ -68,7 +62,8 @@ export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo 
     return () => {
       unsubscribe()
     }
-  }, [enabled])
+  }, [enabled, status])
 
-  return nbmInfo
+  const isActive = enabled && status === 'connected'
+  return isActive ? liveData : {}
 }

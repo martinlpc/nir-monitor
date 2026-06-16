@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import rawData from '../data/provincias-localidades.json'
 
 interface RawLocalidad {
@@ -65,16 +65,18 @@ interface SessionStartModalProps {
   onCancel: () => void
 }
 
-export default function SessionStartModal({ onConfirm, onCancel }: SessionStartModalProps) {
+export default function SessionStartModal({
+  onConfirm,
+  onCancel
+}: SessionStartModalProps): React.JSX.Element {
   const [selectedProvincia, setSelectedProvincia] = useState('')
   const [selectedLocalidad, setSelectedLocalidad] = useState('')
   const [apellido1, setApellido1] = useState('')
   const [apellido2, setApellido2] = useState('')
   const [touched, setTouched] = useState({ apellido1: false, apellido2: false })
-  const dataRef = useRef(provincias)
 
   const localidades = useMemo(() => {
-    const p = dataRef.current.find((p) => p.n === selectedProvincia)
+    const p = provincias.find((p) => p.n === selectedProvincia)
     return p ? p.l : []
   }, [selectedProvincia])
 
@@ -84,7 +86,7 @@ export default function SessionStartModal({ onConfirm, onCancel }: SessionStartM
     apellido1.trim().length >= 2 &&
     apellido2.trim().length >= 2
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
     if (!canSubmit) return
     onConfirm({
@@ -114,7 +116,7 @@ export default function SessionStartModal({ onConfirm, onCancel }: SessionStartM
               required
             >
               <option value="">Seleccionar provincia</option>
-              {dataRef.current.map((p) => (
+              {provincias.map((p) => (
                 <option key={p.n} value={p.n}>
                   {p.n}
                 </option>

@@ -9,7 +9,12 @@ interface SessionItemProps {
   onExport: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => void
 }
 
-export default function SessionItem({ session, onLoad, onDelete, onExport }: SessionItemProps) {
+export default function SessionItem({
+  session,
+  onLoad,
+  onDelete,
+  onExport
+}: SessionItemProps): React.JSX.Element {
   const [showActions, setShowActions] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 

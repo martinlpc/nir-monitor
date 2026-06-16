@@ -191,11 +191,7 @@ declare global {
           }) => void
         ) => () => void
         onImportProgress: (
-          cb: (progress: {
-            imported: number
-            skipped: number
-            total: number
-          }) => void
+          cb: (progress: { imported: number; skipped: number; total: number }) => void
         ) => () => void
       }
     }

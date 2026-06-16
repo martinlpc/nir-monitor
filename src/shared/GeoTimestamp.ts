@@ -2,6 +2,7 @@ export interface GeoPosition {
   lat: number
   lon: number
   alt: number // metros sobre el nivel del mar
+  hdop?: number
 }
 
 export interface EMFSample {

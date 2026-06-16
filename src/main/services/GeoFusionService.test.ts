@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { GeoFusionService } from './GeoFusionService'
-import type { GeoPosition } from '../../shared/GeoTimestamp'
+import type { GeoPosition, GeoTimestamp } from '../../shared/GeoTimestamp'
 
 class FakeNBMDriver {
   constructor(private readonly sample = { rss: 8.2, unit: 'V/m', battery: 100 }) {}
@@ -64,7 +64,7 @@ describe('GeoFusionService', () => {
     service.setGPS(gps as never)
     service.start('session-1')
 
-    const pointPromise = new Promise<any>((resolve) => service.once('point', resolve))
+    const pointPromise = new Promise<GeoTimestamp>((resolve) => service.once('point', resolve))
     service.onGPSPosition(true)
     const point = await pointPromise
 

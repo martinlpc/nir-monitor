@@ -1,7 +1,11 @@
 import { useCallback, useState } from 'react'
 import type { LogEntry } from './types'
 
-export function useDebugLogs() {
+export function useDebugLogs(): {
+  logs: LogEntry[]
+  appendLog: (type: string, message: string) => void
+  clearLogs: () => void
+} {
   const [logs, setLogs] = useState<LogEntry[]>([])
 
   const appendLog = useCallback((type: string, message: string): void => {

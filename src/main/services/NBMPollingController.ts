@@ -1,4 +1,5 @@
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
+import type { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550Driver'
 
 export const DEFAULT_MAX_CONSECUTIVE_READ_FAILURES = 8
 export const NBM_POLL_INTERVAL_MS = 200
@@ -9,7 +10,7 @@ export interface NBMPollingCallbacks {
 }
 
 export class NBMPollingController {
-  private nbm: NBM550Driver | null = null
+  private nbm: NBM550Driver | SimulatedNBM550Driver | null = null
   private pollTimeout: NodeJS.Timeout | null = null
   private _polling = false
   private sampleCount = 0
@@ -33,7 +34,7 @@ export class NBMPollingController {
     return this._polling
   }
 
-  start(nbm: NBM550Driver): void {
+  start(nbm: NBM550Driver | SimulatedNBM550Driver): void {
     if (this._polling) return
 
     this._polling = true

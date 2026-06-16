@@ -12,7 +12,7 @@ async function diagnosisNBM(portPath: string): Promise<void> {
 
   let port: SerialPort | null = null
   const NBM_BAUD_RATE = 460800
-  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
   try {
     port = new SerialPort({
@@ -37,7 +37,7 @@ async function diagnosisNBM(portPath: string): Promise<void> {
     // Helper para enviar comando y capturar respuesta
     const sendCmd = async (cmd: string): Promise<string> => {
       let response = ''
-      const dataHandler = (data: Buffer) => {
+      const dataHandler = (data: Buffer): void => {
         response += data.toString('utf-8')
       }
 

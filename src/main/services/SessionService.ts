@@ -4,6 +4,8 @@ import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { GPSDriver } from '../devices/gps/GPSDriver'
+import type { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550Driver'
+import type { SimulatedGPSDriver } from '../devices/simulated/SimulatedGPSDriver'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 import { getLoadedUncertainty } from '../ipc/SettingsHandler'
@@ -24,8 +26,8 @@ export class SessionService extends EventEmitter {
   private accumulatedPoints: GeoTimestamp[] = []
 
   private fusion: GeoFusionService
-  private nbm: NBM550Driver | null = null
-  private gps: GPSDriver | null = null
+  private nbm: NBM550Driver | SimulatedNBM550Driver | null = null
+  private gps: GPSDriver | SimulatedGPSDriver | null = null
   private repository: ISessionRepository | null = null
   private instrument: InstrumentInfo | null = null
   private correctionFactor: number | null = null
@@ -58,11 +60,7 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(
-    fusion: GeoFusionService,
-    repository?: ISessionRepository,
-    private readonly simulationMode: boolean = false
-  ) {
+  constructor(fusion: GeoFusionService, repository?: ISessionRepository) {
     super()
     this.fusion = fusion
     this.repository = repository || null
@@ -86,7 +84,7 @@ export class SessionService extends EventEmitter {
 
   // ── Registro de devices ───────────────────────────────────
 
-  setNBM(driver: NBM550Driver): void {
+  setNBM(driver: NBM550Driver | SimulatedNBM550Driver): void {
     this.nbm = driver
     this.fusion.setNBM(driver)
     const probeModel = driver.getProbeInfo()?.model ?? null
@@ -104,7 +102,7 @@ export class SessionService extends EventEmitter {
     }
   }
 
-  setGPS(driver: GPSDriver): void {
+  setGPS(driver: GPSDriver | SimulatedGPSDriver): void {
     this.gps = driver
     this.fusion.setGPS(driver)
 
@@ -250,7 +248,7 @@ export class SessionService extends EventEmitter {
       label: this.label,
       correctionFactor: this.correctionFactor,
       instrument: this.instrument
-    } as any)
+    })
 
     return this.currentSessionId
   }

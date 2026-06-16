@@ -1,11 +1,24 @@
 import { useEffect, useState, useCallback } from 'react'
-import type { DeviceManagerStateDTO } from '../../../shared/dto'
+import type { DeviceManagerStateDTO, DeviceStatus } from '../../../shared/dto'
 
 /**
  * Hook para gestión del estado de dispositivos
  * Usa la API de window.api.devices para escaneo, conexión y eventos
  */
-export function useDevices() {
+export function useDevices(): {
+  devices: DeviceManagerStateDTO | null
+  nbm550: { port: string | null; status: DeviceStatus } | null
+  gps: { port: string | null; status: DeviceStatus } | null
+  isScanning: boolean
+  error: string | null
+  scanning: boolean
+  scan: () => Promise<DeviceManagerStateDTO>
+  list: () => Promise<DeviceManagerStateDTO>
+  setPort: (deviceType: 'nbm550' | 'gps', port: string) => Promise<DeviceManagerStateDTO>
+  connect: (deviceType: 'nbm550' | 'gps') => Promise<void>
+  disconnect: (deviceType: 'nbm550' | 'gps') => Promise<void>
+  isConnected: (deviceType: 'nbm550' | 'gps') => boolean
+} {
   const [devices, setDevices] = useState<DeviceManagerStateDTO | null>(null)
   const [isScanning, setIsScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)

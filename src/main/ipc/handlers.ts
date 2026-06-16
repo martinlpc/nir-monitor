@@ -12,7 +12,7 @@ export function emitAlert(
   window: BrowserWindow,
   message: string,
   type: 'error' | 'warning' | 'info' = 'info'
-) {
+): void {
   window.webContents.send('alert', { message, type })
   AlertLogger.log(message, type)
 }

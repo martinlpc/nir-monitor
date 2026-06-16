@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './toast.css'
 
 export type ToastType = 'error' | 'warning' | 'info' | 'done'
@@ -20,7 +20,7 @@ const ICONS: Record<ToastType, string> = {
   done: '✅'
 }
 
-export default function Toast({ message, type, onClose }: Props) {
+export default function Toast({ message, type, onClose }: Props): React.JSX.Element {
   const [hovered, setHovered] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 

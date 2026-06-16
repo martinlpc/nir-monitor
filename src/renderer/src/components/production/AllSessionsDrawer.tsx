@@ -32,7 +32,7 @@ export default function AllSessionsDrawer({
 
   // Filtrar y ordenar sesiones
   const filteredSessions = useMemo(() => {
-    let result = sessions.filter(
+    const result = sessions.filter(
       (s) =>
         s.label?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         formatTimestamp(s.startedAt).toLowerCase().includes(searchQuery.toLowerCase())
@@ -86,7 +86,7 @@ export default function AllSessionsDrawer({
           <select
             className="drawer-sort"
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as 'date-desc' | 'date-asc' | 'name')}
             aria-label="Ordenar por"
           >
             <option value="date-desc">Más recientes</option>

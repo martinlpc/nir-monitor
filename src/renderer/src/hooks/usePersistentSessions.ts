@@ -12,7 +12,37 @@ export interface SessionItem extends SessionSummary {
  * Hook para gestión de sesiones guardadas (historial)
  * permite listar, obtener, eliminar y exportar sesiones
  */
-export function usePersistentSessions() {
+export function usePersistentSessions(): {
+  sessions: SessionItem[]
+  isLoading: boolean
+  error: string | null
+  loadSessions: () => Promise<void>
+  getSession: (sessionId: string) => Promise<PersistedSession>
+  deleteSession: (sessionId: string) => Promise<void>
+  exportGeoJSON: (sessionId: string) => Promise<string>
+  exportCSV: (sessionId: string) => Promise<string>
+  exportSession: (
+    sessionId: string,
+    format: 'geojson' | 'xlsx' | 'kmz',
+    label: string
+  ) => Promise<{ filePaths?: string[]; canceled?: boolean }>
+  importGeoJSON: () => Promise<{ sessionId?: string; canceled?: boolean }>
+  getStats: (sessionId: string) => Promise<{
+    avgCorrected: number
+    maxCorrected: number
+    minCorrected: number
+    pointCount: number
+  } | null>
+  getPointsInBounds: (
+    sessionId: string,
+    north: number,
+    south: number,
+    east: number,
+    west: number
+  ) => Promise<GeoTimestamp[]>
+  totalSessions: number
+  hasError: boolean
+} {
   const [sessions, setSessions] = useState<SessionItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

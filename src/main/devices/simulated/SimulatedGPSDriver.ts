@@ -10,8 +10,6 @@ export class SimulatedGPSDriver extends EventEmitter implements IDeviceDriver {
 
   private state: GPSState = { ...INITIAL_GPS_STATE }
   private positionTimer: NodeJS.Timeout | null = null
-  private startTime: number = 0
-
   private readonly CENTER_LAT = -34.6037
   private readonly CENTER_LON = -58.3816
   private readonly RADIUS = 0.002
@@ -33,7 +31,6 @@ export class SimulatedGPSDriver extends EventEmitter implements IDeviceDriver {
   async connect(): Promise<void> {
     this.setStatus('connecting')
     await new Promise((resolve) => setTimeout(resolve, 500))
-    this.startTime = Date.now()
     this.step = 0
     this.leg = 0
     this.state = { ...INITIAL_GPS_STATE }

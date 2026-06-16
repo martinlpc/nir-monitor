@@ -1,5 +1,6 @@
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js'
 import * as fs from 'fs'
+import * as os from 'os'
 import * as path from 'path'
 import { app } from 'electron'
 import ExcelJS from 'exceljs'
@@ -43,10 +44,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       const dataPath = app.getPath('userData')
       this.dbPath = path.join(dataPath, 'sessions.db')
-    } catch (err) {
+    } catch {
       // Fallback cuando no hay Electron (p.ej. en scripts standalone)
       // En Windows, usa AppData\Roaming; en Unix, usa .config
-      const os = require('os')
       const dataPath =
         process.platform === 'win32'
           ? path.join(process.env.APPDATA || os.homedir(), 'nir-monitor')
@@ -132,22 +132,34 @@ export class SQLiteSessionRepository implements ISessionRepository {
       // Migraciones: agregar columnas si faltan
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN correctionFactor REAL')
-      } catch (e) {}
+      } catch {
+        /* column may already exist */
+      }
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN instrument TEXT')
-      } catch (e) {}
+      } catch {
+        /* column may already exist */
+      }
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN provincia TEXT')
-      } catch (e) {}
+      } catch {
+        /* column may already exist */
+      }
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN localidad TEXT')
-      } catch (e) {}
+      } catch {
+        /* column may already exist */
+      }
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN apellido1 TEXT')
-      } catch (e) {}
+      } catch {
+        /* column may already exist */
+      }
       try {
         this.db.run('ALTER TABLE sessions ADD COLUMN apellido2 TEXT')
-      } catch (e) {}
+      } catch {
+        /* column may already exist */
+      }
 
       this.db.run(`
         CREATE TABLE IF NOT EXISTS geo_points (
@@ -898,20 +910,18 @@ export class SQLiteSessionRepository implements ISessionRepository {
         row.getCell(1).value = point.sequenceNumber
         row.getCell(2).value = date.toLocaleDateString('es-AR')
         row.getCell(3).value = date.toLocaleTimeString('es-AR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-          })
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        })
         row.getCell(4).value = point.position.lat.toFixed(6)
         row.getCell(5).value = point.position.lon.toFixed(6)
         row.getCell(6).value = probe?.model ?? ''
         row.getCell(7).value = probe?.serial ?? ''
         row.getCell(8).value = probe?.calibrationDate ?? ''
         row.getCell(9).value =
-          metadata.correctionFactor != null
-            ? Number(metadata.correctionFactor.toFixed(4))
-            : null
+          metadata.correctionFactor != null ? Number(metadata.correctionFactor.toFixed(4)) : null
         row.getCell(9).numFmt = numberFmt
         row.getCell(9).alignment = { horizontal: 'right' }
         row.getCell(10).value = Number(point.correctedMeasurement.toFixed(2))
@@ -984,10 +994,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     })
   }
 
-  private buildKML(
-    metadata: SessionSummary,
-    points: GeoTimestamp[]
-  ): string {
+  private buildKML(metadata: SessionSummary, points: GeoTimestamp[]): string {
     const escXml = (s: string): string =>
       s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const esc = (s: string | null | undefined): string => escXml(s ?? '')
@@ -1083,12 +1090,15 @@ Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
       .join('')
 
     // Segmentos coloreados entre pares consecutivos (como en el mapa de la app)
-    const segmentPlacemarks = points.length < 2 ? '' : points
-      .slice(0, -1)
-      .map((p, i) => {
-        const next = points[i + 1]
-        const hex = pointToHex(p.correctedMeasurement)
-        return `
+    const segmentPlacemarks =
+      points.length < 2
+        ? ''
+        : points
+            .slice(0, -1)
+            .map((p, i) => {
+              const next = points[i + 1]
+              const hex = pointToHex(p.correctedMeasurement)
+              return `
     <Placemark>
       <styleUrl>#${hexToStyleId(hex, 'seg')}</styleUrl>
       <LineString>
@@ -1096,8 +1106,8 @@ Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
         <coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0} ${next.position.lon},${next.position.lat},${next.position.alt ?? 0}</coordinates>
       </LineString>
     </Placemark>`
-      })
-      .join('')
+            })
+            .join('')
 
     const startDate = new Date(metadata.startedAt).toLocaleString('es-AR')
     const endDate = metadata.stoppedAt

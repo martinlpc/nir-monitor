@@ -90,7 +90,8 @@ async function testRawConnection(portPath: string): Promise<void> {
     if (port?.isOpen) {
       try {
         port.close()
-      } catch (e) {
+      } catch (err: unknown) {
+        void err
         // Ignorar
       }
     }
@@ -107,11 +108,8 @@ async function testNBMDriver(portPath: string): Promise<void> {
     unit: 'V/m'
   })
 
-  let errorOccurred = false
-
   driver.on('error', (err) => {
     console.error('❌ Driver error:', err.message)
-    errorOccurred = true
   })
 
   driver.on('sample', (sample) => {
@@ -157,7 +155,7 @@ async function testParser(): Promise<void> {
     { name: 'Respuesta malformada', input: 'garbage', expected: 'invalid' }
   ]
 
-  testCases.forEach(({ name, input, expected }) => {
+  testCases.forEach(({ name, input }) => {
     console.log(`\nPrueba: "${name}"`)
     console.log(`Entrada: ${JSON.stringify(input)}`)
 

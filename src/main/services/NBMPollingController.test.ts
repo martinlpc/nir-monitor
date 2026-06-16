@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { NBMPollingController } from './NBMPollingController'
+import type { NBMPollingCallbacks } from './NBMPollingController'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { NBM550Sample } from '../devices/nbm550/nbm550.types'
 
@@ -16,7 +17,7 @@ function createMockDriver(
     readBattery?: number | null
     readMeasurement?: NBM550Sample | null
   } = {}
-) {
+): NBM550Driver {
   return {
     meta: { port: 'COM1' },
     isConnected: vi.fn().mockReturnValue(overrides.isConnected ?? true),
@@ -31,8 +32,8 @@ function createMockDriver(
 
 describe('NBMPollingController', () => {
   let controller: NBMPollingController
-  let onSample: ReturnType<typeof vi.fn>
-  let onMaxFailuresExceeded: ReturnType<typeof vi.fn>
+  let onSample: NBMPollingCallbacks['onSample']
+  let onMaxFailuresExceeded: NBMPollingCallbacks['onMaxFailuresExceeded']
 
   beforeEach(() => {
     vi.useRealTimers()

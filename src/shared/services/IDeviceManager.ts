@@ -1,5 +1,6 @@
 // Interface pura - contrato de DeviceManager
-import type { DeviceStatus } from '../dto/index'
+import type { DeviceStatus, DeviceManagerStateDTO } from '../dto/index'
+import type { IDeviceDriver } from '../device.types'
 
 export interface IDeviceManager {
   // State
@@ -10,12 +11,12 @@ export interface IDeviceManager {
   }
 
   // Accesors para SessionService
-  getNBM(): any // Retorna NBM550Driver
-  getGPS(): any // Retorna GPSDriver
+  getNBM(): IDeviceDriver | null
+  getGPS(): IDeviceDriver | null
 
   // Ciclo de vida
   initialize(): Promise<void>
-  scan(): Promise<any>
+  scan(): Promise<DeviceManagerStateDTO>
   setPortManual(device: 'nbm550' | 'gps', port: string): Promise<void>
   disconnectDevice(device: 'nbm550' | 'gps'): Promise<void>
   disconnectAll(): Promise<void>

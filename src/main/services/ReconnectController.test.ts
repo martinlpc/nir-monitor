@@ -14,8 +14,8 @@ describe('ReconnectController', () => {
       deviceId: 'test-device',
       intervalMs: 1000,
       timeoutMs: 5000,
-      connectFn,
-      onStatus
+      connectFn: connectFn as (port: string) => Promise<boolean>,
+      onStatus: onStatus as (deviceId: string, status: string) => void
     })
   })
 

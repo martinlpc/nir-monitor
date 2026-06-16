@@ -48,6 +48,7 @@ function parseArgs(): CLIOptions {
       case '-h':
         printHelp()
         process.exit(0)
+        break
       default:
         console.error(`\n❌ Flag desconocido: ${args[i]}`)
         printHelp()
@@ -115,7 +116,7 @@ async function main(): Promise<void> {
   const opts = parseArgs()
   let nbm: NBM550Driver | null = null
   let gps: GPSDriver | null = null
-  let points: GeoTimestamp[] = []
+  const points: GeoTimestamp[] = []
   let running = true
   let seq = 0
 

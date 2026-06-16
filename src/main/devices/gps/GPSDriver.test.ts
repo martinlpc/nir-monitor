@@ -18,7 +18,9 @@ vi.mock('serialport', () => {
       if (!readlineListeners[event]) readlineListeners[event] = []
       readlineListeners[event].push(fn)
     },
-    removeAllListeners() {}
+    removeAllListeners(): void {
+      /* no-op mock */
+    }
   }
 
   return {

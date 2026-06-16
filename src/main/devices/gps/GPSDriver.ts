@@ -202,7 +202,7 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
     return new Promise((resolve) => {
       if (!this.port || !this.port.isOpen) return resolve()
       this.port.close(() => {
-        this.port = undefined
+        this.port = null
         resolve()
       })
     })

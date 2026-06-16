@@ -78,7 +78,10 @@ export default function SettingsPanel({
   const [isLoading, setIsLoading] = useState(false)
 
   const [preloadBounds, setPreloadBounds] = useState<{
-    north: number; south: number; east: number; west: number
+    north: number
+    south: number
+    east: number
+    west: number
   } | null>(null)
   const [preloadMinZoom, setPreloadMinZoom] = useState(10)
   const [preloadMaxZoom, setPreloadMaxZoom] = useState(18)
@@ -163,10 +166,12 @@ export default function SettingsPanel({
     })
   }
 
-  const isPreloading = preloadProgress?.phase === 'counting' || preloadProgress?.phase === 'downloading'
-  const percent = preloadProgress && preloadProgress.total > 0
-    ? Math.round((preloadProgress.current / preloadProgress.total) * 100)
-    : 0
+  const isPreloading =
+    preloadProgress?.phase === 'counting' || preloadProgress?.phase === 'downloading'
+  const percent =
+    preloadProgress && preloadProgress.total > 0
+      ? Math.round((preloadProgress.current / preloadProgress.total) * 100)
+      : 0
 
   return (
     <div className="settings-panel">
@@ -290,10 +295,7 @@ export default function SettingsPanel({
         </div>
 
         <div className="settings-option">
-          <button
-            className="settings-btn"
-            onClick={() => setShowPreload(!showPreload)}
-          >
+          <button className="settings-btn" onClick={() => setShowPreload(!showPreload)}>
             {showPreload ? 'Ocultar precarga' : 'Precargar zona'}
           </button>
         </div>
@@ -316,8 +318,8 @@ export default function SettingsPanel({
               <div className="settings-option">
                 <span className="settings-option__label">Área capturada</span>
                 <span className="settings-option__value">
-                  N={preloadBounds.north.toFixed(4)} S={preloadBounds.south.toFixed(4)}{' '}
-                  E={preloadBounds.east.toFixed(4)} O={preloadBounds.west.toFixed(4)}
+                  N={preloadBounds.north.toFixed(4)} S={preloadBounds.south.toFixed(4)} E=
+                  {preloadBounds.east.toFixed(4)} O={preloadBounds.west.toFixed(4)}
                 </span>
               </div>
             )}
@@ -362,10 +364,7 @@ export default function SettingsPanel({
                 </p>
                 {preloadProgress.total > 0 && (
                   <div className="progress-bar">
-                    <div
-                      className="progress-bar__fill"
-                      style={{ width: `${percent}%` }}
-                    />
+                    <div className="progress-bar__fill" style={{ width: `${percent}%` }} />
                   </div>
                 )}
                 <p className="settings-preload-progress__text">

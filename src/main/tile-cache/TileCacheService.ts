@@ -52,12 +52,7 @@ export class TileCacheService extends EventEmitter {
     }
   }
 
-  async getTile(
-    providerId: string,
-    z: number,
-    x: number,
-    y: number
-  ): Promise<Buffer | null> {
+  async getTile(providerId: string, z: number, x: number, y: number): Promise<Buffer | null> {
     try {
       return await readFile(this.tilePath(providerId, z, x, y))
     } catch {
@@ -65,24 +60,13 @@ export class TileCacheService extends EventEmitter {
     }
   }
 
-  async setTile(
-    providerId: string,
-    z: number,
-    x: number,
-    y: number,
-    data: Buffer
-  ): Promise<void> {
+  async setTile(providerId: string, z: number, x: number, y: number, data: Buffer): Promise<void> {
     const fp = this.tilePath(providerId, z, x, y)
     await mkdir(dirname(fp), { recursive: true })
     await writeFile(fp, data)
   }
 
-  async fetchAndCache(
-    provider: TileProvider,
-    z: number,
-    x: number,
-    y: number
-  ): Promise<Buffer> {
+  async fetchAndCache(provider: TileProvider, z: number, x: number, y: number): Promise<Buffer> {
     const cached = await this.getTile(provider.id, z, x, y)
     if (cached) return cached
 

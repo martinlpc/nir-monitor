@@ -14,7 +14,13 @@ const TILE_CACHE_SCHEME = 'tile-cache'
 protocol.registerSchemesAsPrivileged([
   {
     scheme: TILE_CACHE_SCHEME,
-    privileges: { standard: true, supportFetchAPI: true, bypassCSP: false, corsEnabled: false, stream: true }
+    privileges: {
+      standard: true,
+      supportFetchAPI: true,
+      bypassCSP: false,
+      corsEnabled: false,
+      stream: true
+    }
   }
 ])
 
@@ -128,12 +134,14 @@ app.on('before-quit', (event) => {
   if (services?.deviceManager) {
     event.preventDefault()
 
+    const svc = services
+
     const shutdown = async (): Promise<void> => {
-      if (services.sessionService.getState() === 'running') {
+      if (svc.sessionService.getState() === 'running') {
         console.log('[Main] Stopping active session before quit...')
-        await services.sessionService.stop()
+        await svc.sessionService.stop()
       }
-      await services.deviceManager.disconnectAll()
+      await svc.deviceManager.disconnectAll()
     }
 
     shutdown().finally(() => app.exit())

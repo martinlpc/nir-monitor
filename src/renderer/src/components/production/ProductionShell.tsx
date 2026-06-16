@@ -1,9 +1,16 @@
-import { useCallback, useRef, useState, useEffect } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 import L from 'leaflet'
-import { useDevices, useSession, useGeoData, useTheme, useTileProvider, useTileCache } from '../../hooks'
+import {
+  useDevices,
+  useSession,
+  useGeoData,
+  useTheme,
+  useTileProvider,
+  useTileCache
+} from '../../hooks'
 import { useMultipleSessions } from '../../hooks/useMultipleSessions'
 import { usePersistentSessions } from '../../hooks/usePersistentSessions'
-import { GpsPositionProvider } from '../../hooks/useGpsPosition'
+import { GpsPositionProvider } from '../../hooks/GpsPositionProvider'
 import MapView from '../map/MapView'
 import PointsTable from './PointsTable'
 import DevicesPanel from './DevicesPanel'
@@ -67,7 +74,7 @@ export default function ProductionShell(): React.JSX.Element {
     }
   }, [])
 
-  useEffect(() => {
+  const derivedBounds = useMemo(() => {
     const allPoints = multipleSessions.loadedSessions
       .flatMap((s) => s.points)
       .filter((p) => p.position !== null && p.position !== undefined)
@@ -77,25 +84,27 @@ export default function ProductionShell(): React.JSX.Element {
     )
     const combined = [...allPoints, ...activePoints]
 
-    if (combined.length === 0) {
-      setFocusSessionBounds(null)
-      return
-    }
-
-    if (multipleSessions.loadedSessions.length > 0) {
-      setFollowPosition(false)
-    }
+    if (combined.length === 0) return null
 
     const lats = combined.map((p) => p.position.lat)
     const lons = combined.map((p) => p.position.lon)
 
-    setFocusSessionBounds({
+    return {
       north: Math.max(...lats),
       south: Math.min(...lats),
       east: Math.max(...lons),
       west: Math.min(...lons)
-    })
+    }
   }, [multipleSessions.loadedSessions, session.points])
+
+  useEffect(() => {
+    if (multipleSessions.loadedSessions.length > 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setFollowPosition(false)
+    }
+  }, [multipleSessions.loadedSessions.length])
+
+  const currentBounds = derivedBounds ?? focusSessionBounds
 
   return (
     <GpsPositionProvider>
@@ -256,7 +265,7 @@ export default function ProductionShell(): React.JSX.Element {
                 maximized={mapMaximized}
                 onToggleMaximize={() => setMapMaximized((prev) => !prev)}
                 loadedSessions={multipleSessions.loadedSessions}
-                focusSessionBounds={focusSessionBounds}
+                focusSessionBounds={currentBounds}
                 tileProvider={provider}
                 onMapReady={handleMapReady}
               />

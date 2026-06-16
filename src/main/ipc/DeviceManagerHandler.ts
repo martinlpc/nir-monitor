@@ -49,7 +49,7 @@ export function registerDeviceManagerHandlers(
 export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: DeviceManager): void {
   let lastGpsFixState = false
 
-  const sendIfReady = (event: string, data: unknown) => {
+  const sendIfReady = (event: string, data: unknown): void => {
     if (!window.webContents.isDestroyed()) {
       window.webContents.send(event, data)
     }

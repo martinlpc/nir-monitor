@@ -19,7 +19,11 @@ function applyTheme(theme: NirTheme): void {
   document.documentElement.setAttribute('data-theme', theme)
 }
 
-export function useTheme() {
+export function useTheme(): {
+  theme: NirTheme
+  setTheme: (t: NirTheme) => void
+  toggleTheme: () => void
+} {
   const [theme, setThemeState] = useState<NirTheme>(getStoredTheme)
 
   const setTheme = useCallback((t: NirTheme) => {

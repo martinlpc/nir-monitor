@@ -108,7 +108,7 @@ export default function SessionsPanel({
       })
   }
 
-  const handleDelete = async (sessionId: string) => {
+  const handleDelete = async (sessionId: string): Promise<void> => {
     try {
       await onDeleteSession(sessionId)
     } catch (err) {
@@ -116,7 +116,7 @@ export default function SessionsPanel({
     }
   }
 
-  const handleImport = async () => {
+  const handleImport = async (): Promise<void> => {
     if (!onImportSession) return
     try {
       const result = await onImportSession()
@@ -135,7 +135,10 @@ export default function SessionsPanel({
     }
   }
 
-  const handleExport = async (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => {
+  const handleExport = async (
+    sessionId: string,
+    format: 'geojson' | 'xlsx' | 'kmz'
+  ): Promise<void> => {
     try {
       const found = sessions.find((s) => s.id === sessionId)
       if (!found) return

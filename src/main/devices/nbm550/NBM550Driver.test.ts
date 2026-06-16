@@ -127,26 +127,41 @@ async function connectDriverReal(d: NBM550Driver): Promise<void> {
   vi.useFakeTimers()
 }
 
+interface NBM550DriverPrivate {
+  port: InstanceType<typeof FakeSerialPort>
+  status: string
+  probeInfo: { model: string; serial: string; calibrationDate: string } | null
+  responseBuffer: string
+  consecutiveTimeouts: number
+  currentBattery: number
+  queryQueue: Promise<void>
+  attachDataListener(): void
+}
+
 /**
  * Sets up connected driver state directly (fast, no real delays).
  * Injects a fake port into the driver's private fields.
  */
-function setupConnectedDriver(): { driver: NBM550Driver; port: FakeSerialPort } {
+function setupConnectedDriver(): {
+  driver: NBM550Driver
+  port: InstanceType<typeof FakeSerialPort>
+} {
   const d = createDriver()
   const port = new FakeSerialPort()
   port.isOpen = true
-  ;(d as any).port = port
-  ;(d as any).status = 'connected'
-  ;(d as any).attachDataListener()
-  ;(d as any).probeInfo = {
+  const pvt = d as unknown as NBM550DriverPrivate
+  pvt.port = port
+  pvt.status = 'connected'
+  pvt.attachDataListener()
+  pvt.probeInfo = {
     model: 'EF-0691',
     serial: '12345',
     calibrationDate: '2024-03-15'
   }
-  ;(d as any).responseBuffer = ''
-  ;(d as any).consecutiveTimeouts = 0
-  ;(d as any).currentBattery = 100
-  ;(d as any).queryQueue = Promise.resolve()
+  pvt.responseBuffer = ''
+  pvt.consecutiveTimeouts = 0
+  pvt.currentBattery = 100
+  pvt.queryQueue = Promise.resolve()
   return { driver: d, port }
 }
 

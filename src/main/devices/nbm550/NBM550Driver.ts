@@ -71,11 +71,9 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
       // Limpiar cualquier dato residual en el buffer
       this.responseBuffer = ''
-      if (this.port?.flush) {
-        await new Promise<void>((resolve) => {
-          this.port!.flush(() => resolve())
-        })
-      }
+      await new Promise<void>((resolve) => {
+        this.port!.flush(() => resolve())
+      })
 
       await this.delay(INIT_DELAY_MS)
 
@@ -171,7 +169,9 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
     if (this.port?.isOpen) {
       try {
         await this.sendCommand('REMOTE OFF').catch(() => {})
-      } catch {}
+      } catch {
+        /* disconnect errors ignored */
+      }
       await this.closePort()
     }
     this.setStatus('disconnected')
@@ -338,7 +338,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
     return new Promise((resolve) => {
       if (!this.port || !this.port.isOpen) return resolve()
       this.port.close(() => {
-        this.port = undefined
+        this.port = null
         resolve()
       })
     })

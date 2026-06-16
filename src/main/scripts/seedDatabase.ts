@@ -73,9 +73,6 @@ const ROUTES = [
   }
 ]
 
-function randomBetween(a: number, b: number) {
-  return a + Math.random() * (b - a)
-}
 function interpolatePoint(start: GeoPosition, end: GeoPosition, progress: number): GeoPosition {
   return {
     lat: start.lat + (end.lat - start.lat) * progress,
@@ -155,11 +152,11 @@ function generateMockSession(routeIndex: number): {
   }
   return { metadata, points }
 }
-function generateAllMockSessions() {
+function generateAllMockSessions(): { metadata: SessionSummary; points: GeoTimestamp[] }[] {
   return ROUTES.map((_, index) => generateMockSession(index))
 }
 
-async function seedDatabase() {
+async function seedDatabase(): Promise<void> {
   console.log('🌱 Iniciando seed de sesiones mock (con instrument)...')
   try {
     const dataPath =

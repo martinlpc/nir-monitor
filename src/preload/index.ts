@@ -8,16 +8,16 @@ import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
 import type { CacheStats, PreloadProgress } from '../main/tile-cache/TileCacheService'
 
 const api = {
-  on: (channel: string, cb: (...args: any[]) => void) => {
+  on: (channel: string, cb: (...args: unknown[]) => void) => {
     if (channel === 'alert') {
-      const handler = (_: IpcRendererEvent, payload: { message: string; type: string }) =>
+      const handler = (_: IpcRendererEvent, payload: { message: string; type: string }): void =>
         cb(_, payload)
       ipcRenderer.on('alert', handler)
       return () => ipcRenderer.removeListener('alert', handler)
     }
     return () => {}
   },
-  off: (channel: string, cb: (...args: any[]) => void) => {
+  off: (channel: string, cb: (...args: unknown[]) => void) => {
     if (channel === 'alert') {
       ipcRenderer.removeListener('alert', cb)
     }
@@ -42,20 +42,23 @@ const api = {
       ipcRenderer.invoke(IPC_HANDLERS.DEVICE_DISCONNECT, deviceId),
 
     onStatus: (cb: (data: { deviceId: string; status: DeviceStatus }) => void) => {
-      const handler = (_: IpcRendererEvent, data: { deviceId: string; status: DeviceStatus }) =>
-        cb(data)
+      const handler = (
+        _: IpcRendererEvent,
+        data: { deviceId: string; status: DeviceStatus }
+      ): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.DEVICE_STATUS, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.DEVICE_STATUS, handler)
     },
 
     onError: (cb: (data: { deviceId: string; error: string }) => void) => {
-      const handler = (_: IpcRendererEvent, data: { deviceId: string; error: string }) => cb(data)
+      const handler = (_: IpcRendererEvent, data: { deviceId: string; error: string }): void =>
+        cb(data)
       ipcRenderer.on(IPC_EVENTS.DEVICE_ERROR, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.DEVICE_ERROR, handler)
     },
 
     onScanState: (cb: (state: DeviceManagerStateDTO) => void) => {
-      const handler = (_: IpcRendererEvent, state: DeviceManagerStateDTO) => cb(state)
+      const handler = (_: IpcRendererEvent, state: DeviceManagerStateDTO): void => cb(state)
       ipcRenderer.on(IPC_EVENTS.SCAN_STATE, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SCAN_STATE, handler)
     }
@@ -66,7 +69,7 @@ const api = {
       const handler = (
         _: IpcRendererEvent,
         data: { coords: GeoPosition; valid: boolean; port?: string }
-      ) => {
+      ): void => {
         cb(data)
       }
       ipcRenderer.on(IPC_EVENTS.GPS_POSITION, handler)
@@ -76,7 +79,7 @@ const api = {
     },
 
     onNmea: (cb: (data: { line: string; port: string }) => void) => {
-      const handler = (_: IpcRendererEvent, data: { line: string; port: string }) => cb(data)
+      const handler = (_: IpcRendererEvent, data: { line: string; port: string }): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.GPS_NMEA, handler)
       return () => {
         ipcRenderer.removeListener(IPC_EVENTS.GPS_NMEA, handler)
@@ -84,7 +87,7 @@ const api = {
     },
 
     onFixLost: (cb: () => void) => {
-      const handler = () => cb()
+      const handler = (): void => cb()
       ipcRenderer.on(IPC_EVENTS.GPS_FIX_LOST, handler)
       return () => {
         ipcRenderer.removeListener(IPC_EVENTS.GPS_FIX_LOST, handler)
@@ -99,7 +102,7 @@ const api = {
       const handler = (
         _: IpcRendererEvent,
         data: { rss: number; unit: string; battery: number; timestamp: number }
-      ) => cb(data)
+      ): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.NBM_SAMPLE, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.NBM_SAMPLE, handler)
     }
@@ -186,7 +189,7 @@ const api = {
       ),
 
     onSample: (cb: (point: GeoTimestamp) => void) => {
-      const handler = (_: IpcRendererEvent, point: GeoTimestamp) => cb(point)
+      const handler = (_: IpcRendererEvent, point: GeoTimestamp): void => cb(point)
       ipcRenderer.on(IPC_EVENTS.SESSION_SAMPLE, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_SAMPLE, handler)
     },
@@ -209,19 +212,19 @@ const api = {
           correctionFactor: number | null
           instrument: InstrumentInfo | null
         }
-      ) => cb(data)
+      ): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.SESSION_STARTED, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STARTED, handler)
     },
 
     onStopped: (cb: (data: SessionSummary) => void) => {
-      const handler = (_: IpcRendererEvent, data: SessionSummary) => cb(data)
+      const handler = (_: IpcRendererEvent, data: SessionSummary): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.SESSION_STOPPED, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_STOPPED, handler)
     },
 
     onAlert: (cb: (data: { message: string }) => void) => {
-      const handler = (_: IpcRendererEvent, data: { message: string }) => cb(data)
+      const handler = (_: IpcRendererEvent, data: { message: string }): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.SESSION_ALERT, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.SESSION_ALERT, handler)
     }
@@ -295,7 +298,9 @@ const api = {
     cancelPreload: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_HANDLERS.TILE_PRELOAD_CANCEL),
 
-    importTiles: (options: { providerId: string }): Promise<{
+    importTiles: (options: {
+      providerId: string
+    }): Promise<{
       success: boolean
       imported?: number
       skipped?: number
@@ -303,7 +308,7 @@ const api = {
     }> => ipcRenderer.invoke(IPC_HANDLERS.TILE_IMPORT, options),
 
     onPreloadProgress: (cb: (progress: PreloadProgress) => void) => {
-      const handler = (_: IpcRendererEvent, progress: PreloadProgress) => cb(progress)
+      const handler = (_: IpcRendererEvent, progress: PreloadProgress): void => cb(progress)
       ipcRenderer.on(IPC_EVENTS.TILE_PRELOAD_PROGRESS, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.TILE_PRELOAD_PROGRESS, handler)
     },
@@ -314,7 +319,7 @@ const api = {
       const handler = (
         _: IpcRendererEvent,
         progress: { imported: number; skipped: number; total: number }
-      ) => cb(progress)
+      ): void => cb(progress)
       ipcRenderer.on(IPC_EVENTS.TILE_IMPORT_PROGRESS, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.TILE_IMPORT_PROGRESS, handler)
     }
@@ -328,6 +333,6 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-expect-error
+  // @ts-expect-error -- window.api is set in non-contextIsolated fallback
   window.api = api
 }

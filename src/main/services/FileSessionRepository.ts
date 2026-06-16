@@ -298,11 +298,11 @@ export class FileSessionRepository implements ISessionRepository {
     return JSON.stringify(geojson, null, 2)
   }
 
-  async exportAsXLSX(_sessionId: string, _folderPath: string, _label: string): Promise<string[]> {
+  async exportAsXLSX(): Promise<string[]> {
     throw new Error('XLSX export is not supported by FileSessionRepository')
   }
 
-  async exportAsKMZ(_sessionId: string): Promise<Buffer> {
+  async exportAsKMZ(): Promise<Buffer> {
     throw new Error('KMZ export is not supported by FileSessionRepository')
   }
 
@@ -349,7 +349,14 @@ export class FileSessionRepository implements ISessionRepository {
   /**
    * Convertir array de GeoTimestamp a FeatureCollection GeoJSON
    */
-  private toGeoJSON(points: GeoTimestamp[]) {
+  private toGeoJSON(points: GeoTimestamp[]): {
+    type: string
+    features: Array<{
+      type: string
+      geometry: { type: string; coordinates: number[] }
+      properties: Record<string, unknown>
+    }>
+  } {
     const features = points.map((point) => ({
       type: 'Feature' as const,
       geometry: {

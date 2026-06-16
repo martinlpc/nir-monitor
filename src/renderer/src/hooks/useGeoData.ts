@@ -21,7 +21,21 @@ export interface MapState {
  * - Cálculo de bounds y center
  * - Estado del mapa en tiempo real
  */
-export function useGeoData(geoPoints: GeoTimestamp[], pointCount?: number) {
+export function useGeoData(
+  geoPoints: GeoTimestamp[],
+  pointCount?: number
+): {
+  center: GeoPosition | null
+  bounds: MapBounds | null
+  allPoints: GeoTimestamp[]
+  trackPoints: GeoPosition[]
+  getPointsInBounds: (testBounds: MapBounds) => GeoTimestamp[]
+  calculateDistance: (p1: GeoPosition, p2: GeoPosition) => number
+  getTotalDistance: () => number
+  hasData: boolean
+  pointCount: number
+  validPointCount: number
+} {
   const mapState = useMemo<MapState>(() => {
     if (geoPoints.length === 0) {
       return { center: null, bounds: null, allPoints: [], trackPoints: [] }

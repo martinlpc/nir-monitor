@@ -2,7 +2,7 @@ import { EventEmitter } from 'events'
 import { describe, expect, it } from 'vitest'
 import { SessionService } from './SessionService'
 import { GeoFusionService } from './GeoFusionService'
-import type { GeoPosition } from '../../shared/GeoTimestamp'
+import type { GeoPosition, GeoTimestamp } from '../../shared/GeoTimestamp'
 
 class FakeNBMDriver extends EventEmitter {
   private connected = true
@@ -88,7 +88,7 @@ describe('SessionService', () => {
       triggerMode: 'distance',
       minDistanceMeters: 1
     })
-    const pointPromise = new Promise<any>((resolve) => session.once('point', resolve))
+    const pointPromise = new Promise<GeoTimestamp>((resolve) => session.once('point', resolve))
 
     gps.emitPosition()
     const point = await pointPromise

@@ -19,7 +19,7 @@ export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver
     this.meta = {
       id: 'nbm-sim',
       name: 'NBM-550 Simulado',
-      type: 'nbm550',
+      type: 'emf',
       port: config.port,
       baudRate: 460800
     }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import type { DeviceManagerStateDTO } from '../../../../shared/dto'
 import type { DeviceId, PortInfo } from './types'
 
@@ -8,7 +8,16 @@ const INITIAL_DEVICE_STATE: DeviceManagerStateDTO = {
   scanning: false
 }
 
-export function useDebugDevices(appendLog: (type: string, message: string) => void) {
+export function useDebugDevices(appendLog: (type: string, message: string) => void): {
+  ports: PortInfo[]
+  deviceState: DeviceManagerStateDTO
+  selectedPorts: Record<DeviceId, string>
+  setDeviceState: Dispatch<SetStateAction<DeviceManagerStateDTO>>
+  setSelectedPort: (deviceId: DeviceId, port: string) => void
+  setSelectedPorts: Dispatch<SetStateAction<Record<DeviceId, string>>>
+  refreshPorts: () => Promise<void>
+  refreshDevices: () => Promise<void>
+} {
   const [ports, setPorts] = useState<PortInfo[]>([])
   const [deviceState, setDeviceState] = useState<DeviceManagerStateDTO>(INITIAL_DEVICE_STATE)
   const [selectedPorts, setSelectedPorts] = useState<Record<DeviceId, string>>({

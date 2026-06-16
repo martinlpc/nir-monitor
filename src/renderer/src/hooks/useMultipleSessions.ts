@@ -28,7 +28,21 @@ export interface LoadedSession {
 /**
  * Hook para gestión de múltiples sesiones visibles en el mapa simultáneamente
  */
-export function useMultipleSessions() {
+export function useMultipleSessions(): {
+  loadedSessions: LoadedSession[]
+  addSession: (
+    sessionId: string,
+    label: string,
+    points: GeoTimestamp[],
+    sessionInfo?: SessionItem
+  ) => void
+  removeSession: (sessionId: string) => void
+  toggleSessionVisibility: (sessionId: string) => void
+  setSessionColor: (sessionId: string, color: string) => void
+  clearSessions: () => void
+  getSession: (sessionId: string) => LoadedSession | undefined
+  getVisiblePoints: (sessionId: string) => GeoTimestamp[]
+} {
   const [loadedSessions, setLoadedSessions] = useState<LoadedSession[]>([])
 
   // Agregar sesión a la lista visible

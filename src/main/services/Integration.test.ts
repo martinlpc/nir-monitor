@@ -1,7 +1,8 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
-import type { GeoFusionService } from '../services/GeoFusionService'
+import type { GeoFusionService, GeoFusionConfig } from '../services/GeoFusionService'
+import type { DeviceManagerState } from '../services/DeviceManager'
 
 /**
  * Integration tests para verificar el flujo completo:
@@ -31,16 +32,11 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
     }
 
     sessionService = {
-      getState: vi.fn(() => ({
-        sessionId: 'test-session',
-        status: 'running' as const,
-        points: [] as any[],
-        startedAt: Date.now()
-      })) as any,
+      getState: vi.fn(() => 'running'),
       start: vi.fn(),
       stop: vi.fn(),
       on: vi.fn()
-    }
+    } as unknown as Partial<SessionService>
 
     geoFusion = {
       start: vi.fn(),
@@ -52,16 +48,17 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
   it('should initialize all services in correct order', async () => {
     const initOrder: string[] = []
 
-    ;(deviceManager.initialize as any)?.mockImplementation(() => {
+    deviceManager.initialize = vi.fn(async () => {
       initOrder.push('deviceManager')
     })
-    ;(sessionService.start as any)?.mockImplementation(() => {
+    sessionService.start = vi.fn(async () => {
       initOrder.push('sessionService')
+      return ''
     })
 
     // Simulate initialization
-    await (deviceManager.initialize as any)()
-    await (sessionService.start as any)('test')
+    await deviceManager.initialize?.()
+    await sessionService.start?.('test')
 
     expect(initOrder).toContain('deviceManager')
     expect(initOrder.indexOf('deviceManager')).toBeLessThan(initOrder.indexOf('sessionService'))
@@ -83,13 +80,13 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
       stop: vi.fn(async () => {
         events.push('session:stopped')
       })
-    } as any
+    } as unknown as Partial<SessionService>
 
     // Lifecycle
-    await mockSessionService.start('Test Session')
+    await mockSessionService.start!('Test Session')
     expect(events).toContain('session:started')
 
-    await mockSessionService.stop()
+    await mockSessionService.stop!()
     expect(events).toContain('session:stopped')
   })
 
@@ -106,7 +103,7 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
   })
 
   it('should emit GPS position updates during active session', async () => {
-    const positions: any[] = []
+    const positions: Record<string, unknown>[] = []
 
     // Mock GPS events
     const mockSession = {
@@ -120,23 +117,23 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
           })
         }
       })
-    } as any
+    } as unknown as Partial<SessionService>
 
     // Simulate GPS event
-    mockSession.on('gps:position', (data: any) => {
+    mockSession.on!('gps:position', (data: Record<string, unknown>) => {
       expect(data).toHaveProperty('lat')
       expect(data).toHaveProperty('lon')
       expect(data).toHaveProperty('timestamp')
     })
 
     // Trigger event
-    if (mockSession.on.mock.calls.length > 0) {
+    if (vi.mocked(mockSession.on!).mock.calls.length > 0) {
       expect(positions.length).toBeGreaterThanOrEqual(0)
     }
   })
 
   it('should capture geospatial timestamps with EMF data', async () => {
-    const capturedPoints: any[] = []
+    const capturedPoints: unknown[] = []
 
     // Mock point capture
     const mockPoint = {
@@ -171,7 +168,7 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
       intervalMs: 2000
     }
 
-    const updateConfigMock = vi.fn((config: any) => {
+    const updateConfigMock = vi.fn((config: Partial<GeoFusionConfig>) => {
       Object.assign(geoFusion, config)
     })
 
@@ -185,7 +182,7 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
 
   it('should maintain data consistency across service boundaries', async () => {
     // Simulate session with device state
-    const sessionPoints: any[] = []
+    const sessionPoints: Record<string, unknown>[] = []
 
     const pointWithDeviceInfo = {
       sessionId: 'session-1',
@@ -201,8 +198,12 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
 
     sessionPoints.push(pointWithDeviceInfo)
 
-    expect(sessionPoints[0].deviceState?.nbm550.status).toBe('connected')
-    expect(sessionPoints[0].deviceState?.gps.status).toBe('connected')
+    expect((sessionPoints[0].deviceState as DeviceManagerState | undefined)?.nbm550.status).toBe(
+      'connected'
+    )
+    expect((sessionPoints[0].deviceState as DeviceManagerState | undefined)?.gps.status).toBe(
+      'connected'
+    )
     expect(sessionPoints[0].position).toEqual(
       expect.objectContaining({
         lat: expect.any(Number),

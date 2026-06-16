@@ -28,7 +28,39 @@ function deriveCorrectionFactorFromPoints(points: GeoTimestamp[]): number | null
  * Hook para gestión del ciclo de vida de sesiones
  * Encapsula inicio/parada y recolección de puntos geospaciales
  */
-export function useSession() {
+export function useSession(): {
+  sessionId: string | null
+  status: 'idle' | 'running' | 'stopped'
+  label: string
+  startedAt: number | null
+  points: GeoTimestamp[]
+  summary: SessionSummary | null
+  error: string | null
+  start: (options?: {
+    label?: string
+    triggerMode?: 'distance' | 'time'
+    minDistanceMeters?: number
+    intervalMs?: number
+    testMode?: boolean
+    provincia?: string
+    localidad?: string
+    apellido1?: string
+    apellido2?: string
+  }) => Promise<string>
+  stop: () => Promise<SessionSummary>
+  reset: () => void
+  setLoadedSession: (loadedData: {
+    sessionId: string
+    label: string
+    points: GeoTimestamp[]
+    summary: SessionSummary
+  }) => void
+  isRunning: boolean
+  isStopped: boolean
+  isIdle: boolean
+  pointCount: number
+  duration: number
+} {
   const [session, setSession] = useState<SessionState>({
     sessionId: null,
     status: 'idle',
@@ -39,8 +71,8 @@ export function useSession() {
 
   const [error, setError] = useState<string | null>(null)
   const [duration, setDuration] = useState(0)
+  const [points, setPoints] = useState<GeoTimestamp[]>([])
   const unsubscribeRef = useRef<(() => void)[]>([])
-  const pointsRef = useRef<GeoTimestamp[]>([])
   const [pointCount, setPointCount] = useState(0)
 
   // Iniciar sesión
@@ -81,7 +113,7 @@ export function useSession() {
           startedAt: Date.now(),
           label: options?.label || prev.label
         }))
-        pointsRef.current = []
+        setPoints([])
         setPointCount(0)
 
         return sessionId
@@ -123,7 +155,7 @@ export function useSession() {
       label: 'Nueva sesión',
       summary: null
     })
-    pointsRef.current = []
+    setPoints([])
     setPointCount(0)
     setError(null)
   }, [])
@@ -134,7 +166,7 @@ export function useSession() {
 
     // Listener para nuevos puntos
     const unsubscribeSample = window.api.session.onSample((point: GeoTimestamp) => {
-      pointsRef.current.push(point)
+      setPoints((prev) => [...prev, point])
       setPointCount((c) => c + 1)
     })
     listeners.push(unsubscribeSample)
@@ -158,7 +190,7 @@ export function useSession() {
         label: data.label,
         summary
       }))
-      pointsRef.current = []
+      setPoints([])
       setPointCount(0)
       setDuration(0)
     })
@@ -208,7 +240,7 @@ export function useSession() {
       console.log('[useSession] Loading saved session:', loadedData.sessionId)
       const effectiveCorrectionFactor =
         loadedData.summary.correctionFactor ?? deriveCorrectionFactorFromPoints(loadedData.points)
-      pointsRef.current = loadedData.points
+      setPoints(loadedData.points)
       setPointCount(loadedData.points.length)
       setSession({
         sessionId: loadedData.sessionId,
@@ -231,7 +263,7 @@ export function useSession() {
     status: session.status,
     label: session.label,
     startedAt: session.startedAt,
-    points: pointsRef.current,
+    points,
     summary: session.summary,
     error,
 

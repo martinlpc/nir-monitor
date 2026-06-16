@@ -33,8 +33,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // @ts-ignore asd
       window.__notify = notify
     }
-    const handler = (_: unknown, payload: { message: string; type: ToastType }) => {
-      notify({ message: payload.message, type: payload.type })
+    const handler = (_: unknown, payload: { message: string; type: string }): void => {
+      notify({ message: payload.message, type: payload.type as ToastType })
     }
     const unsubscribe = window.api?.on?.('alert', handler)
     return () => unsubscribe?.()
@@ -66,7 +66,8 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   )
 }
 
-export function useToast() {
+// eslint-disable-next-line react-refresh/only-export-components
+export function useToast(): ToastContextProps {
   const ctx = useContext(ToastContext)
   if (!ctx) throw new Error('useToast debe usarse dentro de ToastProvider')
   return ctx

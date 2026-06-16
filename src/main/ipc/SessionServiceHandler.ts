@@ -58,9 +58,10 @@ export function registerSessionServiceHandlers(
         })
         console.log(`[SessionServiceHandler] sessionService.start() returned: ${sessionId}`)
         return sessionId
-      } catch (err: any) {
+      } catch (err: unknown) {
         // Emitir alerta global al frontend
-        emitAlert(_window, err?.message || 'Error al iniciar sesión', 'error')
+        const message = err instanceof Error ? err.message : String(err)
+        emitAlert(_window, message || 'Error al iniciar sesión', 'error')
         throw err
       }
     }
@@ -307,7 +308,20 @@ export function registerSessionServiceHandlers(
 
       await repository.initSession(sessionId, metadata)
 
-      const points: GeoTimestamp[] = geojson.features.map((feature: any, index: number) => {
+      interface GeoFeatureProps {
+        id?: string
+        sequenceNumber?: number
+        timestamp?: number | string
+        datetime?: string
+        rawMeasurement?: number
+        unit?: string
+        correctedMeasurement?: number
+      }
+      interface GeoFeature {
+        geometry?: { coordinates?: number[] }
+        properties?: GeoFeatureProps
+      }
+      const points: GeoTimestamp[] = geojson.features.map((feature: GeoFeature, index: number) => {
         const [lon, lat, alt] = feature.geometry?.coordinates || [0, 0, 0]
         const featProps = feature.properties || {}
         return {
@@ -381,7 +395,7 @@ export function bindSessionServiceEvents(
   window: BrowserWindow,
   sessionService: SessionService
 ): void {
-  const sendIfReady = (event: string, data: unknown) => {
+  const sendIfReady = (event: string, data: unknown): void => {
     if (!window.webContents.isDestroyed()) {
       window.webContents.send(event, data)
     }

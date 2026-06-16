@@ -102,7 +102,7 @@ export default function MapView({
       })
     }
     return segments
-  }, [geoData.allPoints.length])
+  }, [geoData.allPoints])
 
   const loadedSegments = useMemo(() => {
     return loadedSessions

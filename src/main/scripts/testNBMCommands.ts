@@ -13,7 +13,7 @@ async function testNBMCommands(portPath: string): Promise<void> {
   let port: SerialPort | null = null
   const NBM_BAUD_RATE = 460800
 
-  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms))
+  const delay = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms))
 
   try {
     port = new SerialPort({
@@ -63,7 +63,7 @@ async function testNBMCommands(portPath: string): Promise<void> {
     console.log('📝 Testeando comandos...\n')
     console.log('┌─ Comando ─────────────────────────┬─ Respuesta ────────────┬─ Error? ┐')
 
-    for (const { cmd, desc } of commandTests) {
+    for (const { cmd } of commandTests) {
       responses = []
       port.write(cmd + '\r\n')
       await delay(800)

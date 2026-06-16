@@ -162,8 +162,8 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect(points[0].emf.unit).toBe('V/m')
     expect(typeof points[0].timestamp).toBe('number')
     expect(points[0].timestamp).toBeGreaterThan(0)
-    expect((points[0] as any).hdop).toBeUndefined()
-    expect((points[0] as any).interpolated).toBeUndefined()
+    expect((points[0] as unknown as Record<string, unknown>).hdop).toBeUndefined()
+    expect((points[0] as unknown as Record<string, unknown>).interpolated).toBeUndefined()
 
     const loaded = await repo.getSession(meta.id)
     expect(loaded?.metadata.sampleCount).toBe(1)
@@ -348,8 +348,8 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect(inside).toHaveLength(1)
     expect(inside[0].sequenceNumber).toBe(1)
     expect(typeof inside[0].timestamp).toBe('number')
-    expect((inside[0] as any).hdop).toBeUndefined()
-    expect((inside[0] as any).interpolated).toBeUndefined()
+    expect((inside[0] as unknown as Record<string, unknown>).hdop).toBeUndefined()
+    expect((inside[0] as unknown as Record<string, unknown>).interpolated).toBeUndefined()
   })
 
   // ── exportAsGeoJSON ──────────────────────────────────────────

@@ -59,7 +59,7 @@ async function cleanPort(portPath: string): Promise<void> {
         port.write('REMOTE OFF\r')
 
         let hasData = false
-        const dataHandler = () => {
+        const dataHandler = (): void => {
           hasData = true
         }
 

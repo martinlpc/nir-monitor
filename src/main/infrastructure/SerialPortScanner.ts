@@ -125,7 +125,8 @@ export class SerialPortScanner implements ISerialPortScanner {
       await Promise.race([probePromise, timeoutPromise])
       console.log(`[SerialPortScanner] ✓ NBM550 detected on ${port}`)
       return true
-    } catch (error) {
+    } catch (err: unknown) {
+      void err
       console.log(`[SerialPortScanner] ✗ NBM550 not found on ${port}`)
       return false
     } finally {
