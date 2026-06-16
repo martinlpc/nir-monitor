@@ -1,5 +1,5 @@
 import { useCallback, useState, useEffect } from 'react'
-import { useDevices, useSession, useGeoData } from '../../hooks'
+import { useDevices, useSession, useGeoData, useTheme } from '../../hooks'
 import { useMultipleSessions } from '../../hooks/useMultipleSessions'
 import { usePersistentSessions } from '../../hooks/usePersistentSessions'
 import { GpsPositionProvider } from '../../hooks/useGpsPosition'
@@ -18,9 +18,11 @@ export default function ProductionShell(): React.JSX.Element {
   const geoData = useGeoData(session.points, session.pointCount)
   const multipleSessions = useMultipleSessions()
   const persistedSessions = usePersistentSessions()
+  const { theme, setTheme } = useTheme()
   const [activeTab, setActiveTab] = useState<'devices' | 'sessions' | 'settings'>('devices')
   const [followPosition, setFollowPosition] = useState(true)
   const [mapMaximized, setMapMaximized] = useState(false)
+  const [tableMaximized, setTableMaximized] = useState(false)
   const [allSessionsDrawerOpen, setAllSessionsDrawerOpen] = useState(false)
   const [focusSessionBounds, setFocusSessionBounds] = useState<{
     north: number
@@ -208,14 +210,14 @@ export default function ProductionShell(): React.JSX.Element {
                 aria-labelledby="tab-settings"
                 style={{ display: activeTab === 'settings' ? 'block' : 'none' }}
               >
-                <SettingsPanel />
+                <SettingsPanel theme={theme} onThemeChange={setTheme} />
               </div>
             </div>
           </div>
 
           <div className="prod-main">
             <div
-              className={`map-container ${mapMaximized ? 'map-maximized' : ''}`}
+              className={`map-container ${mapMaximized ? 'map-maximized' : tableMaximized ? 'map-table-maximized' : ''}`}
               style={{ position: 'relative' }}
             >
               {(session.sessionId || multipleSessions.loadedSessions.length > 0) && (
@@ -256,6 +258,8 @@ export default function ProductionShell(): React.JSX.Element {
                 deviceSerial={session.summary?.instrument?.meter?.serial || null}
                 probeModel={session.summary?.instrument?.probe?.model || null}
                 probeSerial={session.summary?.instrument?.probe?.serial || null}
+                tableMaximized={tableMaximized}
+                onToggleMaximizeTable={() => setTableMaximized((prev) => !prev)}
               />
             )}
           </div>

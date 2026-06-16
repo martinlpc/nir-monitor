@@ -21,7 +21,7 @@
   font-weight: 600;
   color: var(--nir-text);
   padding-bottom: 4px;
-  border-bottom: 1px solid rgba(114, 186, 255, 0.1);
+  border-bottom: 1px solid var(--nir-border-blue);
 }
 
 .settings-section__desc {
@@ -37,7 +37,7 @@
   padding: 7px 14px;
   border-radius: 6px;
   border: 1px solid var(--nir-border-blue);
-  background: rgba(114, 186, 255, 0.08);
+  background: var(--nir-input-bg);
   color: var(--nir-blue);
   font-size: 0.8rem;
   font-weight: 500;
@@ -46,7 +46,7 @@
 }
 
 .settings-btn:hover {
-  background: rgba(114, 186, 255, 0.16);
+  background: var(--nir-border-blue);
   border-color: var(--nir-border-blue-hover);
 }
 
@@ -84,7 +84,7 @@
 .settings-table-wrapper {
   overflow-x: auto;
   border-radius: 6px;
-  border: 1px solid rgba(114, 186, 255, 0.1);
+  border: 1px solid var(--nir-border-blue);
 }
 
 .settings-table {
@@ -96,26 +96,26 @@
 .settings-table th {
   text-align: left;
   padding: 4px 6px;
-  background: rgba(114, 186, 255, 0.08);
+  background: var(--nir-table-header-bg);
   color: var(--nir-blue);
   font-weight: 600;
   white-space: nowrap;
-  border-bottom: 1px solid rgba(114, 186, 255, 0.15);
+  border-bottom: 1px solid var(--nir-table-border);
 }
 
 .settings-table td {
   padding: 3px 6px;
-  color: var(--nir-text);
-  border-bottom: 1px solid rgba(114, 186, 255, 0.05);
+  color: var(--nir-table-text);
+  border-bottom: 1px solid var(--nir-table-border);
   white-space: nowrap;
 }
 
 .settings-table tbody tr:hover {
-  background: rgba(114, 186, 255, 0.04);
+  background: var(--nir-border-blue);
 }
 
 .settings-table tbody tr.row-active {
-  background: rgba(114, 186, 255, 0.12);
+  background: var(--nir-border-blue-hover);
   border-left: 2px solid var(--nir-blue);
 }
 
@@ -137,6 +137,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 4px 0;
 }
 
@@ -153,6 +154,33 @@
 .settings-option__coming-soon {
   font-style: italic;
   opacity: 0.6;
+}
+
+.settings-select {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--nir-border-blue);
+  background: rgba(23, 34, 75, 0.7);
+  color: var(--nir-text);
+  outline: none;
+  cursor: pointer;
+  min-width: 100px;
+}
+
+[data-theme='soft'] .settings-select {
+  background: #ffffff;
+  border-color: rgba(60, 60, 67, 0.18);
+}
+
+.settings-select option {
+  background: inherit;
+  color: inherit;
+}
+
+.settings-select:focus {
+  border-color: var(--nir-blue);
+  box-shadow: 0 0 0 2px var(--nir-border-blue);
 }
 
 /* === Settings tab icon button === */

@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import './SettingsPanel.css'
 
+interface SettingsPanelProps {
+  theme: 'dark' | 'soft'
+  onThemeChange: (theme: 'dark' | 'soft') => void
+}
+
 interface CorrectionFactorRecord {
   name: string
   fMin: number
@@ -26,7 +31,7 @@ interface ActiveCorrectionFactor {
   probeModel: string | null
 }
 
-export default function SettingsPanel(): React.JSX.Element {
+export default function SettingsPanel({ theme, onThemeChange }: SettingsPanelProps): React.JSX.Element {
   // Cambiar nombres a los del preload original
   const [correctionData, setCorrectionData] = useState<CorrectionFactorData | null>(null)
   const [probeInfo, setProbeInfo] = useState<ProbeInfo | null>(null)
@@ -167,7 +172,14 @@ export default function SettingsPanel(): React.JSX.Element {
         <h3 className="settings-section__title">Interfaz</h3>
         <div className="settings-option">
           <span className="settings-option__label">Tema</span>
-          <span className="settings-option__value settings-option__coming-soon">Próximamente</span>
+          <select
+            className="settings-select"
+            value={theme}
+            onChange={(e) => onThemeChange(e.target.value as 'dark' | 'soft')}
+          >
+            <option value="dark">Oscuro</option>
+            <option value="soft">Soft</option>
+          </select>
         </div>
       </section>
     </div>

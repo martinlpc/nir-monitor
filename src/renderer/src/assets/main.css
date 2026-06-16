@@ -12,6 +12,14 @@ body {
   user-select: none;
 }
 
+[data-theme='soft'] body,
+[data-theme='soft'] body.prod-shell {
+  background:
+    radial-gradient(circle at top left, rgba(255, 149, 0, 0.06), transparent 28%),
+    radial-gradient(circle at top right, rgba(0, 122, 255, 0.04), transparent 24%),
+    linear-gradient(180deg, #f2f2f7 0%, #e5e5ea 100%);
+}
+
 button,
 input,
 select {
@@ -353,7 +361,7 @@ select {
   background: rgba(0, 0, 0, 0.1);
 }
 
-/* === NBM Status Badge === */
+/* === NBM Status Badge (sobre mapa) === */
 .nbm-status-badge {
   display: flex;
   align-items: center;
@@ -371,6 +379,7 @@ select {
   margin-top: 10px;
 }
 
+/* Dark theme (default) — colores originales */
 .nbm-status-badge--connected {
   background: #e6f7ed;
   border: 1px solid #a3e4b6;
@@ -420,6 +429,41 @@ select {
   margin-left: 3px;
 }
 
+/* Soft theme */
+[data-theme='soft'] .nbm-status-badge {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme='soft'] .nbm-status-badge--connected {
+  background: #f0fdf4;
+  border-color: #34c759;
+}
+
+[data-theme='soft'] .nbm-status-badge--connecting {
+  background: #fffbeb;
+  border-color: #ff9500;
+}
+
+[data-theme='soft'] .nbm-status-badge--disconnected {
+  background: #f8f8fa;
+  border-color: rgba(107, 114, 128, 0.3);
+}
+
+[data-theme='soft'] .nbm-status-badge--connected .nbm-status-badge__label,
+[data-theme='soft'] .nbm-status-badge--connected .nbm-status-badge__battery {
+  color: #15803d;
+}
+
+[data-theme='soft'] .nbm-status-badge--connecting .nbm-status-badge__label,
+[data-theme='soft'] .nbm-status-badge--connecting .nbm-status-badge__battery {
+  color: #a16207;
+}
+
+[data-theme='soft'] .nbm-status-badge--disconnected .nbm-status-badge__label,
+[data-theme='soft'] .nbm-status-badge--disconnected .nbm-status-badge__battery {
+  color: #6b7280;
+}
+
 .map-view__header h2 {
   margin: 0;
   font-size: 1rem;
@@ -446,16 +490,16 @@ select {
   cursor: pointer;
   padding: 6px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(180, 203, 232, 0.15);
+  background: var(--nir-card-bg);
+  border: 1px solid var(--nir-border-blue);
   transition: all 0.2s ease;
   font-size: 0.9rem;
-  color: #d8e2ef;
+  color: var(--nir-text);
 }
 
 .map-view__follow-checkbox:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(180, 203, 232, 0.3);
+  background: var(--nir-card-bg-hover);
+  border-color: var(--nir-border-blue-hover);
 }
 
 .map-view__follow-checkbox input[type='checkbox'] {
