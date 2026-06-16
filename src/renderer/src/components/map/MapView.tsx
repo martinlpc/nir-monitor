@@ -1,11 +1,13 @@
 import 'leaflet/dist/leaflet.css'
-import { type LatLngExpression } from 'leaflet'
-import { useMemo } from 'react'
-import { CircleMarker, MapContainer, Polyline, Popup, TileLayer } from 'react-leaflet'
+import { useEffect, useMemo, useRef } from 'react'
+import L, { type LatLngExpression } from 'leaflet'
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
 import type { MapState } from '../../hooks/useGeoData'
 import type { LoadedSession } from '../../hooks/useMultipleSessions'
 import { useGpsPosition } from '../../hooks/useGpsPosition'
 import { getIntensityColor } from '../../utils/intensityPalette'
+import type { TileProvider } from '../../../../shared/tileProviders'
+import { getProvider } from '../../../../shared/tileProviders'
 import SyncMapView from './SyncMapView'
 import PanControl from './PanControl'
 import MaximizeControl from './MaximizeControl'
@@ -23,6 +25,51 @@ interface MapViewProps {
   onToggleMaximize?: () => void
   loadedSessions?: LoadedSession[]
   focusSessionBounds?: { north: number; south: number; east: number; west: number } | null
+  tileProvider?: TileProvider
+  onMapReady?: (map: L.Map) => void
+}
+
+function ZoomLevelIndicator(): null {
+  const map = useMap()
+  const elRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const el = L.DomUtil.create('div', 'map-zoom-indicator')
+    elRef.current = el
+
+    function update(): void {
+      el.textContent = `Zoom ${map.getZoom()}`
+    }
+    update()
+
+    map.on('zoomend', update)
+
+    const control = new (L.Control.extend({
+      onAdd() {
+        return el
+      },
+      onRemove() {
+        elRef.current = null
+      }
+    }))({ position: 'topright' })
+
+    control.addTo(map)
+
+    return () => {
+      map.off('zoomend', update)
+      control.remove()
+    }
+  }, [map])
+
+  return null
+}
+
+function MapInstanceCapture({ onMap }: { onMap: (map: L.Map) => void }): null {
+  const map = useMap()
+  useEffect(() => {
+    onMap(map)
+  }, [map, onMap])
+  return null
 }
 
 export default function MapView({
@@ -33,13 +80,14 @@ export default function MapView({
   maximized = false,
   onToggleMaximize,
   loadedSessions = [],
-  focusSessionBounds = null
+  focusSessionBounds = null,
+  tileProvider = getProvider('osm')!,
+  onMapReady
 }: MapViewProps): React.JSX.Element {
   const { position: livePosition, lastKnownPosition } = useGpsPosition()
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
 
-  // Generar segmentos coloreados por intensidad del punto de origen
   const activeSegments = useMemo(() => {
     const pts = geoData.allPoints.filter((p) => p.position !== null && p.position !== undefined)
     const segments: { key: string; positions: LatLngExpression[]; color: string }[] = []
@@ -56,7 +104,6 @@ export default function MapView({
     return segments
   }, [geoData.allPoints.length])
 
-  // Generar segmentos coloreados para sesiones cargadas
   const loadedSegments = useMemo(() => {
     return loadedSessions
       .filter((session) => session.visible && session.points.length > 0)
@@ -103,9 +150,11 @@ export default function MapView({
           className="map-leaflet"
         >
           <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution={tileProvider.attribution}
+            url={`tile-cache://${tileProvider.id}/{z}/{x}/{y}.png`}
           />
+          <ZoomLevelIndicator />
+          {onMapReady && <MapInstanceCapture onMap={onMapReady} />}
           <SyncMapView
             geoData={geoData}
             followPosition={followPosition}
@@ -134,7 +183,6 @@ export default function MapView({
               />
             ))
           )}
-          {/* Renderizar todos los puntos de medición como marcadores */}
           {geoData.allPoints.map((point) => {
             const pointColor = getIntensityColor(point.correctedMeasurement)
             return (

@@ -2,11 +2,12 @@ import { BrowserWindow } from 'electron'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
 import { registerSessionServiceHandlers, bindSessionServiceEvents } from './SessionServiceHandler'
 import { registerSettingsHandlers } from './SettingsHandler'
+import { registerTileCacheHandlers } from './TileCacheHandler'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
+import type { TileCacheService } from '../tile-cache/TileCacheService'
 import { AlertLogger } from '../infrastructure/AlertLogger'
 
-// Utilidad para emitir alertas globales
 export function emitAlert(
   window: BrowserWindow,
   message: string,
@@ -16,35 +17,30 @@ export function emitAlert(
   AlertLogger.log(message, type)
 }
 
-// -- Setup -----------------------------------------------------------
-// Registrar handlers y conectar eventos de servicios hacia el Renderer
-// vía webContents.send()
-// Delegación: handlers específicos están en DeviceManagerHandler y SessionServiceHandler
-
 export function setupIPC(
   window: BrowserWindow,
   deviceManager: DeviceManager,
-  sessionService: SessionService
+  sessionService: SessionService,
+  tileCache?: TileCacheService
 ): void {
-  // CRÍTICO: Limpiar listeners viejos ANTES de registrar nuevos
-  // Esto previene duplicados cuando se abre múltiples ventanas o al recargar
   deviceManager.removeAllListeners()
   sessionService.removeAllListeners()
 
   console.log('[IPC] Setting up IPC handlers...')
 
-  // Registrar handlers (Renderer -> Main request/response)
   registerDeviceManagerHandlers(window, deviceManager)
   registerSessionServiceHandlers(window, deviceManager, sessionService)
   registerSettingsHandlers(window, deviceManager)
 
-  // Vincular eventos (Main -> Renderer push)
+  if (tileCache) {
+    registerTileCacheHandlers(window, tileCache)
+  }
+
   bindDeviceManagerEvents(window, deviceManager)
   bindSessionServiceEvents(window, sessionService)
 
-  console.log('[IPC] ✓ All IPC handlers and event listeners registered')
+  console.log('[IPC] All IPC handlers and event listeners registered')
 
-  // Limpiar listeners cuando se cierra ventana
   window.on('closed', () => {
     console.log('[IPC] Window closed - cleaning up listeners')
     deviceManager.removeAllListeners()

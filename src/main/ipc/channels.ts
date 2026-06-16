@@ -1,4 +1,3 @@
-// Main -> Renderer (push)
 export const IPC_EVENTS = {
   GPS_POSITION: 'gps:position',
   GPS_NMEA: 'gps:nmea',
@@ -11,10 +10,11 @@ export const IPC_EVENTS = {
   SESSION_STOPPED: 'session:stopped',
   SESSION_ALERT: 'session:alert',
   SCAN_STATE: 'scan:state',
-  ALERT: 'alert' // Canal global para notificaciones tipo toast
+  ALERT: 'alert',
+  TILE_PRELOAD_PROGRESS: 'tile:preload-progress',
+  TILE_IMPORT_PROGRESS: 'tile:import-progress'
 } as const
 
-// Renderer -> Main (request/response)
 export const IPC_HANDLERS = {
   DEVICE_LIST: 'device:list',
   DEVICE_SCAN: 'device:scan',
@@ -39,5 +39,10 @@ export const IPC_HANDLERS = {
   OPEN_UNCERTAINTY_FILE: 'settings:open-uncertainty-file',
   GET_PROBE_INFO: 'settings:get-probe-info',
   GET_ACTIVE_UNCERTAINTY: 'settings:get-active-uncertainty',
-  GET_LOADED_UNCERTAINTY: 'settings:get-loaded-uncertainty'
+  GET_LOADED_UNCERTAINTY: 'settings:get-loaded-uncertainty',
+  TILE_CACHE_STATS: 'tile:cache-stats',
+  TILE_CLEAR_CACHE: 'tile:clear-cache',
+  TILE_PRELOAD: 'tile:preload',
+  TILE_PRELOAD_CANCEL: 'tile:preload-cancel',
+  TILE_IMPORT: 'tile:import'
 } as const

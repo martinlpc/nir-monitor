@@ -1,5 +1,6 @@
-import { useCallback, useState, useEffect } from 'react'
-import { useDevices, useSession, useGeoData, useTheme } from '../../hooks'
+import { useCallback, useRef, useState, useEffect } from 'react'
+import L from 'leaflet'
+import { useDevices, useSession, useGeoData, useTheme, useTileProvider, useTileCache } from '../../hooks'
 import { useMultipleSessions } from '../../hooks/useMultipleSessions'
 import { usePersistentSessions } from '../../hooks/usePersistentSessions'
 import { GpsPositionProvider } from '../../hooks/useGpsPosition'
@@ -12,13 +13,14 @@ import AllSessionsDrawer from './AllSessionsDrawer'
 import './production.css'
 
 export default function ProductionShell(): React.JSX.Element {
-  // Inicializar hooks principales
   const devices = useDevices()
   const session = useSession()
   const geoData = useGeoData(session.points, session.pointCount)
   const multipleSessions = useMultipleSessions()
   const persistedSessions = usePersistentSessions()
   const { theme, setTheme } = useTheme()
+  const { provider, setProvider, providers } = useTileProvider()
+  const tileCache = useTileCache()
   const [activeTab, setActiveTab] = useState<'devices' | 'sessions' | 'settings'>('devices')
   const [followPosition, setFollowPosition] = useState(true)
   const [mapMaximized, setMapMaximized] = useState(false)
@@ -30,6 +32,23 @@ export default function ProductionShell(): React.JSX.Element {
     east: number
     west: number
   } | null>(null)
+  const mapInstanceRef = useRef<L.Map | null>(null)
+
+  const handleMapReady = useCallback((map: L.Map) => {
+    mapInstanceRef.current = map
+  }, [])
+
+  const selectMapBounds = useCallback(() => {
+    const map = mapInstanceRef.current
+    if (!map) return null
+    const bounds = map.getBounds()
+    return {
+      north: bounds.getNorth(),
+      south: bounds.getSouth(),
+      east: bounds.getEast(),
+      west: bounds.getWest()
+    }
+  }, [])
 
   const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -48,27 +67,11 @@ export default function ProductionShell(): React.JSX.Element {
     }
   }, [])
 
-  // Manejar toggle de sesión en drawer
-  const handleToggleSessionInDrawer = useCallback(
-    (sessionId: string, checked: boolean) => {
-      if (checked) {
-        // Cargar sesión y agregarla a múltiples
-        // Esto se hace desde SessionsPanel pasando callback
-      } else {
-        multipleSessions.removeSession(sessionId)
-      }
-    },
-    [multipleSessions]
-  )
-
-  // Calcular bounds cuando se cargan/quitan sesiones para centrar el mapa en todo lo visible
   useEffect(() => {
-    // Recolectar todos los puntos de todas las sesiones cargadas
     const allPoints = multipleSessions.loadedSessions
       .flatMap((s) => s.points)
       .filter((p) => p.position !== null && p.position !== undefined)
 
-    // También incluir puntos de la sesión activa/cargada
     const activePoints = session.points.filter(
       (p) => p.position !== null && p.position !== undefined
     )
@@ -79,7 +82,6 @@ export default function ProductionShell(): React.JSX.Element {
       return
     }
 
-    // Desactivar seguimiento GPS al cargar sesiones
     if (multipleSessions.loadedSessions.length > 0) {
       setFollowPosition(false)
     }
@@ -99,7 +101,6 @@ export default function ProductionShell(): React.JSX.Element {
     <GpsPositionProvider>
       <main className="prod-shell">
         <div className="prod-layout">
-          {/* Panel lateral con tabs */}
           <div className="side-panel">
             <div
               className="panel-tabs"
@@ -146,7 +147,6 @@ export default function ProductionShell(): React.JSX.Element {
             </div>
 
             <div className="panel-content">
-              {/* Mantener ambos componentes montados pero solo mostrar uno - preserva estado */}
               <div
                 role="tabpanel"
                 id="tabpanel-devices"
@@ -210,7 +210,20 @@ export default function ProductionShell(): React.JSX.Element {
                 aria-labelledby="tab-settings"
                 style={{ display: activeTab === 'settings' ? 'block' : 'none' }}
               >
-                <SettingsPanel theme={theme} onThemeChange={setTheme} />
+                <SettingsPanel
+                  theme={theme}
+                  onThemeChange={setTheme}
+                  tileProviders={providers}
+                  selectedProvider={provider}
+                  onProviderChange={setProvider}
+                  cacheStats={tileCache.stats}
+                  onClearCache={tileCache.clearCache}
+                  onImportTiles={tileCache.importTiles}
+                  onPreloadTiles={tileCache.startPreload}
+                  onCancelPreload={tileCache.cancelPreload}
+                  preloadProgress={tileCache.preloadProgress}
+                  onSelectMapBounds={selectMapBounds}
+                />
               </div>
             </div>
           </div>
@@ -235,7 +248,6 @@ export default function ProductionShell(): React.JSX.Element {
                   ✕ Limpiar sesión cargada
                 </button>
               )}
-              {/* Mapa con datos geoespaciales */}
               <MapView
                 geoData={geoData}
                 isSessionActive={session.status === 'running'}
@@ -245,9 +257,10 @@ export default function ProductionShell(): React.JSX.Element {
                 onToggleMaximize={() => setMapMaximized((prev) => !prev)}
                 loadedSessions={multipleSessions.loadedSessions}
                 focusSessionBounds={focusSessionBounds}
+                tileProvider={provider}
+                onMapReady={handleMapReady}
               />
             </div>
-            {/* Tabla de puntos */}
             {!mapMaximized && (
               <PointsTable
                 points={session.points}
@@ -265,7 +278,6 @@ export default function ProductionShell(): React.JSX.Element {
           </div>
         </div>
 
-        {/* All Sessions Drawer */}
         <AllSessionsDrawer
           isOpen={allSessionsDrawerOpen}
           onClose={() => setAllSessionsDrawerOpen(false)}
@@ -274,7 +286,6 @@ export default function ProductionShell(): React.JSX.Element {
           loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
           onToggleSession={(sessionId, checked) => {
             if (checked) {
-              // Cargar sesión completa
               persistedSessions
                 .getSession(sessionId)
                 .then((fullSession) => {
@@ -294,7 +305,6 @@ export default function ProductionShell(): React.JSX.Element {
             }
           }}
           onLoadSession={(sessionId) => {
-            // Cargar como sesión principal
             setFollowPosition(false)
             persistedSessions
               .getSession(sessionId)

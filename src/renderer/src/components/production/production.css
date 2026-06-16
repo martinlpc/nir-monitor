@@ -923,3 +923,21 @@
 .modal-btn-confirm:hover:not(:disabled) {
   opacity: 0.9;
 }
+
+/* === Map Zoom Indicator === */
+
+.map-zoom-indicator {
+  display: flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 14px;
+  margin-top: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  cursor: default;
+  user-select: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}

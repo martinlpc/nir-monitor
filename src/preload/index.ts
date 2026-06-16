@@ -5,12 +5,9 @@ import type { DeviceStatus } from '../shared/device.types'
 import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
+import type { CacheStats, PreloadProgress } from '../main/tile-cache/TileCacheService'
 
-// -- API expuesta al Renderer via window.api ----------------------------
 const api = {
-  /**
-   * Suscribe a eventos push desde main process. Actualmente soporta 'alert'.
-   */
   on: (channel: string, cb: (...args: any[]) => void) => {
     if (channel === 'alert') {
       const handler = (_: IpcRendererEvent, payload: { message: string; type: string }) =>
@@ -25,7 +22,6 @@ const api = {
       ipcRenderer.removeListener('alert', cb)
     }
   },
-  // -- Puertos y dispositivos -------------------------------------------
 
   ports: {
     list: (): Promise<{ path: string; manufacturer: string }[]> =>
@@ -34,7 +30,6 @@ const api = {
 
   devices: {
     list: (): Promise<DeviceManagerStateDTO> => ipcRenderer.invoke(IPC_HANDLERS.DEVICE_LIST),
-    // -- API expuesta al Renderer via window.api ----------------------------
     scan: (): Promise<DeviceManagerStateDTO> => ipcRenderer.invoke(IPC_HANDLERS.DEVICE_SCAN),
 
     setPort: (device: 'nbm550' | 'gps', port: string): Promise<DeviceManagerStateDTO> =>
@@ -65,8 +60,6 @@ const api = {
       return () => ipcRenderer.removeListener(IPC_EVENTS.SCAN_STATE, handler)
     }
   },
-
-  // -- GPS -----------------------------------------------------------------
 
   gps: {
     onPosition: (cb: (data: { coords: GeoPosition; valid: boolean; port?: string }) => void) => {
@@ -99,8 +92,6 @@ const api = {
     }
   },
 
-  // -- NBM550 ---------------------------------------------------------------
-
   nbm: {
     onSample: (
       cb: (data: { rss: number; unit: string; battery: number; timestamp: number }) => void
@@ -113,8 +104,6 @@ const api = {
       return () => ipcRenderer.removeListener(IPC_EVENTS.NBM_SAMPLE, handler)
     }
   },
-
-  // -- Sesión --------------------------------------------------------------
 
   session: {
     start: (payload: {
@@ -238,8 +227,6 @@ const api = {
     }
   },
 
-  // -- Settings ---------------------------------------------------------------
-
   settings: {
     openUncertaintyFile: (): Promise<{
       success: boolean
@@ -287,10 +274,52 @@ const api = {
         factor: number
       }>
     }> => ipcRenderer.invoke(IPC_HANDLERS.GET_LOADED_UNCERTAINTY)
+  },
+
+  tileCache: {
+    getStats: (): Promise<CacheStats> => ipcRenderer.invoke(IPC_HANDLERS.TILE_CACHE_STATS),
+
+    clearCache: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.TILE_CLEAR_CACHE),
+
+    preloadTiles: (options: {
+      providerId: string
+      north: number
+      south: number
+      east: number
+      west: number
+      minZoom: number
+      maxZoom: number
+    }): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_HANDLERS.TILE_PRELOAD, options),
+
+    cancelPreload: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.TILE_PRELOAD_CANCEL),
+
+    importTiles: (options: { providerId: string }): Promise<{
+      success: boolean
+      imported?: number
+      skipped?: number
+      canceled?: boolean
+    }> => ipcRenderer.invoke(IPC_HANDLERS.TILE_IMPORT, options),
+
+    onPreloadProgress: (cb: (progress: PreloadProgress) => void) => {
+      const handler = (_: IpcRendererEvent, progress: PreloadProgress) => cb(progress)
+      ipcRenderer.on(IPC_EVENTS.TILE_PRELOAD_PROGRESS, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.TILE_PRELOAD_PROGRESS, handler)
+    },
+
+    onImportProgress: (
+      cb: (progress: { imported: number; skipped: number; total: number }) => void
+    ) => {
+      const handler = (
+        _: IpcRendererEvent,
+        progress: { imported: number; skipped: number; total: number }
+      ) => cb(progress)
+      ipcRenderer.on(IPC_EVENTS.TILE_IMPORT_PROGRESS, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.TILE_IMPORT_PROGRESS, handler)
+    }
   }
 }
-
-// -- contextBridge -----------------------------------------------------------------
 
 if (process.contextIsolated) {
   try {
@@ -299,6 +328,6 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
-  // @ts-expect-error — fallback for non-isolated context
+  // @ts-expect-error
   window.api = api
 }

@@ -8,7 +8,6 @@
   font-size: 0.78rem;
 }
 
-/* === Sections === */
 .settings-section {
   display: flex;
   flex-direction: column;
@@ -31,7 +30,6 @@
   line-height: 1.4;
 }
 
-/* === Load button === */
 .settings-btn {
   align-self: flex-start;
   padding: 7px 14px;
@@ -55,7 +53,22 @@
   cursor: not-allowed;
 }
 
-/* === Error message === */
+.settings-btn--primary {
+  background: var(--nir-blue);
+  color: #ffffff;
+  border-color: var(--nir-blue);
+}
+
+.settings-btn--primary:hover {
+  background: var(--nir-border-blue-hover);
+  border-color: var(--nir-border-blue-hover);
+}
+
+.settings-btn--active {
+  background: var(--nir-border-blue);
+  border-color: var(--nir-blue);
+}
+
 .settings-error {
   font-size: 0.78rem;
   color: var(--nir-danger);
@@ -65,7 +78,6 @@
   border: 1px solid rgba(252, 165, 165, 0.15);
 }
 
-/* === Uncertainty data === */
 .settings-uncertainty {
   display: flex;
   flex-direction: column;
@@ -124,7 +136,6 @@
   font-weight: 500;
 }
 
-/* === Active uncertainty highlight === */
 .settings-option__highlight {
   color: var(--nir-accent) !important;
   font-weight: 600;
@@ -132,7 +143,6 @@
   font-size: 0.75rem;
 }
 
-/* === Options (toggle/select rows) === */
 .settings-option {
   display: flex;
   justify-content: space-between;
@@ -183,11 +193,86 @@
   box-shadow: 0 0 0 2px var(--nir-border-blue);
 }
 
-/* === Settings tab icon button === */
 .tab-button--icon {
   flex: 0 0 auto;
   width: 44px;
   font-size: 1.1rem;
   padding: 12px 0;
   text-align: center;
+}
+
+.settings-input {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--nir-border-blue);
+  background: rgba(23, 34, 75, 0.7);
+  color: var(--nir-text);
+  outline: none;
+  width: 100px;
+  text-align: right;
+}
+
+[data-theme='soft'] .settings-input {
+  background: #ffffff;
+  border-color: rgba(60, 60, 67, 0.18);
+}
+
+.settings-input:focus {
+  border-color: var(--nir-blue);
+  box-shadow: 0 0 0 2px var(--nir-border-blue);
+}
+
+.settings-preload {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--nir-border-blue);
+  border-radius: 6px;
+  background: rgba(23, 34, 75, 0.3);
+}
+
+[data-theme='soft'] .settings-preload {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.settings-preload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0;
+}
+
+.settings-preload-progress__text {
+  font-size: 0.72rem;
+  color: var(--nir-text-muted);
+  margin: 0;
+}
+
+.settings-preload-progress__done {
+  font-size: 0.78rem;
+  color: var(--nir-accent);
+  margin: 4px 0;
+}
+
+.settings-preload-progress__cancelled {
+  font-size: 0.78rem;
+  color: var(--nir-text-muted);
+  margin: 4px 0;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--nir-border-blue);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar__fill {
+  height: 100%;
+  background: var(--nir-blue);
+  border-radius: 4px;
+  transition: width 300ms ease;
 }

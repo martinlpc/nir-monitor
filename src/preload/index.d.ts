@@ -7,11 +7,6 @@ import type { DeviceStatus } from '../shared/device.types'
 declare global {
   interface Window {
     api: {
-      /**
-       * Suscribe a eventos push desde main process. Actualmente soporta 'alert'.
-       * @param channel Canal IPC ('alert')
-       * @param cb Callback con (event, payload)
-       */
       on: (
         channel: 'alert',
         cb: (event: unknown, payload: { message: string; type: string }) => void
@@ -163,6 +158,45 @@ declare global {
             factor: number
           }>
         }>
+      }
+      tileCache: {
+        getStats: () => Promise<{
+          sizeBytes: number
+          tileCount: number
+        }>
+        clearCache: () => Promise<{ success: boolean }>
+        preloadTiles: (options: {
+          providerId: string
+          north: number
+          south: number
+          east: number
+          west: number
+          minZoom: number
+          maxZoom: number
+        }) => Promise<{ success: boolean }>
+        cancelPreload: () => Promise<{ success: boolean }>
+        importTiles: (options: { providerId: string }) => Promise<{
+          success: boolean
+          imported?: number
+          skipped?: number
+          canceled?: boolean
+        }>
+        onPreloadProgress: (
+          cb: (progress: {
+            current: number
+            total: number
+            zoom: number
+            phase: 'counting' | 'downloading' | 'done' | 'cancelled' | 'error'
+            error?: string
+          }) => void
+        ) => () => void
+        onImportProgress: (
+          cb: (progress: {
+            imported: number
+            skipped: number
+            total: number
+          }) => void
+        ) => () => void
       }
     }
   }
