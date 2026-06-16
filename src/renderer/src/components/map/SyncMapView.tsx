@@ -62,7 +62,7 @@ export default function SyncMapView({
     }
 
     if (livePosition && livePosition.lat !== 0) {
-      map.setView([livePosition.lat, livePosition.lon], 17)
+      map.panTo([livePosition.lat, livePosition.lon])
     }
   }, [followPosition, livePosition, map])
 

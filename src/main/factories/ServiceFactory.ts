@@ -34,7 +34,8 @@ function createSimulatedScanner(): ISerialPortScanner {
  * Retorna todas las instancias ya configuradas y "wireadas"
  */
 export function createServices(): Services {
-  const simulationMode = process.env.NIR_SIMULATION === 'true'
+  const simulationMode =
+    process.env.NIR_SIMULATION === 'true' || process.argv.includes('--simulation')
   console.log(`[ServiceFactory] simulationMode: ${simulationMode}`)
 
   // 1. Crear dependencias base (sin dependencias)

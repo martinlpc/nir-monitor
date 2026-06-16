@@ -1,6 +1,6 @@
 {
   "name": "nir-monitor",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Non-Ionizing Radiations mapper, based on ITU-K.113",
   "main": "./out/main/index.js",
   "author": {
