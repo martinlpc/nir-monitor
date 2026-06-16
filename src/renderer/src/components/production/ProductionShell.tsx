@@ -249,7 +249,6 @@ export default function ProductionShell(): React.JSX.Element {
                     session.reset()
                     multipleSessions.clearSessions()
                     setFocusSessionBounds(null)
-                    setFollowPosition(true)
                   }}
                   title="Limpiar sesión cargada"
                   aria-label="Limpiar sesión cargada"

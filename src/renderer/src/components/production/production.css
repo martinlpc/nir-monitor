@@ -846,7 +846,7 @@
 .modal-label {
   font-size: 0.8rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--nir-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
