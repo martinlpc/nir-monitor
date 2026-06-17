@@ -276,3 +276,20 @@
   border-radius: 4px;
   transition: width 300ms ease;
 }
+
+.settings-section--about {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--nir-border-blue);
+}
+
+.settings-section--about .settings-option__label {
+  font-size: 0.7rem;
+  color: var(--nir-text-muted);
+}
+
+.settings-section--about .settings-option__value {
+  font-family: 'Courier New', monospace;
+  font-size: 0.7rem;
+  color: var(--nir-blue);
+}

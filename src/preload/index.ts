@@ -318,6 +318,10 @@ const api = {
 
     install: (type: DriverType): Promise<void> =>
       ipcRenderer.invoke(IPC_HANDLERS.DRIVERS_INSTALL, type)
+  },
+
+  app: {
+    getVersion: (): Promise<{ version: string }> => ipcRenderer.invoke(IPC_HANDLERS.GET_APP_VERSION)
   }
 }
 

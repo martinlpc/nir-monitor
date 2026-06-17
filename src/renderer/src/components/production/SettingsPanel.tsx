@@ -70,6 +70,7 @@ export default function SettingsPanel({
   const [dataVersion, setDataVersion] = useState<number | null>(null)
   const [probeInfo, setProbeInfo] = useState<ProbeInfo | null>(null)
   const [activeCorrection, setActiveCorrection] = useState<ActiveCorrectionFactor | null>(null)
+  const [appVersion, setAppVersion] = useState<string | null>(null)
 
   const [preloadBounds, setPreloadBounds] = useState<{
     north: number
@@ -97,6 +98,9 @@ export default function SettingsPanel({
         setProbeRecords(res.records)
         setDataVersion(res.version)
       }
+    })
+    window.api.app.getVersion().then(({ version }) => {
+      setAppVersion(version)
     })
   }, [])
 
@@ -345,6 +349,15 @@ export default function SettingsPanel({
           </div>
         )}
       </section>
+
+      {appVersion && (
+        <section className="settings-section settings-section--about">
+          <div className="settings-option">
+            <span className="settings-option__label">Versión de la aplicación</span>
+            <span className="settings-option__value">{appVersion}</span>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

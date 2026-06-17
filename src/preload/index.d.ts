@@ -188,6 +188,9 @@ declare global {
         check: () => Promise<DriverCheckResult>
         install: (type: DriverType) => Promise<void>
       }
+      app: {
+        getVersion: () => Promise<{ version: string }>
+      }
     }
   }
 }

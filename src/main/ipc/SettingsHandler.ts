@@ -1,10 +1,13 @@
-import { ipcMain } from 'electron'
+import { ipcMain, app } from 'electron'
 import { IPC_HANDLERS } from './channels'
 import { loadBuiltInProbeData, getBuiltInVersion } from '../uncertainty/loadBuiltInData'
 import { normalizeProbeName } from '../uncertainty/correctionFactor'
 import type { DeviceManager } from '../services/DeviceManager'
 
 export function registerSettingsHandlers(deviceManager: DeviceManager): void {
+  ipcMain.handle(IPC_HANDLERS.GET_APP_VERSION, async () => {
+    return { version: app.getVersion() }
+  })
   ipcMain.handle(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA, async () => {
     const records = loadBuiltInProbeData()
     const version = getBuiltInVersion()
