@@ -25,17 +25,17 @@ Desarrollado por el [Ente Nacional de Comunicaciones (ENACOM)](https://www.enaco
 
 ## Tech Stack
 
-| Capa | Tecnología |
-|------|-----------|
-| Shell desktop | Electron 42 + electron-vite 5 + Vite 7 |
-| Frontend | React 19 + TypeScript 5.9 (strict) |
-| Mapas | Leaflet 1.9 + react-leaflet 5 |
-| Comunicación serie | serialport 13 |
-| Parsing GPS | nmea-simple 3.3 |
-| Base de datos | sql.js (SQLite WASM) |
-| Exportación | exceljs 4.4, archiver 7.0 |
-| Testing | Vitest 4.1 + coverage V8 |
-| Empaquetado | electron-builder 26 (NSIS / DMG / AppImage) |
+| Capa               | Tecnología                                  |
+| ------------------ | ------------------------------------------- |
+| Shell desktop      | Electron 42 + electron-vite 5 + Vite 7      |
+| Frontend           | React 19 + TypeScript 5.9 (strict)          |
+| Mapas              | Leaflet 1.9 + react-leaflet 5               |
+| Comunicación serie | serialport 13                               |
+| Parsing GPS        | nmea-simple 3.3                             |
+| Base de datos      | sql.js (SQLite WASM)                        |
+| Exportación        | exceljs 4.4, archiver 7.0                   |
+| Testing            | Vitest 4.1 + coverage V8                    |
+| Empaquetado        | electron-builder 26 (NSIS / DMG / AppImage) |
 
 ## Prerequisitos
 
@@ -78,18 +78,18 @@ La ruta de instalación en Windows es `Program Files\ENACOM\nir-monitor`. Los ar
 
 ## Scripts Clave
 
-| Comando | Propósito |
-|---------|-----------|
-| `npm run dev` | Dev con hot reload |
-| `npm run build` | Typecheck + build production |
-| `npm test` | Vitest (node env, timeout 15s) |
-| `npm run lint` | ESLint |
-| `npm run format` | Prettier --write |
-| `npm run typecheck` | tsc node + web |
-| `npm run seed:mock` | Seeds SQLite con datos mock (Neuquén) |
-| `npm run build:win` | Build NSIS installer |
-| `npm run build:mac` | Build DMG |
-| `npm run build:linux` | Build AppImage/snap/deb |
+| Comando               | Propósito                             |
+| --------------------- | ------------------------------------- |
+| `npm run dev`         | Dev con hot reload                    |
+| `npm run build`       | Typecheck + build production          |
+| `npm test`            | Vitest (node env, timeout 15s)        |
+| `npm run lint`        | ESLint                                |
+| `npm run format`      | Prettier --write                      |
+| `npm run typecheck`   | tsc node + web                        |
+| `npm run seed:mock`   | Seeds SQLite con datos mock (Neuquén) |
+| `npm run build:win`   | Build NSIS installer                  |
+| `npm run build:mac`   | Build DMG                             |
+| `npm run build:linux` | Build AppImage/snap/deb               |
 
 ---
 
@@ -153,6 +153,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 #### Device Drivers
 
 **GPSDriver** (`src/main/devices/gps/GPSDriver.ts`)
+
 - Protocolo **NMEA 0183** a 4800 baud
 - `ReadlineParser` con delimitador `\r\n`
 - Parseo con `nmea-simple` (sentencias GGA, RMC, GSA)
@@ -160,6 +161,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 - Mantiene estado interno de posición y validez de fix
 
 **NBM550Driver** (`src/main/devices/nbm550/NBM550Driver.ts`)
+
 - Protocolo **binario comando-respuesta** a 460800 baud, delimitador `;`
 - **Cola de promesas serializada** — garantiza un solo comando pendiente por vez
 - Timeout por comando: 6s. Tras **4 timeouts consecutivos** → estado `error`
@@ -167,6 +169,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 - Parser dedicado (`NBM550Parser.ts`) que extrae RSS, unidad y batería
 
 **Simuladores** (`src/main/devices/simulated/`)
+
 - `SimulatedGPSDriver`: emite posiciones falsas sobre Av. del Libertador (CABA) cada 3s
 - `SimulatedNBM550Driver`: emite lecturas senoidales con ruido aleatorio
 - Activados con `NIR_SIMULATION=true` o flag `--simulation`
@@ -174,6 +177,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 #### Servicios Core
 
 **DeviceManager** (`src/main/services/DeviceManager.ts`)
+
 - Orquestador de drivers. Ciclo de vida de NBM-550 y GPS.
 - `initialize()` → carga `port-config.json` → `scan()` → auto-detecta y conecta
 - `ReconnectController` por dispositivo: 3s entre reintentos, timeout de 30s
@@ -181,6 +185,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 - Emite eventos: `device:status`, `device:error`, `gps:position`, `gps:nmea`, `nbm:sample`, `state`
 
 **GeoFusionService** (`src/main/services/GeoFusionService.ts`)
+
 - Fusiona posición GPS + medición EMF en un `GeoTimestamp`.
 - Dos modos de captura:
   - **`distance`** — captura al moverse ≥ N metros (Haversine)
@@ -190,6 +195,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 - Flag `capturing` previene doble captura simultánea
 
 **SessionService** (`src/main/services/SessionService.ts`)
+
 - Ciclo de vida: `idle → running → stopped`
 - `start()`: valida dispositivos conectados + fix GPS → resuelve correction factor desde datos embebidos → inicia fusión
 - `stop()`: detiene fusión → finaliza en repositorio (actualiza metadatos, computa stats, flush)
@@ -221,11 +227,11 @@ session_stats (sessionId PK, avgCorrected, maxCorrected,
 
 30+ canales definidos en `channels.ts`. Separación por handler:
 
-| Handler | Canales |
-|---------|---------|
-| `DeviceManagerHandler.ts` | `device:list`, `device:scan`, `device:set-port`, `device:connect`, `device:disconnect` |
+| Handler                    | Canales                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `DeviceManagerHandler.ts`  | `device:list`, `device:scan`, `device:set-port`, `device:connect`, `device:disconnect`                                          |
 | `SessionServiceHandler.ts` | `session:start/stop/list/get/delete`, `session:export-*`, `session:import-geojson`, `session:stats`, `session:points-in-bounds` |
-| `TileCacheHandler.ts` | `tile:cache-stats`, `tile:clear-cache`, `tile:preload`, `tile:preload-cancel`, `tile:import` |
+| `TileCacheHandler.ts`      | `tile:cache-stats`, `tile:clear-cache`, `tile:preload`, `tile:preload-cancel`, `tile:import`                                    |
 
 **Push** (Main → Renderer): `gps:position`, `nbm:sample`, `session:sample`, `device:status`
 **Request/Response** (Renderer → Main): `device:list`, `session:start`, `session:export`
@@ -234,14 +240,14 @@ session_stats (sessionId PK, avgCorrected, maxCorrected,
 
 Los factores de corrección para sondas Narda están **embebidos** en `resources/probe-data.json`:
 
-| Sonda | Rango (MHz) | Incertidumbre (%) | Factor |
-|-------|-------------|-------------------|--------|
-| EF0391 | 0.1 – 3000 | 2.73 | 1.370 |
-| EF1891 | 3 – 18000 | 3.12 | 1.432 |
-| EF6091 | 100 – 6000 | 4.05 | 1.594 |
-| EF6092 | 0.1 – 3000 | 4.10 | 1.604 |
-| HF3061 | 0.3 – 30 | 1.11 | 1.000 |
-| HF0191 | 27 – 1000 | 1.27 | 1.000 |
+| Sonda  | Rango (MHz) | Incertidumbre (%) | Factor |
+| ------ | ----------- | ----------------- | ------ |
+| EF0391 | 0.1 – 3000  | 2.73              | 1.370  |
+| EF1891 | 3 – 18000   | 3.12              | 1.432  |
+| EF6091 | 100 – 6000  | 4.05              | 1.594  |
+| EF6092 | 0.1 – 3000  | 4.10              | 1.604  |
+| HF3061 | 0.3 – 30    | 1.11              | 1.000  |
+| HF0191 | 27 – 1000   | 1.27              | 1.000  |
 
 `loadBuiltInData.ts` carga estos datos según empaquetado (development vs producción). El factor se resuelve automáticamente por modelo de sonda. Sin factor válido → la sesión no arranca.
 
@@ -249,21 +255,22 @@ Los factores de corrección para sondas Narda están **embebidos** en `resources
 
 Expone **`window.api`** via `contextBridge.exposeInMainWorld`:
 
-| Sección | Métodos |
-|---------|---------|
-| `ports` | `list()` |
-| `devices` | `list()`, `scan()`, `setPort()`, `connect()`, `disconnect()` + listeners |
-| `gps` | `onPosition()`, `onNmea()`, `onFixLost()` |
-| `nbm` | `onSample()` |
-| `session` | `start()`, `stop()`, `list()`, `get()`, `delete()`, `export()`, `importGeoJSON()`, `getStats()`, `getPointsInBounds()` + listeners |
-| `settings` | `getProbeInfo()`, `getActiveUncertainty()` |
-| `tileCache` | `getStats()`, `clearCache()`, `preloadTiles()`, `cancelPreload()`, `importTiles()` + progress listeners |
+| Sección     | Métodos                                                                                                                            |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `ports`     | `list()`                                                                                                                           |
+| `devices`   | `list()`, `scan()`, `setPort()`, `connect()`, `disconnect()` + listeners                                                           |
+| `gps`       | `onPosition()`, `onNmea()`, `onFixLost()`                                                                                          |
+| `nbm`       | `onSample()`                                                                                                                       |
+| `session`   | `start()`, `stop()`, `list()`, `get()`, `delete()`, `export()`, `importGeoJSON()`, `getStats()`, `getPointsInBounds()` + listeners |
+| `settings`  | `getProbeInfo()`, `getActiveUncertainty()`                                                                                         |
+| `tileCache` | `getStats()`, `clearCache()`, `preloadTiles()`, `cancelPreload()`, `importTiles()` + progress listeners                            |
 
 ### Capa Renderer (React 19)
 
 #### App.tsx
 
 Renderiza condicionalmente según `?debug=1`:
+
 - **DebugPanel** — herramientas de desarrollo
 - **ProductionShell** — interfaz de producción
 
@@ -273,20 +280,21 @@ Gestiona 3 pestañas laterales (Dispositivos | Historial | Configuración), MapV
 
 #### Hooks Principales
 
-| Hook | Propósito |
-|------|-----------|
-| `useDevices` | Estado y control de NBM-550 y GPS via IPC |
-| `useSession` | Ciclo de sesión: start/stop/reset, puntos en vivo, resumen |
-| `useGeoData` | Prepara datos geográficos para el mapa |
-| `useGpsPosition` | Posición GPS actual (contexto React con Provider) |
-| `useMultipleSessions` | Carga múltiples sesiones históricas superpuestas |
-| `usePersistentSessions` | CRUD de sesiones guardadas + export |
-| `useTileProvider` | Selección de tiles (OSM, CartoDB, ESRI) |
-| `useTileCache` | Estadísticas y control del caché offline |
+| Hook                    | Propósito                                                  |
+| ----------------------- | ---------------------------------------------------------- |
+| `useDevices`            | Estado y control de NBM-550 y GPS via IPC                  |
+| `useSession`            | Ciclo de sesión: start/stop/reset, puntos en vivo, resumen |
+| `useGeoData`            | Prepara datos geográficos para el mapa                     |
+| `useGpsPosition`        | Posición GPS actual (contexto React con Provider)          |
+| `useMultipleSessions`   | Carga múltiples sesiones históricas superpuestas           |
+| `usePersistentSessions` | CRUD de sesiones guardadas + export                        |
+| `useTileProvider`       | Selección de tiles (OSM, CartoDB, ESRI)                    |
+| `useTileCache`          | Estadísticas y control del caché offline                   |
 
 #### MapView
 
 Leaflet map con:
+
 - `CircleMarker` por punto (color según intensidad via paleta verde-amarillo-rojo)
 - `Polyline` entre puntos (segmentos color-coded)
 - `GpsPositionProvider` para seguir posición actual
@@ -296,27 +304,27 @@ Leaflet map con:
 
 ### Patrones de Diseño
 
-| Patrón | Aplicación |
-|--------|-----------|
-| **EventEmitter** | Comunicación asíncrona intra-Main |
-| **Factory Method** | `ServiceFactory.createServices()` con DI manual |
-| **Strategy** | `GeoFusionConfig.triggerMode`: distance vs time |
-| **Repository** | `ISessionRepository` (SQLiteSessionRepository) |
-| **Bridge** | `contextBridge` en preload |
-| **Observer** | Event listeners: `device:status`, `session:point` |
-| **Promise Queue** | NBM550Driver serializa comandos |
-| **DTO** | `src/shared/dto/` desacopla IPC de implementaciones |
+| Patrón             | Aplicación                                          |
+| ------------------ | --------------------------------------------------- |
+| **EventEmitter**   | Comunicación asíncrona intra-Main                   |
+| **Factory Method** | `ServiceFactory.createServices()` con DI manual     |
+| **Strategy**       | `GeoFusionConfig.triggerMode`: distance vs time     |
+| **Repository**     | `ISessionRepository` (SQLiteSessionRepository)      |
+| **Bridge**         | `contextBridge` en preload                          |
+| **Observer**       | Event listeners: `device:status`, `session:point`   |
+| **Promise Queue**  | NBM550Driver serializa comandos                     |
+| **DTO**            | `src/shared/dto/` desacopla IPC de implementaciones |
 
 ---
 
 ## Export Formats
 
-| Formato | Descripción |
-|---------|-------------|
+| Formato                | Descripción                                                                                                          |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | **GeoJSON** (RFC 7946) | FeatureCollection con Point [lon, lat, alt]. Incluye metadata de sesión, instrumento, stats. Cifrado (.geojson.enc). |
-| **CSV** | Quoted comma-separated. Cabecera en español. |
-| **XLSX** | 3 archivos via exceljs usando plantillas ENACOM: reporte (16 cols), reporte_p (% MEP), averif (solo MEP ≥ 50%). |
-| **KMZ** | KML comprimido para Google Earth. Color-coded por % MEP. Puntos + segmentos + timestamps. |
+| **CSV**                | Quoted comma-separated. Cabecera en español.                                                                         |
+| **XLSX**               | 3 archivos via exceljs usando plantillas ENACOM: reporte (16 cols), reporte_p (% MEP), averif (solo MEP ≥ 50%).      |
+| **KMZ**                | KML comprimido para Google Earth. Color-coded por % MEP. Puntos + segmentos + timestamps.                            |
 
 ## Database Encryption
 
@@ -333,10 +341,10 @@ La passphrase se convierte a key de 256 bits via SHA-256.
 
 ### Variables de Entorno
 
-| Variable | Requerida | Descripción |
-|----------|-----------|-------------|
-| `NIR_DB_ENCRYPTION_KEY` | Sí | Passphrase compartida (cualquier string) |
-| `NIR_SIMULATION` | No | `true` para activar simulación de dispositivos |
+| Variable                | Requerida | Descripción                                    |
+| ----------------------- | --------- | ---------------------------------------------- |
+| `NIR_DB_ENCRYPTION_KEY` | Sí        | Passphrase compartida (cualquier string)       |
+| `NIR_SIMULATION`        | No        | `true` para activar simulación de dispositivos |
 
 ### Migración Legacy
 

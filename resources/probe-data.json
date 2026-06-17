@@ -1,10 +1,10 @@
 {
   "version": 1,
   "records": [
-    { "name": "EF0391", "fMin": 0.1, "fMax": 3000, "uncertainty": 2.73, "factor": 1.370 },
+    { "name": "EF0391", "fMin": 0.1, "fMax": 3000, "uncertainty": 2.73, "factor": 1.37 },
     { "name": "EF1891", "fMin": 3, "fMax": 18000, "uncertainty": 3.12, "factor": 1.432 },
     { "name": "EF6091", "fMin": 100, "fMax": 6000, "uncertainty": 4.05, "factor": 1.594 },
-    { "name": "EF6092", "fMin": 0.1, "fMax": 3000, "uncertainty": 4.10, "factor": 1.604 },
+    { "name": "EF6092", "fMin": 0.1, "fMax": 3000, "uncertainty": 4.1, "factor": 1.604 },
     { "name": "HF3061", "fMin": 0.3, "fMax": 30, "uncertainty": 1.11, "factor": 1 },
     { "name": "HF0191", "fMin": 27, "fMax": 1000, "uncertainty": 1.27, "factor": 1 }
   ]

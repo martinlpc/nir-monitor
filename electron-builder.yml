@@ -15,7 +15,7 @@ extraResources:
   - from: resources/drivers
     to: drivers
     filter:
-      - "**/*"
+      - '**/*'
 win:
   executableName: nir-monitor
 nsis:

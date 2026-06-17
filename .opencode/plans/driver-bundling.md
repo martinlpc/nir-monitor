@@ -11,10 +11,10 @@ usuario para instalarlos con un clic.
 
 ## 1. Hardware detectado
 
-| Puerto | Chip | VID:PID | Fabricante | Dispositivo |
-|--------|------|---------|------------|-------------|
-| COM19 | **FTDI** | `0403:6001` | FTDI | NBM-550 |
-| COM18 | **Prolific PL2303** | `067B:2303` | Prolific | GPS |
+| Puerto | Chip                | VID:PID     | Fabricante | Dispositivo |
+| ------ | ------------------- | ----------- | ---------- | ----------- |
+| COM19  | **FTDI**            | `0403:6001` | FTDI       | NBM-550     |
+| COM18  | **Prolific PL2303** | `067B:2303` | Prolific   | GPS         |
 
 ---
 
@@ -93,13 +93,13 @@ src/
 
 ```yaml
 nsis:
-  include: build/installer.nsh       # ← NUEVO
+  include: build/installer.nsh # ← NUEVO
 
-extraResources:                       # ← NUEVO
+extraResources: # ← NUEVO
   - from: resources/drivers
     to: drivers
     filter:
-      - "**/*"
+      - '**/*'
 ```
 
 `extraResources` copia `resources/drivers/` a `$INSTDIR/resources/drivers/`
@@ -185,7 +185,7 @@ export interface PortDriverInfo {
 
 export interface DriverCheckResult {
   ports: PortDriverInfo[]
-  missing: PortDriverInfo[]      // puertos cuyo driver falta
+  missing: PortDriverInfo[] // puertos cuyo driver falta
 }
 ```
 
@@ -198,20 +198,20 @@ import { join } from 'path'
 
 // Mapeo de vendorId conocido a DriverType
 const VENDOR_MAP: Record<string, { type: DriverType; name: string }> = {
-  '0403': { type: 'ftdi', name: 'FTDI' },       // NBM-550
-  '067B': { type: 'prolific', name: 'Prolific' },  // GPS
+  '0403': { type: 'ftdi', name: 'FTDI' }, // NBM-550
+  '067B': { type: 'prolific', name: 'Prolific' }, // GPS
   '1A86': { type: 'ch340', name: 'CH340' },
-  '10C4': { type: 'cp210x', name: 'CP210x' },
+  '10C4': { type: 'cp210x', name: 'CP210x' }
 }
 
 // Registry keys que indican driver instalado
 const DRIVER_REGISTRY_KEYS: Record<DriverType, string> = {
-  ftdi:     'HKLM\\SYSTEM\\CurrentControlSet\\Services\\ftdibus',
+  ftdi: 'HKLM\\SYSTEM\\CurrentControlSet\\Services\\ftdibus',
   prolific: 'HKLM\\SYSTEM\\CurrentControlSet\\Services\\ser2pl',
-  ch340:    'HKLM\\SYSTEM\\CurrentControlSet\\Services\\CH341SER',
-  cp210x:   'HKLM\\SYSTEM\\CurrentControlSet\\Services\\silabser',
-  cdc_acm:  '',           // built-in, siempre instalado
-  unknown:  '',
+  ch340: 'HKLM\\SYSTEM\\CurrentControlSet\\Services\\CH341SER',
+  cp210x: 'HKLM\\SYSTEM\\CurrentControlSet\\Services\\silabser',
+  cdc_acm: '', // built-in, siempre instalado
+  unknown: ''
 }
 ```
 
@@ -232,9 +232,12 @@ export class DriverInstaller {
         [
           '-Command',
           'Start-Process',
-          '-FilePath', `"${exePath}"`,
-          '-ArgumentList', `"${args.join(' ')}"`,
-          '-Verb', 'RunAs',
+          '-FilePath',
+          `"${exePath}"`,
+          '-ArgumentList',
+          `"${args.join(' ')}"`,
+          '-Verb',
+          'RunAs',
           '-Wait'
         ],
         { windowsHide: true },
@@ -261,7 +264,7 @@ export class DriverInstaller {
 export const IPC_HANDLERS = {
   // ... existentes ...
   DRIVERS_CHECK: 'drivers:check',
-  DRIVERS_INSTALL: 'drivers:install',
+  DRIVERS_INSTALL: 'drivers:install'
 }
 ```
 
@@ -273,10 +276,13 @@ ipcMain.handle(IPC_HANDLERS.DRIVERS_CHECK, async (): Promise<DriverCheckResult> 
   return detector.check()
 })
 
-ipcMain.handle(IPC_HANDLERS.DRIVERS_INSTALL, async (_event, driverType: DriverType): Promise<boolean> => {
-  const installer = new DriverInstaller()
-  return installer.install(driverType)
-})
+ipcMain.handle(
+  IPC_HANDLERS.DRIVERS_INSTALL,
+  async (_event, driverType: DriverType): Promise<boolean> => {
+    const installer = new DriverInstaller()
+    return installer.install(driverType)
+  }
+)
 ```
 
 ### src/preload/index.ts — agregar al contextBridge
@@ -306,16 +312,19 @@ export function useDriverCheck() {
     setDriverStatus(result)
   }, [])
 
-  const install = useCallback(async (type: DriverType) => {
-    setInstalling(type)
-    try {
-      await window.api.drivers.install(type)
-      // Re-evaluar después de instalar
-      await check()
-    } finally {
-      setInstalling(null)
-    }
-  }, [check])
+  const install = useCallback(
+    async (type: DriverType) => {
+      setInstalling(type)
+      try {
+        await window.api.drivers.install(type)
+        // Re-evaluar después de instalar
+        await check()
+      } finally {
+        setInstalling(null)
+      }
+    },
+    [check]
+  )
 
   return { driverStatus, check, install, installing }
 }
@@ -354,28 +363,29 @@ useEffect(() => {
 }, [scanComplete])
 
 // Renderizar warning si hay dispositivos sin driver
-{driverStatus?.missing.length > 0 && (
-  <div className="devices-panel__driver-warning">
-    <span>⚠</span>
-    <div>
-      {driverStatus.missing.map((port) => (
-        <div key={port.path} className="driver-warning__item">
-          <span>
-            {port.friendlyName} ({port.path}) necesita driver{' '}
-            {port.driverType.toUpperCase()}
-          </span>
-          <button
-            className="btn btn--primary btn--sm"
-            onClick={() => install(port.driverType)}
-            disabled={installing === port.driverType}
-          >
-            {installing === port.driverType ? 'Instalando...' : 'Instalar driver'}
-          </button>
-        </div>
-      ))}
+{
+  driverStatus?.missing.length > 0 && (
+    <div className="devices-panel__driver-warning">
+      <span>⚠</span>
+      <div>
+        {driverStatus.missing.map((port) => (
+          <div key={port.path} className="driver-warning__item">
+            <span>
+              {port.friendlyName} ({port.path}) necesita driver {port.driverType.toUpperCase()}
+            </span>
+            <button
+              className="btn btn--primary btn--sm"
+              onClick={() => install(port.driverType)}
+              disabled={installing === port.driverType}
+            >
+              {installing === port.driverType ? 'Instalando...' : 'Instalar driver'}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
-  </div>
-)}
+  )
+}
 ```
 
 ---
@@ -417,21 +427,21 @@ useEffect(() => {
 
 ## 10. Archivos a modificar/crear
 
-| Archivo | Acción |
-|---------|--------|
-| `resources/drivers/ftdi/*` | **Crear** — descargar FTDI CDM v2.12.36 + DPInst |
-| `resources/drivers/prolific/*` | **Crear** — descargar PL2303 v4.9.0.0 |
-| `build/installer.nsh` | **Crear** — hook NSIS |
-| `electron-builder.yml` | **Modificar** — agregar `nsis.include` + `extraResources` |
-| `src/shared/driver.types.ts` | **Crear** — tipos `DriverType`, `PortDriverInfo`, `DriverCheckResult` |
-| `src/main/drivers/DriverDetector.ts` | **Crear** — detección de chips + registry check |
-| `src/main/drivers/DriverInstaller.ts` | **Crear** — elevation + ejecución del installer |
-| `src/main/ipc/channels.ts` | **Modificar** — agregar `DRIVERS_CHECK`, `DRIVERS_INSTALL` |
-| `src/main/ipc/DriverHandler.ts` | **Crear** — handlers IPC |
-| `src/main/factories/ServiceFactory.ts` | **Modificar** — registrar DriverHandler |
-| `src/preload/index.ts` | **Modificar** — exponer `window.api.drivers` |
-| `src/renderer/src/hooks/useDriverCheck.ts` | **Crear** — hook React |
-| `src/renderer/src/components/production/DevicesPanel.tsx` | **Modificar** — integrar warning + botón |
+| Archivo                                                   | Acción                                                                |
+| --------------------------------------------------------- | --------------------------------------------------------------------- |
+| `resources/drivers/ftdi/*`                                | **Crear** — descargar FTDI CDM v2.12.36 + DPInst                      |
+| `resources/drivers/prolific/*`                            | **Crear** — descargar PL2303 v4.9.0.0                                 |
+| `build/installer.nsh`                                     | **Crear** — hook NSIS                                                 |
+| `electron-builder.yml`                                    | **Modificar** — agregar `nsis.include` + `extraResources`             |
+| `src/shared/driver.types.ts`                              | **Crear** — tipos `DriverType`, `PortDriverInfo`, `DriverCheckResult` |
+| `src/main/drivers/DriverDetector.ts`                      | **Crear** — detección de chips + registry check                       |
+| `src/main/drivers/DriverInstaller.ts`                     | **Crear** — elevation + ejecución del installer                       |
+| `src/main/ipc/channels.ts`                                | **Modificar** — agregar `DRIVERS_CHECK`, `DRIVERS_INSTALL`            |
+| `src/main/ipc/DriverHandler.ts`                           | **Crear** — handlers IPC                                              |
+| `src/main/factories/ServiceFactory.ts`                    | **Modificar** — registrar DriverHandler                               |
+| `src/preload/index.ts`                                    | **Modificar** — exponer `window.api.drivers`                          |
+| `src/renderer/src/hooks/useDriverCheck.ts`                | **Crear** — hook React                                                |
+| `src/renderer/src/components/production/DevicesPanel.tsx` | **Modificar** — integrar warning + botón                              |
 
 ---
 
@@ -454,11 +464,11 @@ useEffect(() => {
 
 ## 12. Consideraciones
 
-| Aspecto | Nota |
-|---------|------|
-| **Firma digital** | DPInst.exe (Microsoft) y .cat (FTDI/Prolific) están WHQL-firmados. Windows 10/11 no mostrará advertencias. |
-| **UAC** | El NSIS installer ya corre como admin (`perMachine: true`). En runtime, el botón de instalar dispara UAC via PowerShell `Start-Process -Verb RunAs`. |
+| Aspecto                       | Nota                                                                                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Firma digital**             | DPInst.exe (Microsoft) y .cat (FTDI/Prolific) están WHQL-firmados. Windows 10/11 no mostrará advertencias.                                                     |
+| **UAC**                       | El NSIS installer ya corre como admin (`perMachine: true`). En runtime, el botón de instalar dispara UAC via PowerShell `Start-Process -Verb RunAs`.           |
 | **Chip distinto al esperado** | Si el usuario tiene un GPS con CH340 en vez de Prolific, el detector lo categoriza y muestra el mensaje correcto. No se intenta instalar el driver equivocado. |
-| **Driver ya instalado** | Tanto NSIS como runtime verifican registry antes de instalar. No se reinstala innecesariamente. |
-| **Tamaño** | ~8 MB adicionales en el installer (FTDI ~5MB, Prolific ~3MB). |
-| **macOS/Linux** | En macOS los drivers FTDI se instalan via .pkg (no DPInst). En Linux los drivers vienen en el kernel. Este plan cubre solo Windows por ahora. |
+| **Driver ya instalado**       | Tanto NSIS como runtime verifican registry antes de instalar. No se reinstala innecesariamente.                                                                |
+| **Tamaño**                    | ~8 MB adicionales en el installer (FTDI ~5MB, Prolific ~3MB).                                                                                                  |
+| **macOS/Linux**               | En macOS los drivers FTDI se instalan via .pkg (no DPInst). En Linux los drivers vienen en el kernel. Este plan cubre solo Windows por ahora.                  |
