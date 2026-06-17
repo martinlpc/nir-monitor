@@ -6,6 +6,7 @@ import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
 import type { CacheStats, PreloadProgress } from '../main/tile-cache/TileCacheService'
+import type { DriverCheckResult, DriverType } from '../shared/driver.types'
 
 const api = {
   on: (channel: string, cb: (...args: unknown[]) => void) => {
@@ -307,6 +308,13 @@ const api = {
       ipcRenderer.on(IPC_EVENTS.TILE_IMPORT_PROGRESS, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.TILE_IMPORT_PROGRESS, handler)
     }
+  },
+
+  drivers: {
+    check: (): Promise<DriverCheckResult> => ipcRenderer.invoke(IPC_HANDLERS.DRIVERS_CHECK),
+
+    install: (type: DriverType): Promise<void> =>
+      ipcRenderer.invoke(IPC_HANDLERS.DRIVERS_INSTALL, type)
   }
 }
 

@@ -1,0 +1,86 @@
+;   Prolific PL2303 VCP Series
+
+;   ser2pl_1.INF (for Win11)
+
+;   Copyright (c) 2024, Prolific Technology Inc.
+
+
+[version]
+signature="$CHICAGO$"
+Class=Ports
+ClassGuid={4D36E978-E325-11CE-BFC1-08002BE10318}
+Provider=%PRO%
+DriverVer=06/17/2024,3.9.6.0
+PnpLockdown=1
+CatalogFile=ser2pl_1.cat
+
+; ================= Device Install section =====================
+
+[ControlFlags]
+ExcludeFromSelect=*
+
+[Manufacturer]
+%PRO%=PRO,NTAMD64
+
+[SourceDisksFiles]
+ser2pl64_1.sys=1
+ser2pl64_1.dll=1
+
+[SourceDisksNames]
+1=%DISK_NAME%,
+
+[DestinationDirs] 
+DefaultDestDir  = 12
+CopyFiles_AMD64 = 11
+
+[PRO.NTAMD64]
+%DeviceDesc1% = ComPort, USB\VID_067B&PID_2303
+%DeviceDesc2% = ComPort, USB\VID_067B&PID_2304
+
+[ComPort.HW.AddReg]
+HKR,,"UpperFilters",0x00010000,"serenum"
+HKR,,"PL2303C1",0x00010001,10
+HKR,,"PL2303C2",0x00010001,0
+HKR,,"PL2303C3",0x00010001,4096
+
+[ComPort.NTAMD64]
+CopyFiles=ComPort.NTAMD64.Copy
+CopyFiles=CopyFiles_AMD64
+AddReg=ComPort.NTAMD64.AddReg
+
+[ComPort.NTAMD64.HW]
+AddReg=ComPort.HW.AddReg
+
+[ComPort.NTAMD64.Services]
+AddService = ser2pl_1, 0x00000002, Serial_Service_Inst.NTAMD64
+
+
+[ComPort.NTAMD64.Copy]
+ser2pl64_1.sys
+
+[CopyFiles_AMD64]
+ser2pl64_1.dll
+
+[ComPort.NTAMD64.AddReg]
+HKR,,DevLoader,,*ntkern
+HKR,,NTMPDriver,,ser2pl64_1.sys
+HKR,,NTMPDriver,,serenum.sys
+HKR,,PortSubClass,1,01
+HKR,,EnumPropPages32,,"ser2pl64_1.dll,SerialPortPropPageProvider"
+
+[Serial_Service_Inst.NTAMD64]
+DisplayName    = %Serial.SVCDESC%                            
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\ser2pl64_1.sys                            
+LoadOrderGroup = Base
+
+
+[Strings]
+PRO = "Prolific"
+DeviceDesc1 = "Prolific USB-to-Serial Comm Port"
+DeviceDesc2 = "Prolific USB-to-GPIO/PWM Port"
+Serial.SVCDESC  = "Prolific ser2pl_1 Serial Port WDF Driver"
+Serenum.SVCDESC = "Serenum Filter Driver"
+DISK_NAME = "USB-Serial Cable Diskette"

@@ -43,5 +43,7 @@ export const IPC_HANDLERS = {
   TILE_CLEAR_CACHE: 'tile:clear-cache',
   TILE_PRELOAD: 'tile:preload',
   TILE_PRELOAD_CANCEL: 'tile:preload-cancel',
-  TILE_IMPORT: 'tile:import'
+  TILE_IMPORT: 'tile:import',
+  DRIVERS_CHECK: 'drivers:check',
+  DRIVERS_INSTALL: 'drivers:install'
 } as const

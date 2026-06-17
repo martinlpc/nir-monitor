@@ -3,6 +3,7 @@ import type { DeviceManagerStateDTO } from '../shared/dto'
 import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import type { DeviceStatus } from '../shared/device.types'
+import type { DriverCheckResult, DriverType } from '../shared/driver.types'
 
 declare global {
   interface Window {
@@ -178,6 +179,10 @@ declare global {
         onImportProgress: (
           cb: (progress: { imported: number; skipped: number; total: number }) => void
         ) => () => void
+      }
+      drivers: {
+        check: () => Promise<DriverCheckResult>
+        install: (type: DriverType) => Promise<void>
       }
     }
   }

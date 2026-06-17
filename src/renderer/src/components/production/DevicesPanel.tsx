@@ -4,6 +4,7 @@ import type { useSession } from '../../hooks/useSession'
 import { generateSessionName, haversineMeters } from '../../utils/geolocation'
 import { formatDurationMs } from '../../utils/formatters'
 import { useGpsPosition } from '../../hooks/useGpsPosition'
+import { useDriverCheck } from '../../hooks/useDriverCheck'
 import DeviceCard from './DeviceCard'
 import SessionStartModal from '../SessionStartModal'
 import './production.css'
@@ -43,6 +44,14 @@ export default function DevicesPanel({
   const [confirmStop, setConfirmStop] = useState(false)
   const [showStartModal, setShowStartModal] = useState(false)
   const { position } = useGpsPosition()
+  const { driverStatus, check: checkDrivers, install: installDriver, installing } = useDriverCheck()
+
+  // Chequear drivers después de cada scan
+  useEffect(() => {
+    if (!devices.scanning && devices.nbm550) {
+      checkDrivers()
+    }
+  }, [devices.scanning, devices.nbm550, checkDrivers])
 
   // Ctrl+Alt+D togglea visibilidad del modo test
   useEffect(() => {
@@ -183,6 +192,29 @@ export default function DevicesPanel({
           {devices.scanning ? '⟳ Escaneando...' : '⟳ Escanear'}
         </button>
       </div>
+
+      {driverStatus && driverStatus.missing.length > 0 && (
+        <div className="devices-panel__driver-warning">
+          <span className="driver-warning-icon">⚠</span>
+          <div className="driver-warning-content">
+            {driverStatus.missing.map((port) => (
+              <div key={port.path} className="driver-warning__item">
+                <span className="driver-warning-text">
+                  {port.friendlyName} ({port.path}): driver {port.driverType.toUpperCase()} no
+                  instalado
+                </span>
+                <button
+                  className="btn btn--primary btn--sm"
+                  onClick={() => installDriver(port.driverType)}
+                  disabled={installing === port.driverType}
+                >
+                  {installing === port.driverType ? 'Instalando...' : 'Instalar driver'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="devices-list">
         {devicesList.map((device) => (

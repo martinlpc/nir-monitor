@@ -120,6 +120,43 @@
   cursor: not-allowed;
 }
 
+.devices-panel__driver-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0.75rem;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.driver-warning-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.driver-warning-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.driver-warning__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.driver-warning-text {
+  color: var(--nir-text-secondary);
+  line-height: 1.3;
+}
+
 .devices-list {
   flex: 1;
   padding: 1rem;

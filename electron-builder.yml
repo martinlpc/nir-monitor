@@ -11,6 +11,11 @@ files:
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
 asarUnpack:
   - resources/**
+extraResources:
+  - from: resources/drivers
+    to: drivers
+    filter:
+      - "**/*"
 win:
   executableName: nir-monitor
 nsis:
@@ -21,6 +26,7 @@ nsis:
   oneClick: false
   perMachine: true
   menuCategory: ENACOM
+  include: build/installer.nsh
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:

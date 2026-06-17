@@ -3,6 +3,7 @@ import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './Device
 import { registerSessionServiceHandlers, bindSessionServiceEvents } from './SessionServiceHandler'
 import { registerSettingsHandlers } from './SettingsHandler'
 import { registerTileCacheHandlers } from './TileCacheHandler'
+import { registerDriverHandlers } from './DriverHandler'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
@@ -28,6 +29,7 @@ export function setupIPC(
 
   console.log('[IPC] Setting up IPC handlers...')
 
+  registerDriverHandlers()
   registerDeviceManagerHandlers(window, deviceManager)
   registerSessionServiceHandlers(window, deviceManager, sessionService)
   registerSettingsHandlers(deviceManager)
