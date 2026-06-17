@@ -16,6 +16,10 @@ extraResources:
     to: drivers
     filter:
       - '**/*'
+  - from: resources/probe-data.json
+    to: probe-data.json
+  - from: resources/plantillas
+    to: plantillas
 win:
   executableName: nir-monitor
 nsis:
