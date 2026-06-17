@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import { useCallback, useRef, useState, useEffect } from 'react'
 import L from 'leaflet'
 import {
   useDevices,
@@ -74,37 +74,12 @@ export default function ProductionShell(): React.JSX.Element {
     }
   }, [])
 
-  const derivedBounds = useMemo(() => {
-    const allPoints = multipleSessions.loadedSessions
-      .flatMap((s) => s.points)
-      .filter((p) => p.position !== null && p.position !== undefined)
-
-    const activePoints = session.points.filter(
-      (p) => p.position !== null && p.position !== undefined
-    )
-    const combined = [...allPoints, ...activePoints]
-
-    if (combined.length === 0) return null
-
-    const lats = combined.map((p) => p.position.lat)
-    const lons = combined.map((p) => p.position.lon)
-
-    return {
-      north: Math.max(...lats),
-      south: Math.min(...lats),
-      east: Math.max(...lons),
-      west: Math.min(...lons)
-    }
-  }, [multipleSessions.loadedSessions, session.points])
-
   useEffect(() => {
     if (multipleSessions.loadedSessions.length > 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFollowPosition(false)
     }
   }, [multipleSessions.loadedSessions.length])
-
-  const currentBounds = derivedBounds ?? focusSessionBounds
 
   return (
     <GpsPositionProvider>
@@ -242,20 +217,21 @@ export default function ProductionShell(): React.JSX.Element {
               className={`map-container ${mapMaximized ? 'map-maximized' : tableMaximized ? 'map-table-maximized' : ''}`}
               style={{ position: 'relative' }}
             >
-              {(session.sessionId || multipleSessions.loadedSessions.length > 0) && (
-                <button
-                  className="map-clear-btn"
-                  onClick={() => {
-                    session.reset()
-                    multipleSessions.clearSessions()
-                    setFocusSessionBounds(null)
-                  }}
-                  title="Limpiar sesión cargada"
-                  aria-label="Limpiar sesión cargada"
-                >
-                  ✕ Limpiar sesión cargada
-                </button>
-              )}
+              {session.status !== 'running' &&
+                (session.sessionId || multipleSessions.loadedSessions.length > 0) && (
+                  <button
+                    className="map-clear-btn"
+                    onClick={() => {
+                      session.reset()
+                      multipleSessions.clearSessions()
+                      setFocusSessionBounds(null)
+                    }}
+                    title="Limpiar sesión cargada"
+                    aria-label="Limpiar sesión cargada"
+                  >
+                    ✕ Limpiar sesión cargada
+                  </button>
+                )}
               <MapView
                 geoData={geoData}
                 isSessionActive={session.status === 'running'}
@@ -264,7 +240,7 @@ export default function ProductionShell(): React.JSX.Element {
                 maximized={mapMaximized}
                 onToggleMaximize={() => setMapMaximized((prev) => !prev)}
                 loadedSessions={multipleSessions.loadedSessions}
-                focusSessionBounds={currentBounds}
+                focusSessionBounds={focusSessionBounds}
                 tileProvider={provider}
                 onMapReady={handleMapReady}
               />
