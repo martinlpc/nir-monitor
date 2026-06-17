@@ -217,7 +217,7 @@ export class SessionService extends EventEmitter {
         meter: {
           brand: 'Narda',
           model: 'NBM-550',
-          serial: null,
+          serial: this.nbm.getMeterSerial() ?? null,
           lastCalibrationDate: null
         },
         probe: {

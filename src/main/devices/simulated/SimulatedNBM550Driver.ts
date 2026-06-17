@@ -10,7 +10,7 @@ export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver
   private currentBattery: number = 100
   private probeInfo: NBM550ProbeInfo = {
     model: 'EF-0391',
-    serial: 'SIM-00001',
+    serial: 'SIM-0001',
     calibrationDate: '2024-06-01'
   }
 
@@ -62,6 +62,10 @@ export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver
 
   async resetMaxHold(): Promise<void> {
     // no-op en simulación
+  }
+
+  getMeterSerial(): string | null {
+    return this.probeInfo.serial
   }
 
   getProbeInfo(): NBM550ProbeInfo | null {

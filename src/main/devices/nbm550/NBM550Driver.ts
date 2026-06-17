@@ -266,6 +266,10 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
     return this.probeInfo
   }
 
+  getMeterSerial(): string | null {
+    return null
+  }
+
   // ── Serial I/O ───────────────────────────────────────────
 
   // Envía comando y espera respuesta (el NBM responde a todo, incluso Set)

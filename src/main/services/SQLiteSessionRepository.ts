@@ -729,7 +729,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const buildFooter = (): string => {
       const inst = metadata.instrument
       return inst
-        ? `Instrumento utilizado: Medidor de RNI marca ${inst.meter.brand} modelo ${inst.meter.model} numero de serie ${inst.meter.serial} + sonda marca ${inst.probe.brand} modelo ${inst.probe.model} numero de serie ${inst.probe.serial}`
+        ? `Instrumento utilizado: Medidor de RNI marca ${inst.meter.brand} modelo ${inst.meter.model} numero de serie ${inst.meter.serial ?? 'N/E'} + sonda marca ${inst.probe.brand} modelo ${inst.probe.model} numero de serie ${inst.probe.serial ?? 'N/E'}`
         : ''
     }
 
