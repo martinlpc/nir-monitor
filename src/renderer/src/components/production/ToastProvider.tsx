@@ -33,8 +33,15 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       // @ts-ignore asd
       window.__notify = notify
     }
-    const handler = (_: unknown, payload: { message: string; type: string }): void => {
-      notify({ message: payload.message, type: payload.type as ToastType })
+    const handler = (
+      _: unknown,
+      payload: { message: string; type: string; userAction?: string }
+    ): void => {
+      notify({
+        message: payload.message,
+        type: payload.type as ToastType,
+        userAction: payload.userAction
+      })
     }
     const unsubscribe = window.api?.on?.('alert', handler)
     return () => unsubscribe?.()

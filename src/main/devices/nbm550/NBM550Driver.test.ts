@@ -305,7 +305,7 @@ describe('NBM550Driver', () => {
     expect(sample).toBeNull()
     expect(d.status).toBe('error')
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'NBM-550 error code 412' })
+      expect.objectContaining({ code: 'NBM_412', message: 'Fallo interno del sistema NBM-550' })
     )
   })
 

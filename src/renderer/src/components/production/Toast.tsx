@@ -7,6 +7,8 @@ export interface ToastData {
   id: string
   message: string
   type: ToastType
+  userAction?: string
+  code?: string
 }
 
 interface Props extends ToastData {
@@ -20,7 +22,7 @@ const ICONS: Record<ToastType, string> = {
   done: '✅'
 }
 
-export default function Toast({ message, type, onClose }: Props): React.JSX.Element {
+export default function Toast({ message, type, userAction, onClose }: Props): React.JSX.Element {
   const [hovered, setHovered] = useState(false)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -50,7 +52,10 @@ export default function Toast({ message, type, onClose }: Props): React.JSX.Elem
       <span className="toast__icon" aria-hidden>
         {ICONS[type]}
       </span>
-      <span className="toast__msg">{message}</span>
+      <span className="toast__msg">
+        {message}
+        {userAction && <span className="toast__action">→ {userAction}</span>}
+      </span>
       <button
         className="toast__close"
         aria-label="Cerrar notificación"

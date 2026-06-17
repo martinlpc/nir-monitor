@@ -12,10 +12,14 @@ import { AlertLogger } from '../infrastructure/AlertLogger'
 export function emitAlert(
   window: BrowserWindow,
   message: string,
-  type: 'error' | 'warning' | 'info' = 'info'
+  type: 'error' | 'warning' | 'info' = 'info',
+  userAction?: string
 ): void {
-  window.webContents.send('alert', { message, type })
+  window.webContents.send('alert', { message, type, userAction })
   AlertLogger.log(message, type)
+  if (userAction) {
+    AlertLogger.log(`[Acción sugerida] ${userAction}`, type)
+  }
 }
 
 export function setupIPC(

@@ -95,7 +95,7 @@ describe('NBMPollingController', () => {
     expect(failController.isPolling).toBe(false)
     expect(onMaxFailuresExceeded).toHaveBeenCalledWith(
       'COM1',
-      expect.stringContaining('reconexión')
+      expect.objectContaining({ code: 'NBM_POLL_FAILURE' })
     )
   })
 

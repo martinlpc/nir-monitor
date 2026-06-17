@@ -4,7 +4,7 @@ import type { DeviceManagerStateDTO } from './dto'
 
 // Canales Main → Renderer (push)
 export interface IPCEvents {
-  'device:status': { deviceId: string; status: DeviceStatus }
+  'device:status': { deviceId: string; status: DeviceStatus; intentional?: boolean }
   'gps:position': { coords: GeoPosition; valid: boolean; port?: string }
   'session:sample': GeoTimestamp
   'session:started': { sessionId: string; startedAt: number; label: string }

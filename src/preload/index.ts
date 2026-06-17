@@ -7,6 +7,7 @@ import type { PersistedSession } from '../shared/services/ISessionRepository'
 import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
 import type { CacheStats, PreloadProgress } from '../main/tile-cache/TileCacheService'
 import type { DriverCheckResult, DriverType } from '../shared/driver.types'
+import type { AppErrorInfo } from '../shared/errors/error.types'
 
 const api = {
   on: (channel: string, cb: (...args: unknown[]) => void) => {
@@ -51,9 +52,11 @@ const api = {
       return () => ipcRenderer.removeListener(IPC_EVENTS.DEVICE_STATUS, handler)
     },
 
-    onError: (cb: (data: { deviceId: string; error: string }) => void) => {
-      const handler = (_: IpcRendererEvent, data: { deviceId: string; error: string }): void =>
-        cb(data)
+    onError: (cb: (data: { deviceId: string; error: AppErrorInfo }) => void) => {
+      const handler = (
+        _: IpcRendererEvent,
+        data: { deviceId: string; error: AppErrorInfo }
+      ): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.DEVICE_ERROR, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.DEVICE_ERROR, handler)
     },

@@ -1,12 +1,13 @@
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550Driver'
+import type { AppErrorInfo } from '../../shared/errors/error.types'
 
 export const DEFAULT_MAX_CONSECUTIVE_READ_FAILURES = 8
 export const NBM_POLL_INTERVAL_MS = 200
 
 export interface NBMPollingCallbacks {
   onSample: (sample: { rss: number; unit: string; battery: number; timestamp: number }) => void
-  onMaxFailuresExceeded: (port: string, message: string) => void
+  onMaxFailuresExceeded: (port: string, errorInfo: AppErrorInfo) => void
 }
 
 export class NBMPollingController {
@@ -86,16 +87,26 @@ export class NBMPollingController {
 
       if (this.consecutiveReadFailures >= this.maxFailures) {
         const port = this.port || 'desconocido'
-        const message = `NBM-550 sin respuesta continua en ${port}; iniciando reconexión automática`
-        console.error(`[NBMPollingController] ${message}`)
-        this.callbacks.onMaxFailuresExceeded(port, message)
+        console.error(
+          `[NBMPollingController] NBM-550 sin respuesta continua en ${port}; iniciando reconexión automática`
+        )
+        this.callbacks.onMaxFailuresExceeded(port, {
+          code: 'NBM_POLL_FAILURE',
+          message: `NBM-550 sin respuesta continua en ${port}`,
+          severity: 'error',
+          category: 'nbm',
+          userAction: 'Verifique el cable USB y que el NBM-550 esté encendido',
+          retryable: true,
+          deviceId: 'nbm550'
+        })
         this.stop()
         return
       }
 
       this.sampleCount++
-    } catch {
-      // Silenciar errores de lectura - el dispositivo puede estar ocupado
+    } catch (err) {
+      console.error(`[NBMPollingController] Error en ciclo de polling:`, err)
+      this.consecutiveReadFailures++
     }
 
     this.pollTimeout = setTimeout(() => void this.pollCycle(), this.pollIntervalMs)

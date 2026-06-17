@@ -4,13 +4,17 @@ import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import type { DeviceStatus } from '../shared/device.types'
 import type { DriverCheckResult, DriverType } from '../shared/driver.types'
+import type { AppErrorInfo } from '../shared/errors/error.types'
 
 declare global {
   interface Window {
     api: {
       on: (
         channel: 'alert',
-        cb: (event: unknown, payload: { message: string; type: string }) => void
+        cb: (
+          event: unknown,
+          payload: { message: string; type: string; userAction?: string }
+        ) => void
       ) => () => void
       off: (
         channel: 'alert',
@@ -26,7 +30,7 @@ declare global {
         connect: (deviceId: 'nbm550' | 'gps') => Promise<void>
         disconnect: (deviceId: 'nbm550' | 'gps') => Promise<void>
         onStatus: (cb: (data: { deviceId: string; status: DeviceStatus }) => void) => () => void
-        onError: (cb: (data: { deviceId: string; error: string }) => void) => () => void
+        onError: (cb: (data: { deviceId: string; error: AppErrorInfo }) => void) => () => void
         onScanState: (cb: (state: DeviceManagerStateDTO) => void) => () => void
       }
       gps: {

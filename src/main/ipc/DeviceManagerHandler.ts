@@ -57,7 +57,15 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
 
   deviceManager.on('gps:nmea', (data) => sendIfReady(IPC_EVENTS.GPS_NMEA, data))
   deviceManager.on('gps:position', (data) => sendIfReady(IPC_EVENTS.GPS_POSITION, data))
-  deviceManager.on('gps:fix-lost', () => sendIfReady(IPC_EVENTS.GPS_FIX_LOST, null))
+  deviceManager.on('gps:fix-lost', () => {
+    sendIfReady(IPC_EVENTS.GPS_FIX_LOST, null)
+    emitAlert(
+      window,
+      'Se perdió la señal GPS',
+      'warning',
+      'Despeje la vista al cielo o acérquese a una ventana'
+    )
+  })
   deviceManager.on('nbm:sample', (data) => sendIfReady(IPC_EVENTS.NBM_SAMPLE, data))
   deviceManager.on('device:status', (data) => {
     sendIfReady(IPC_EVENTS.DEVICE_STATUS, data)
@@ -69,10 +77,20 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
         emitAlert(window, 'NBM-550 conectado', 'info')
       }
     }
+
+    // Alerta de desconexión inesperada
+    if (data?.status === 'disconnected' && !data.intentional && data.deviceId) {
+      const label = data.deviceId === 'gps' ? 'GPS' : 'NBM-550'
+      emitAlert(window, `${label} desconectado`, 'warning')
+    }
   })
   deviceManager.on('device:error', (data) => {
     sendIfReady(IPC_EVENTS.DEVICE_ERROR, data)
-    emitAlert(window, `${data.deviceId}: ${data.error}`, 'error')
+    const errorInfo = data.error
+    const msg = errorInfo?.message
+      ? `[${data.deviceId}] ${errorInfo.message}`
+      : `${data.deviceId}: ${data.error}`
+    emitAlert(window, msg, 'error', errorInfo?.userAction)
   })
   deviceManager.on('state', (state) => sendIfReady(IPC_EVENTS.SCAN_STATE, state))
   deviceManager.on('scanning', (scanning) =>

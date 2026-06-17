@@ -10,6 +10,7 @@ import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 import { loadAppConfig } from './AppConfig'
 import { resolveBuiltInFactor } from '../uncertainty/correctionFactor'
+import { AppError } from '../../shared/errors/AppError'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -114,12 +115,44 @@ export class SessionService extends EventEmitter {
     }
   ): Promise<string> {
     if (this.state === 'running') {
-      throw new Error('Ya hay una sesión en curso')
+      throw new AppError({
+        code: 'SESSION_ALREADY_RUNNING',
+        message: 'Ya hay una sesión en curso',
+        severity: 'warning',
+        category: 'session',
+        userAction: 'Detenga la sesión actual antes de iniciar una nueva',
+        retryable: true
+      })
     }
-    if (!this.nbm?.isConnected()) throw new Error('NBM-550 no conectado')
-    if (!this.gps?.isConnected()) throw new Error('GPS no conectado')
+    if (!this.nbm?.isConnected()) {
+      throw new AppError({
+        code: 'SESSION_NBM_NOT_CONNECTED',
+        message: 'NBM-550 no conectado',
+        severity: 'error',
+        category: 'session',
+        userAction: 'Conecte el NBM-550 en el panel de dispositivos antes de iniciar la sesión',
+        retryable: true
+      })
+    }
+    if (!this.gps?.isConnected()) {
+      throw new AppError({
+        code: 'SESSION_GPS_NOT_CONNECTED',
+        message: 'GPS no conectado',
+        severity: 'error',
+        category: 'session',
+        userAction: 'Conecte el GPS en el panel de dispositivos antes de iniciar la sesión',
+        retryable: true
+      })
+    }
     if (!this.gps.isPositionValid()) {
-      throw new Error('GPS sin fix: espere a obtener señal antes de iniciar la sesión')
+      throw new AppError({
+        code: 'SESSION_GPS_NO_FIX',
+        message: 'GPS sin fix: espere a obtener señal antes de iniciar la sesión',
+        severity: 'warning',
+        category: 'session',
+        userAction: 'Despeje la vista al cielo y espere a que el GPS obtenga señal',
+        retryable: true
+      })
     }
 
     this.currentSessionId = uuidv4()
@@ -197,9 +230,16 @@ export class SessionService extends EventEmitter {
       this.syncCorrectionFactorFromProbe(this.instrument.probe.model)
       if (this.correctionFactor == null) {
         const probeModel = this.instrument.probe.model ?? 'desconocida'
-        const message = `No se encontró factor de corrección para la sonda "${probeModel}". No se puede iniciar la sesión.`
-        this.emit('alert', { message })
-        throw new Error(message)
+        const appError = new AppError({
+          code: 'SESSION_NO_CORRECTION_FACTOR',
+          message: `No se encontró factor de corrección para la sonda "${probeModel}"`,
+          severity: 'error',
+          category: 'correction',
+          userAction:
+            'Revise la configuración de incertidumbre en Ajustes. Asegúrese de que la sonda esté en la tabla de factores de corrección',
+          retryable: true
+        })
+        throw appError
       }
 
       try {
@@ -241,7 +281,13 @@ export class SessionService extends EventEmitter {
 
   async stop(): Promise<SessionSummary> {
     if (this.state !== 'running') {
-      throw new Error('No hay sesión en curso')
+      throw new AppError({
+        code: 'SESSION_NOT_RUNNING',
+        message: 'No hay sesión en curso',
+        severity: 'warning',
+        category: 'session',
+        userAction: 'Inicie una sesión antes de intentar detenerla'
+      })
     }
 
     console.log(`[SessionService] Stopping session, total points: ${this.pointCount}`)

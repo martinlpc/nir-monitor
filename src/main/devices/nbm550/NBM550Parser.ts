@@ -1,4 +1,6 @@
 import type { NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
+import type { AppErrorInfo } from '../../../shared/errors/error.types'
+import { getNBMErrorInfo } from '../../../shared/errors/nbmErrorCodes'
 
 export class NBM550Parser {
   private unit: string = 'V/m'
@@ -79,6 +81,21 @@ export class NBM550Parser {
     } catch (err: unknown) {
       void err
       return null
+    }
+  }
+
+  // Obtiene info estructurada para un código de error del NBM
+  getErrorInfo(code: number): AppErrorInfo | null {
+    const entry = getNBMErrorInfo(code)
+    if (!entry) return null
+    return {
+      code: `NBM_${code}`,
+      message: entry.message,
+      severity: 'error',
+      category: 'nbm',
+      userAction: entry.userAction,
+      retryable: entry.retryable,
+      deviceCode: code
     }
   }
 

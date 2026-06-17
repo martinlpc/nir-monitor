@@ -110,7 +110,8 @@ export function useDevices(): {
     })
 
     const unsubscribeError = window.api.devices.onError((data) => {
-      setError(`[${data.deviceId}] ${data.error}`)
+      const msg = typeof data.error === 'string' ? data.error : data.error.message
+      setError(`[${data.deviceId}] ${msg}`)
     })
 
     const unsubscribeScan = window.api.devices.onScanState((state) => {

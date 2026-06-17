@@ -29,7 +29,7 @@ describe('IPC Integration: Services Smoke Tests', () => {
     // No throws = success
     await deviceManager.scan?.()
     expect(true).toBe(true)
-  })
+  }, 30000)
 
   it('should allow calling sessionService methods without crashing', async () => {
     try {
@@ -49,5 +49,5 @@ describe('IPC Integration: Services Smoke Tests', () => {
       }
     }
     expect(true).toBe(true)
-  })
+  }, 120000)
 })

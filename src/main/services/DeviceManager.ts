@@ -9,6 +9,7 @@ import { NBMPollingController, NBM_POLL_INTERVAL_MS } from './NBMPollingControll
 import type { DeviceStatus } from '../../shared/device.types'
 import type { GeoPosition } from '../../shared/GeoTimestamp'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
+import { AppError } from '../../shared/errors/AppError'
 
 export interface DeviceManagerState {
   nbm550: { port: string | null; status: DeviceStatus }
@@ -83,8 +84,8 @@ export class DeviceManager extends EventEmitter {
       NBM_MAX_CONSECUTIVE_READ_FAILURES,
       {
         onSample: (sample) => this.emit('nbm:sample', sample),
-        onMaxFailuresExceeded: (port, message) => {
-          this.emit('device:error', { deviceId: 'nbm550', error: message })
+        onMaxFailuresExceeded: (port, errorInfo) => {
+          this.emit('device:error', { deviceId: 'nbm550', error: errorInfo })
           this.nbmReconnect.start(port)
         }
       },
@@ -246,7 +247,11 @@ export class DeviceManager extends EventEmitter {
 
     this.nbm.on('status', (status: DeviceStatus) => {
       console.log(`[DeviceManager] NBM status changed to: ${status}`)
-      this.emit('device:status', { deviceId: 'nbm550', status })
+      this.emit('device:status', {
+        deviceId: 'nbm550',
+        status,
+        intentional: this.nbmIntentionalDisconnect
+      })
 
       if (status === 'connected') {
         console.log(`[DeviceManager] Starting NBM polling`)
@@ -265,7 +270,23 @@ export class DeviceManager extends EventEmitter {
 
     this.nbm.on('error', (err: Error) => {
       console.log(`[DeviceManager] NBM error: ${err.message}`)
-      this.emit('device:error', { deviceId: 'nbm550', error: err.message })
+      if (err instanceof AppError) {
+        this.emit('device:error', {
+          deviceId: 'nbm550',
+          error: err.toAppErrorInfo()
+        })
+      } else {
+        this.emit('device:error', {
+          deviceId: 'nbm550',
+          error: {
+            code: 'NBM_ERROR',
+            message: err.message,
+            severity: 'error',
+            category: 'nbm',
+            deviceId: 'nbm550'
+          }
+        })
+      }
     })
 
     console.log(`[DeviceManager] Calling nbm.connect()`)
@@ -290,7 +311,11 @@ export class DeviceManager extends EventEmitter {
 
     this.gps.on('status', (status: DeviceStatus) => {
       console.log(`[DeviceManager] GPS status changed to: ${status}`)
-      this.emit('device:status', { deviceId: 'gps', status })
+      this.emit('device:status', {
+        deviceId: 'gps',
+        status,
+        intentional: this.gpsIntentionalDisconnect
+      })
 
       if (status === 'connected') {
         this.gpsReconnect.stop()
@@ -304,7 +329,23 @@ export class DeviceManager extends EventEmitter {
 
     this.gps.on('error', (err: Error) => {
       console.error('[GPS] Connection error:', err.message)
-      this.emit('device:error', { deviceId: 'gps', error: err.message })
+      if (err instanceof AppError) {
+        this.emit('device:error', {
+          deviceId: 'gps',
+          error: err.toAppErrorInfo()
+        })
+      } else {
+        this.emit('device:error', {
+          deviceId: 'gps',
+          error: {
+            code: 'GPS_ERROR',
+            message: err.message,
+            severity: 'error',
+            category: 'gps',
+            deviceId: 'gps'
+          }
+        })
+      }
     })
 
     this.gps.on('nmea', (line: string) => {

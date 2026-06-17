@@ -3,6 +3,7 @@ import { EventEmitter } from 'events'
 import { NBM550Parser } from './NBM550Parser'
 import type { NBM550Config, NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
+import { AppError } from '../../../shared/errors/AppError'
 
 const RESPONSE_TIMEOUT_MS = 6000 // Aumentado a 6s para permitir que NBM550 responda (necesita ~800ms)
 const INIT_DELAY_MS = 2000 // Aumentado a 2s - NBM550 necesita tiempo para sincronizar a 460800 baud tras abrir puerto
@@ -29,9 +30,20 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private handleCommunicationTimeout(command: string): void {
     this.consecutiveTimeouts++
     if (this.consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
-      const message = `NBM-550 sin respuesta (${this.consecutiveTimeouts} timeouts seguidos, último: ${command})`
       this.setStatus('error')
-      this.emit('error', new Error(message))
+      this.emit(
+        'error',
+        new AppError({
+          code: 'NBM_TIMEOUT',
+          message: `NBM-550 sin respuesta (${this.consecutiveTimeouts} timeouts seguidos, último: ${command})`,
+          severity: 'error',
+          category: 'nbm',
+          userAction:
+            'Verifique el cable USB y que el NBM-550 esté encendido. Si persiste, cierre y vuelva a abrir la aplicación',
+          retryable: true,
+          deviceId: 'nbm550'
+        })
+      )
     }
   }
 
@@ -163,7 +175,15 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
   async disconnect(): Promise<void> {
     // Rechazar cualquier query pendiente en la cola para no dejar promesas colgadas
-    this.queryQueue = Promise.reject(new Error('Disconnected'))
+    this.queryQueue = Promise.reject(
+      new AppError({
+        code: 'NBM_DISCONNECTED',
+        message: 'Disconnected',
+        severity: 'warning',
+        category: 'nbm',
+        deviceId: 'nbm550'
+      })
+    )
     this.queryQueue.catch(() => {})
 
     if (this.port?.isOpen) {
@@ -206,9 +226,12 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
     // Detectar código de error del NBM (ej: "412;" cuando el dispositivo falla)
     if (this.parser.isErrorResponse(raw)) {
       const code = this.parser.parseErrorCode(raw)
-      console.error(`[NBM550Driver] readMeasurement: device returned error code ${code}`)
+      const appError = AppError.fromNBMErrorCode(code)
+      console.error(
+        `[NBM550Driver] readMeasurement: device returned error code ${code}: ${appError.message}`
+      )
       this.setStatus('error')
-      this.emit('error', new Error(`NBM-550 error code ${code}`))
+      this.emit('error', appError)
       return null
     }
 
@@ -260,7 +283,17 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
   private executeQuery(command: string): Promise<string> {
     return new Promise((resolve, reject) => {
       if (!this.port?.isOpen) {
-        return reject(new Error('Puerto no abierto'))
+        return reject(
+          new AppError({
+            code: 'NBM_PORT_CLOSED',
+            message: 'Puerto no abierto',
+            severity: 'error',
+            category: 'nbm',
+            userAction: 'Seleccione un puerto COM válido en la configuración y reconecte',
+            retryable: true,
+            deviceId: 'nbm550'
+          })
+        )
       }
 
       this.pendingResolve = resolve
@@ -268,7 +301,17 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
       const timeout = setTimeout(() => {
         this.pendingResolve = null
-        reject(new Error(`Timeout esperando respuesta a: ${command}`))
+        reject(
+          new AppError({
+            code: 'NBM_TIMEOUT',
+            message: `Timeout esperando respuesta a: ${command}`,
+            severity: 'error',
+            category: 'nbm',
+            userAction: 'Verifique el cable USB y que el NBM-550 esté encendido',
+            retryable: true,
+            deviceId: 'nbm550'
+          })
+        )
       }, RESPONSE_TIMEOUT_MS)
 
       this.pendingTimeout = timeout
@@ -289,7 +332,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
     const response = await this.query(command)
     const code = this.parser.parseErrorCode(response)
     if (code !== 0) {
-      throw new Error(`NBM-550 error ${code} en comando: ${command}`)
+      throw AppError.fromNBMErrorCode(code)
     }
   }
 

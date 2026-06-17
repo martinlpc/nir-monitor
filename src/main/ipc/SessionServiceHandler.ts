@@ -404,5 +404,8 @@ export function bindSessionServiceEvents(
   sessionService.on('point', (point) => sendIfReady(IPC_EVENTS.SESSION_SAMPLE, point))
   sessionService.on('started', (info) => sendIfReady(IPC_EVENTS.SESSION_STARTED, info))
   sessionService.on('stopped', (summary) => sendIfReady(IPC_EVENTS.SESSION_STOPPED, summary))
-  sessionService.on('alert', (data) => sendIfReady(IPC_EVENTS.SESSION_ALERT, data))
+  sessionService.on('alert', (data) => {
+    sendIfReady(IPC_EVENTS.SESSION_ALERT, data)
+    emitAlert(window, data.message, 'error')
+  })
 }

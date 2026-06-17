@@ -8,6 +8,7 @@ import type { GSAPacket } from 'nmea-simple'
 import type { GeoPosition } from '../../../shared/GeoTimestamp'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
 import { INITIAL_GPS_STATE, type GPSState } from './gps.types'
+import { AppError } from '../../../shared/errors/AppError'
 
 export interface GPSConfig {
   port: string
@@ -106,8 +107,17 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
 
     this.port!.on('error', (err: Error) => {
       this.setStatus('error')
+      const appError = new AppError({
+        code: 'GPS_PORT_ERROR',
+        message: `Error en puerto GPS: ${err.message}`,
+        severity: 'error',
+        category: 'gps',
+        userAction: 'Verifique la conexión del GPS y el puerto seleccionado',
+        retryable: true,
+        deviceId: 'gps'
+      })
       if (this.listenerCount('error') > 0) {
-        this.emit('error', err)
+        this.emit('error', appError)
       }
     })
 
@@ -185,8 +195,8 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver {
         default:
           break
       }
-    } catch {
-      // Trama malformada o checksum inválido — ignorar silenciosamente
+    } catch (err) {
+      console.warn(`[GPSDriver] Malformed NMEA sentence ignored:`, err)
     }
   }
 

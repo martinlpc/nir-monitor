@@ -60,8 +60,8 @@ export class ReconnectController {
           this.stop()
           return
         }
-      } catch {
-        // Silenciar — se reintenta en el próximo ciclo
+      } catch (err) {
+        console.warn(`[ReconnectController:${this.deviceId}] Reconnect attempt failed:`, err)
       }
 
       if (this._reconnecting) {
