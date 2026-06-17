@@ -111,20 +111,6 @@ declare global {
         onAlert: (cb: (data: { message: string }) => void) => () => void
       }
       settings: {
-        openUncertaintyFile: () => Promise<{
-          success: boolean
-          filePath?: string
-          headers?: string[]
-          records?: Array<{
-            name: string
-            fMin: number
-            fMax: number
-            uncertainty: number
-            factor: number
-          }>
-          error?: string
-          canceled?: boolean
-        }>
         getProbeInfo: () => Promise<{
           success: boolean
           probeInfo?: {
@@ -146,11 +132,10 @@ declare global {
           } | null
           probeModel: string | null
         }>
-        getLoadedUncertainty: () => Promise<{
+        getBuiltInProbeData: () => Promise<{
           success: boolean
-          filePath?: string
-          headers?: string[]
-          records?: Array<{
+          version: number | null
+          records: Array<{
             name: string
             fMin: number
             fMax: number

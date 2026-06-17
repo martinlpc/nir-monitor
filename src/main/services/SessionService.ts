@@ -8,12 +8,8 @@ import type { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550
 import type { SimulatedGPSDriver } from '../devices/simulated/SimulatedGPSDriver'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
-import { getLoadedUncertainty } from '../ipc/SettingsHandler'
 import { loadAppConfig } from './AppConfig'
-import {
-  resolveCorrectionFactor as resolveCFFromFile,
-  findFactor
-} from '../uncertainty/correctionFactor'
+import { resolveBuiltInFactor } from '../uncertainty/correctionFactor'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -38,17 +34,7 @@ export class SessionService extends EventEmitter {
 
   private resolveCorrectionFactor(probeModel: string | null): number | null {
     if (!probeModel) return null
-
-    // 1. Try loaded uncertainty from Settings
-    const loaded = getLoadedUncertainty()
-    if (loaded?.records?.length) {
-      const factor = findFactor(loaded.records, probeModel)
-      if (factor != null) return factor
-    }
-
-    // 2. Fallback: leer archivo de incertidumbre directamente
-    const config = loadAppConfig()
-    return resolveCFFromFile(probeModel, config.uncertaintyFilePath)
+    return resolveBuiltInFactor(probeModel)
   }
 
   private syncCorrectionFactorFromProbe(probeModel: string | null): void {

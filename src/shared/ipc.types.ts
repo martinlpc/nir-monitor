@@ -55,21 +55,6 @@ export interface InstrumentInfo {
   }
 }
 
-// Obsoleto: Usar solo correctionFactor en SessionSummary
-export interface UncertaintyRecord {
-  name: string // modelo de la sonda (ej: "EF0391")
-  fMin: number // frecuencia mínima (MHz)
-  fMax: number // frecuencia máxima (MHz)
-  uncertainty: number // (obsoleto, usar correctionFactor)
-  factor: number // factor multiplicativo para aplicar al RSS
-}
-
-export interface UncertaintyData {
-  filePath: string
-  headers: string[]
-  records: UncertaintyRecord[]
-}
-
 export interface SessionSummary {
   id: string
   label: string

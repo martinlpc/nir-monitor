@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import { SerialPortScanner } from '../infrastructure/SerialPortScanner'
-import { resolveCorrectionFactor } from '../uncertainty/correctionFactor'
+import { resolveBuiltInFactor } from '../uncertainty/correctionFactor'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { NBM550Config } from '../devices/nbm550/nbm550.types'
 
@@ -175,20 +175,16 @@ async function main(): Promise<void> {
     const probeModel = probeInfo?.model ?? null
     console.log(`   🔬 Sonda: ${probeModel ?? 'desconocida'}`)
 
-    if (probeModel && opts.uncertaintyFile) {
-      const resolved = resolveCorrectionFactor(probeModel, opts.uncertaintyFile)
+    if (probeModel) {
+      const resolved = resolveBuiltInFactor(probeModel)
       if (resolved != null) {
         opts.cf = resolved
-        console.log(`   ✅ CF desde archivo de incertidumbre: ${resolved}`)
+        console.log(`   ✅ CF desde datos embebidos: ${resolved}`)
       } else {
         console.log(
-          `   ⚠️  No se encontró factor para "${probeModel}" en ${opts.uncertaintyFile}, usando --cf ${opts.cf}`
+          `   ⚠️  No se encontró factor embebido para "${probeModel}", usando --cf ${opts.cf}`
         )
       }
-    } else if (probeModel && !opts.uncertaintyFile) {
-      console.log(
-        `   ℹ️  Usando --cf ${opts.cf}. Pasa --uncertainty-file para auto-resolver según sonda`
-      )
     }
 
     console.log('\n🔌 Conectando GPS...')

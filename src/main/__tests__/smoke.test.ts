@@ -98,12 +98,12 @@ vi.mock('nmea-simple', () => ({
   parseNmeaSentence: (...args: unknown[]) => mockParseNmeaSentence(...args)
 }))
 
-vi.mock('../ipc/SettingsHandler', () => ({
-  getLoadedUncertainty: () => ({
-    filePath: '/fake/uncertainty.csv',
-    headers: ['name', 'fMin', 'fMax', 'uncertainty', 'factor'],
-    records: [{ name: 'EF-0391', fMin: 0, fMax: 0, uncertainty: 0, factor: 1.37 }]
-  })
+vi.mock('../uncertainty/loadBuiltInData', () => ({
+  loadBuiltInProbeData: () => [
+    { name: 'EF-0391', fMin: 0.1, fMax: 3000, uncertainty: 0, factor: 1.37 },
+    { name: 'EF-0691', fMin: 0.1, fMax: 3000, uncertainty: 0, factor: 1.15 }
+  ],
+  getBuiltInVersion: () => 1
 }))
 
 vi.mock('electron', () => ({

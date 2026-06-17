@@ -231,21 +231,6 @@ const api = {
   },
 
   settings: {
-    openUncertaintyFile: (): Promise<{
-      success: boolean
-      filePath?: string
-      headers?: string[]
-      records?: Array<{
-        name: string
-        fMin: number
-        fMax: number
-        uncertainty: number
-        factor: number
-      }>
-      error?: string
-      canceled?: boolean
-    }> => ipcRenderer.invoke(IPC_HANDLERS.OPEN_UNCERTAINTY_FILE),
-
     getProbeInfo: (): Promise<{
       success: boolean
       probeInfo?: { model: string | null; serial: string | null; calibrationDate: string | null }
@@ -265,18 +250,17 @@ const api = {
       probeModel: string | null
     }> => ipcRenderer.invoke(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY),
 
-    getLoadedUncertainty: (): Promise<{
+    getBuiltInProbeData: (): Promise<{
       success: boolean
-      filePath?: string
-      headers?: string[]
-      records?: Array<{
+      version: number | null
+      records: Array<{
         name: string
         fMin: number
         fMax: number
         uncertainty: number
         factor: number
       }>
-    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_LOADED_UNCERTAINTY)
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA)
   },
 
   tileCache: {

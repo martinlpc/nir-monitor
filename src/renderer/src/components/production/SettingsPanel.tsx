@@ -26,17 +26,12 @@ interface SettingsPanelProps {
   onSelectMapBounds?: () => { north: number; south: number; east: number; west: number } | null
 }
 
-interface CorrectionFactorRecord {
+interface BuiltInRecord {
   name: string
   fMin: number
   fMax: number
+  uncertainty: number
   factor: number
-}
-
-interface CorrectionFactorData {
-  filePath: string
-  headers: string[]
-  records: CorrectionFactorRecord[]
 }
 
 interface ProbeInfo {
@@ -47,7 +42,7 @@ interface ProbeInfo {
 
 interface ActiveCorrectionFactor {
   factor: number | null
-  matchedRecord: CorrectionFactorRecord | null
+  matchedRecord: BuiltInRecord | null
   probeModel: string | null
 }
 
@@ -71,11 +66,10 @@ export default function SettingsPanel({
   preloadProgress,
   onSelectMapBounds
 }: SettingsPanelProps): React.JSX.Element {
-  const [correctionData, setCorrectionData] = useState<CorrectionFactorData | null>(null)
+  const [probeRecords, setProbeRecords] = useState<BuiltInRecord[]>([])
+  const [dataVersion, setDataVersion] = useState<number | null>(null)
   const [probeInfo, setProbeInfo] = useState<ProbeInfo | null>(null)
   const [activeCorrection, setActiveCorrection] = useState<ActiveCorrectionFactor | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
 
   const [preloadBounds, setPreloadBounds] = useState<{
     north: number
@@ -98,9 +92,10 @@ export default function SettingsPanel({
 
   useEffect(() => {
     refreshProbeAndMatch()
-    window.api.settings.getLoadedUncertainty().then((res) => {
-      if (res.success && res.filePath && res.headers && res.records) {
-        setCorrectionData({ filePath: res.filePath, headers: res.headers, records: res.records })
+    window.api.settings.getBuiltInProbeData().then((res) => {
+      if (res.success) {
+        setProbeRecords(res.records)
+        setDataVersion(res.version)
       }
     })
   }, [])
@@ -113,33 +108,6 @@ export default function SettingsPanel({
     })
     return unsub
   }, [])
-
-  const handleLoadFile = async (): Promise<void> => {
-    setIsLoading(true)
-    setLoadError(null)
-    try {
-      const result = await window.api.settings.openUncertaintyFile()
-      if (result.canceled) {
-        setIsLoading(false)
-        return
-      }
-      if (!result.success) {
-        setLoadError(result.error || 'Error desconocido')
-      } else {
-        setCorrectionData({
-          filePath: result.filePath!,
-          headers: result.headers!,
-          records: result.records!
-        })
-        const active = await window.api.settings.getActiveUncertainty()
-        if (active.success) setActiveCorrection(active)
-      }
-    } catch (err) {
-      setLoadError(err instanceof Error ? err.message : 'Error al abrir archivo')
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const handleClearCache = async (): Promise<void> => {
     await onClearCache()
@@ -196,20 +164,12 @@ export default function SettingsPanel({
       <section className="settings-section">
         <h3 className="settings-section__title">Tabla de factores de corrección</h3>
         <p className="settings-section__desc">
-          Archivo con factores de corrección por rango de frecuencia.
+          Datos de sondas incorporados (v{dataVersion ?? '?'}). Se actualizan con cada versión de la
+          aplicación.
         </p>
 
-        <button className="settings-btn" onClick={handleLoadFile} disabled={isLoading}>
-          {isLoading ? 'Cargando...' : correctionData ? 'Cambiar archivo' : 'Cargar archivo'}
-        </button>
-
-        {loadError && <div className="settings-error">{loadError}</div>}
-
-        {correctionData && (
+        {probeRecords.length > 0 && (
           <div className="settings-uncertainty">
-            <span className="settings-filepath" title={correctionData.filePath}>
-              {correctionData.filePath.split(/[\\/]/).pop()}
-            </span>
             <div className="settings-table-wrapper">
               <table className="settings-table">
                 <thead>
@@ -221,7 +181,7 @@ export default function SettingsPanel({
                   </tr>
                 </thead>
                 <tbody>
-                  {correctionData.records.map((rec, i) => (
+                  {probeRecords.map((rec, i) => (
                     <tr
                       key={i}
                       className={

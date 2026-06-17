@@ -30,7 +30,7 @@ export function setupIPC(
 
   registerDeviceManagerHandlers(window, deviceManager)
   registerSessionServiceHandlers(window, deviceManager, sessionService)
-  registerSettingsHandlers(window, deviceManager)
+  registerSettingsHandlers(deviceManager)
 
   if (tileCache) {
     registerTileCacheHandlers(window, tileCache)

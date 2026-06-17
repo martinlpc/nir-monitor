@@ -7,7 +7,6 @@ export interface AppConfigData {
     nbm550?: string
     gps?: string
   }
-  uncertaintyFilePath?: string
   triggerMode?: 'distance' | 'time'
   intervalMs?: number
   minDistanceMeters?: number
