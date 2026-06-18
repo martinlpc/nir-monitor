@@ -1,4 +1,4 @@
-# nir-monitor
+# RNI Monitor
 
 Desktop EMF mapper basado en ITU-T K.113. Electron 42 + React 19 + Leaflet + SQLite.
 

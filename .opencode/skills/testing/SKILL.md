@@ -1,6 +1,6 @@
 ---
 name: testing
-description: Testing conventions for nir-monitor — Vitest, coverage thresholds, serial mocking
+description: Testing conventions for RNI Monitor — Vitest, coverage thresholds, serial mocking
 ---
 
 - Framework: Vitest 4.1 con node environment

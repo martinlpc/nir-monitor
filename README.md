@@ -1,4 +1,4 @@
-# nir-monitor
+# RNI Monitor
 
 **Non-Ionizing Radiation Mapper** — Desktop application for mapping electromagnetic field (EMF) measurements based on **ITU-T Recommendation K.113**.
 
@@ -8,7 +8,7 @@ Desarrollado por el [Ente Nacional de Comunicaciones (ENACOM)](https://www.enaco
 
 ## Overview
 
-`nir-monitor` se conecta a un **Narda NBM-550** (medidor de campo eléctrico de banda ancha) y a un **receptor GPS** (compatible NMEA 0183) vía puerto serial para capturar lecturas georreferenciadas de radiación no ionizante. Los datos se visualizan en tiempo real sobre un mapa interactivo, se almacenan localmente en una base de datos SQLite cifrada y pueden exportarse en múltiples formatos normalizados.
+`RNI Monitor` se conecta a un **Narda NBM-550** (medidor de campo eléctrico de banda ancha) y a un **receptor GPS** (compatible NMEA 0183) vía puerto serial para capturar lecturas georreferenciadas de radiación no ionizante. Los datos se visualizan en tiempo real sobre un mapa interactivo, se almacenan localmente en una base de datos SQLite cifrada y pueden exportarse en múltiples formatos normalizados.
 
 ## Features
 
@@ -74,7 +74,7 @@ npm run build:mac
 npm run build:linux
 ```
 
-La ruta de instalación en Windows es `Program Files\ENACOM\nir-monitor`. Los artefactos de build se generan en `dist/`.
+La ruta de instalación en Windows es `Program Files\ENACOM\RNI Monitor`. Los artefactos de build se generan en `dist/`.
 
 ### Build en Windows — Clave de cifrado
 

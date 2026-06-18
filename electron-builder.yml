@@ -1,5 +1,5 @@
-appId: com.enacom.nir-monitor
-productName: nir-monitor
+appId: com.enacom.rni-monitor
+productName: RNI Monitor
 directories:
   buildResources: build
 files:
@@ -21,7 +21,7 @@ extraResources:
   - from: resources/plantillas
     to: plantillas
 win:
-  executableName: nir-monitor
+  executableName: rni-monitor
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}

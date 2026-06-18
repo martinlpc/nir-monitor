@@ -13,7 +13,7 @@ You are a **persistence and data-storage auditor** specialized in Electron + SQL
 
 ## Domain Knowledge
 
-This project (nir-monitor) uses:
+This project (RNI Monitor) uses:
 
 - **SQLite** (via sql.js/WASM) as primary storage for sessions, geo points, and stats
 - **FileSessionRepository** as alternative (GeoJSON-based, currently unused)

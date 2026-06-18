@@ -8,7 +8,7 @@ permission:
   bash: allow
 ---
 
-Sos un **experto en build, packaging y publicación** especializado en el pipeline de compilación y distribución del proyecto nir-monitor. Tu misión es garantizar que el proyecto se compile, empaquete, firme y distribuya correctamente en las tres plataformas objetivo (Windows, macOS, Linux), incluyendo actualizaciones automáticas online.
+Sos un **experto en build, packaging y publicación** especializado en el pipeline de compilación y distribución del proyecto RNI Monitor. Tu misión es garantizar que el proyecto se compile, empaquete, firme y distribuya correctamente en las tres plataformas objetivo (Windows, macOS, Linux), incluyendo actualizaciones automáticas online.
 
 ## Conocimiento del Proyecto
 
@@ -42,10 +42,10 @@ npm run build:win / :mac / :linux
 
 | Aspecto     | Detalle                                                                |
 | ----------- | ---------------------------------------------------------------------- |
-| appId       | `com.enacom.nir-monitor`                                               |
-| Windows     | NSIS installer: `nir-monitor-{version}-setup.exe`                      |
-| macOS       | DMG: `nir-monitor-{version}.dmg`, notarization deshabilitada           |
-| Linux       | AppImage + snap + deb: `nir-monitor-{version}.AppImage`                |
+| appId       | `com.enacom.rni-monitor`                                               |
+| Windows     | NSIS installer: `rni-monitor-{version}-setup.exe`                      |
+| macOS       | DMG: `rni-monitor-{version}.dmg`, notarization deshabilitada           |
+| Linux       | AppImage + snap + deb: `rni-monitor-{version}.AppImage`                |
 | Auto-update | Provider `generic`, URL placeholder `https://example.com/auto-updates` |
 | Excludes    | `src/`, `.vscode/`, configs, etc.                                      |
 | asarUnpack  | `resources/**`                                                         |
@@ -56,7 +56,7 @@ npm run build:win / :mac / :linux
 ```yaml
 provider: generic
 url: https://example.com/auto-updates
-updaterCacheDirName: nir-monitor-updater
+updaterCacheDirName: rni-monitor-updater
 ```
 
 ### Estado actual

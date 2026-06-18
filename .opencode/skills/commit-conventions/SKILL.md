@@ -1,6 +1,6 @@
 ---
 name: commit-conventions
-description: Git commit conventions for nir-monitor — conventional commits, English only, human language
+description: Git commit conventions for RNI Monitor — conventional commits, English only, human language
 ---
 
 ## Formato

@@ -49,8 +49,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       // En Windows, usa AppData\Roaming; en Unix, usa .config
       const dataPath =
         process.platform === 'win32'
-          ? path.join(process.env.APPDATA || os.homedir(), 'nir-monitor')
-          : path.join(os.homedir(), '.config', 'nir-monitor')
+          ? path.join(process.env.APPDATA || os.homedir(), 'RNI Monitor')
+          : path.join(os.homedir(), '.config', 'RNI Monitor')
       this.dbPath = path.join(dataPath, 'sessions.db')
     }
   }

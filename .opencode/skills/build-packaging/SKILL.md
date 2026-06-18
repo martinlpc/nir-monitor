@@ -7,7 +7,7 @@ Archivo: `electron-builder.yml`
 
 ## appId
 
-`com.enacom.nir-monitor`
+`com.enacom.rni-monitor`
 
 ## Scripts
 
@@ -28,7 +28,7 @@ npm run build:unpack   # electron-builder --dir  -> directorio sin empaquetar
 
 ```yaml
 win:
-  executableName: nir-monitor
+  executableName: rni-monitor
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
   shortcutName: ${productName}
@@ -36,7 +36,7 @@ nsis:
   createDesktopShortcut: always
 ```
 
-- Output: `nir-monitor-1.0.0-setup.exe`
+- Output: `rni-monitor-1.0.0-setup.exe`
 
 ## macOS (DMG)
 
@@ -50,7 +50,7 @@ dmg:
 
 - Entitlements: camera, microphone, documents, downloads
 - Notarization: deshabilitada (configurar para distribucion oficial)
-- Output: `nir-monitor-1.0.0.dmg`
+- Output: `rni-monitor-1.0.0.dmg`
 
 ## Linux
 
@@ -65,7 +65,7 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 ```
 
-- Output: `nir-monitor-1.0.0.AppImage`
+- Output: `rni-monitor-1.0.0.AppImage`
 
 ## Auto-update (electron-updater)
 

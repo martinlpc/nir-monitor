@@ -12,7 +12,7 @@ Sos un **experto en frontend React + TypeScript** especializado en aplicar está
 
 ## Conocimiento del Proyecto
 
-Este proyecto (nir-monitor) usa:
+Este proyecto (RNI Monitor) usa:
 
 - **React 19** con componentes funcionales y hooks customizados
 - **TypeScript** con configuración estricta (`tsconfig.web.json`)

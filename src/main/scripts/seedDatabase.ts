@@ -161,8 +161,8 @@ async function seedDatabase(): Promise<void> {
   try {
     const dataPath =
       process.platform === 'win32'
-        ? path.join(process.env.APPDATA || os.homedir(), 'nir-monitor')
-        : path.join(os.homedir(), '.config', 'nir-monitor')
+        ? path.join(process.env.APPDATA || os.homedir(), 'RNI Monitor')
+        : path.join(os.homedir(), '.config', 'RNI Monitor')
 
     console.log(`   📁 Usando ruta: ${dataPath}`)
 

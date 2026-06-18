@@ -11,7 +11,7 @@ import type {
 
 /**
  * File-based session persistence
- * Stores sessions in ~/.nir-monitor/sessions/
+ * Stores sessions in ~/.rni-monitor/sessions/
  */
 export class FileSessionRepository implements ISessionRepository {
   private sessionsDir: string

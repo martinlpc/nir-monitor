@@ -1,9 +1,9 @@
-# Plan: Bundling USB Drivers (FTDI + Prolific) into nir-monitor
+# Plan: Bundling USB Drivers (FTDI + Prolific) into RNI Monitor
 
 ## Objective
 
 Eliminar la necesidad de instalar drivers USB-serial manualmente. El installer de
-nir-monitor detecta qué chips están conectados y ofrece instalar los drivers
+RNI Monitor detecta qué chips están conectados y ofrece instalar los drivers
 correspondientes. En runtime, la app detecta dispositivos sin driver y guía al
 usuario para instalarlos con un clic.
 
@@ -395,7 +395,7 @@ useEffect(() => {
 ### Durante la instalación (NSIS):
 
 ```
-1. Usuario ejecuta nir-monitor-setup.exe
+1. Usuario ejecuta rni-monitor-setup.exe
 2. Se copian archivos de la app + drivers/ a $INSTDIR/resources/
 3. Hook customInstall:
    a. Lee registry → ftdibus ¿existe? → NO → pregunta

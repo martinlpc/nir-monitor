@@ -10,7 +10,7 @@ function App(): React.JSX.Element {
 
   useEffect(() => {
     window.api.app.getVersion().then(({ version }) => {
-      document.title = `nir-monitor v${version}`
+      document.title = `RNI Monitor v${version}`
     })
   }, [])
 

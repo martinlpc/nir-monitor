@@ -14,7 +14,7 @@ export default function DebugHero({
   return (
     <section className="hero-card">
       <div>
-        <p className="eyebrow">nir-monitor</p>
+        <p className="eyebrow">RNI Monitor</p>
         <h1>Panel de Debug IPC</h1>
         <p className="hero-copy">
           Esta pantalla sirve para validar el wiring real entre renderer, preload, IPC y servicios
