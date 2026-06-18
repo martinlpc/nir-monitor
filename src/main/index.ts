@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { app, shell, BrowserWindow, ipcMain, protocol } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -86,6 +86,17 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
+
+  // Validación temprana de clave de cifrado en producción
+  if (app.isPackaged && !process.env.NIR_DB_ENCRYPTION_KEY) {
+    dialog.showErrorBox(
+      'Error de configuración',
+      'La variable de entorno NIR_DB_ENCRYPTION_KEY no está configurada.\n\n' +
+        'Reinstale la aplicación o contacte al administrador del sistema.'
+    )
+    app.quit()
+    return
+  }
 
   ipcMain.on('ping', () => console.log('pong'))
 

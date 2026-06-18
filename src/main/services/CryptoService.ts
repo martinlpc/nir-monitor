@@ -9,9 +9,11 @@ function getKey(): Buffer {
   const passphrase = process.env.NIR_DB_ENCRYPTION_KEY
   if (!passphrase) {
     throw new Error(
-      'NIR_DB_ENCRYPTION_KEY environment variable is not set.\n' +
-        'Create a .env file with: NIR_DB_ENCRYPTION_KEY=<passphrase-compartida>\n' +
-        'Or set it before launching the app.'
+      'NIR_DB_ENCRYPTION_KEY no está configurada.\n\n' +
+        'En desarrollo: crear un archivo .env en la raíz del proyecto con:\n' +
+        '  NIR_DB_ENCRYPTION_KEY=<passphrase>\n\n' +
+        'En producción: la clave se configura automáticamente durante la instalación.\n' +
+        '  Reinstale la aplicación o contacte al administrador del sistema.'
     )
   }
   return crypto.createHash('sha256').update(passphrase, 'utf8').digest()

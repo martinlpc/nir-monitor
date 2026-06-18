@@ -76,6 +76,26 @@ npm run build:linux
 
 La ruta de instalación en Windows es `Program Files\ENACOM\nir-monitor`. Los artefactos de build se generan en `dist/`.
 
+### Build en Windows — Clave de cifrado
+
+El instalador NSIS inyecta `NIR_DB_ENCRYPTION_KEY` como variable de entorno a nivel de máquina
+durante la instalación.
+
+**Flujo de compilación:**
+
+```bash
+npm run generate:nsh-key   # Lee .env y genera build/key.nsh
+npm run build              # Typecheck + electron-vite build
+electron-builder --win     # Empaqueta NSIS
+```
+
+`npm run build:win` ejecuta los tres pasos automáticamente.
+
+> **Seguridad:** La passphrase se lee del archivo `.env` (gitignored) y se transforma a un `!define`
+> de NSIS en `build/key.nsh` (también gitignored). La clave nunca se hardcodea en el código fuente
+> ni viaja en el ASAR de la aplicación. Solo el instalador tiene acceso a la clave para escribirla
+> en el registro del sistema.
+
 ## Scripts Clave
 
 | Comando               | Propósito                             |
@@ -87,7 +107,8 @@ La ruta de instalación en Windows es `Program Files\ENACOM\nir-monitor`. Los ar
 | `npm run format`      | Prettier --write                      |
 | `npm run typecheck`   | tsc node + web                        |
 | `npm run seed:mock`   | Seeds SQLite con datos mock (Neuquén) |
-| `npm run build:win`   | Build NSIS installer                  |
+| `npm run generate:nsh-key` | Genera build/key.nsh desde .env     |
+| `npm run build:win`   | Build NSIS installer (incluye generate:nsh-key) |
 | `npm run build:mac`   | Build DMG                             |
 | `npm run build:linux` | Build AppImage/snap/deb               |
 
@@ -328,16 +349,22 @@ Leaflet map con:
 
 ## Database Encryption
 
-La base de datos SQLite (`sessions.db`) se cifra con **AES-256-GCM**.
+La base de datos SQLite (`sessions.db`) y los archivos GeoJSON exportados se cifran con
+**AES-256-GCM** (clave derivada via SHA-256).
 
-### Configuración
+### Desarrollo
 
 ```ini
-# .env (gitignored)
+# .env (gitignored, en la raíz del proyecto)
 NIR_DB_ENCRYPTION_KEY=passphrase-compartida-entre-equipos
 ```
 
-La passphrase se convierte a key de 256 bits via SHA-256.
+### Producción (Windows)
+
+El instalador NSIS escribe `NIR_DB_ENCRYPTION_KEY` en el registro del sistema a nivel de máquina.
+La aplicación la lee de `process.env` en tiempo de ejecución.
+
+La variable se setea durante la instalación y se elimina al desinstalar la aplicación.
 
 ### Variables de Entorno
 

@@ -1,4 +1,16 @@
+!include key.nsh
+
 !macro customInstall
+  ; ──────────────────────────────────────────────
+  ; NIR_DB_ENCRYPTION_KEY — persistente a nivel de máquina
+  ; ──────────────────────────────────────────────
+  WriteRegStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+    "NIR_DB_ENCRYPTION_KEY" "${NIR_DB_ENCRYPTION_KEY}"
+  ; Setear en el entorno actual para que el auto-arranque post-instal lo herede
+  System::Call 'kernel32::SetEnvironmentVariable(t "NIR_DB_ENCRYPTION_KEY", t "${NIR_DB_ENCRYPTION_KEY}")'
+  ; Notificar al sistema
+  SendMessage 0xFFFF 0x001A 0 "STR:Environment"
+
   ; ──────────────────────────────────────────────
   ; FTDI driver check & install (via pnputil)
   ; ──────────────────────────────────────────────
@@ -57,4 +69,10 @@
   ${Else}
     DetailPrint "✓ Drivers Prolific ya instalados (skip)"
   ${EndIf}
+!macroend
+
+!macro customUnInstall
+  DeleteRegValue HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
+    "NIR_DB_ENCRYPTION_KEY"
+  SendMessage 0xFFFF 0x001A 0 "STR:Environment"
 !macroend

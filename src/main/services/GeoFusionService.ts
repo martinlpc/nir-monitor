@@ -17,7 +17,7 @@ export interface GeoFusionConfig {
 
 export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = {
   triggerMode: 'distance',
-  minDistanceMeters: 10,
+  minDistanceMeters: 20,
   intervalMs: 5000,
   testMode: false
 }

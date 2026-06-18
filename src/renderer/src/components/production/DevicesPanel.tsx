@@ -39,7 +39,7 @@ export default function DevicesPanel({
   const [showTestMode, setShowTestMode] = useState(false)
   const [sessionName, setSessionName] = useState('')
   const [triggerMode, setTriggerMode] = useState<'distance' | 'time'>('distance')
-  const [minDistanceMeters, setMinDistanceMeters] = useState(10)
+  const [minDistanceMeters, setMinDistanceMeters] = useState(20)
   const [intervalSec, setIntervalSec] = useState(5)
   const [confirmStop, setConfirmStop] = useState(false)
   const [showStartModal, setShowStartModal] = useState(false)

@@ -227,16 +227,26 @@ export function registerSessionServiceHandlers(
       }
 
       try {
+        let finalPath = result.filePath
+
         if (format === 'geojson') {
+          while (finalPath.endsWith('.geojson.enc')) {
+            finalPath = finalPath.slice(0, -'.geojson.enc'.length)
+          }
+          finalPath += '.geojson.enc'
           const data = await repository.exportAsGeoJSON(sessionId)
           const encrypted = encryptBuffer(Buffer.from(data, 'utf-8'))
-          fs.writeFileSync(result.filePath, encrypted)
+          fs.writeFileSync(finalPath, encrypted)
         } else if (format === 'kmz') {
+          while (finalPath.endsWith('.kmz')) {
+            finalPath = finalPath.slice(0, -'.kmz'.length)
+          }
+          finalPath += '.kmz'
           const buffer = await repository.exportAsKMZ(sessionId)
-          fs.writeFileSync(result.filePath, buffer)
+          fs.writeFileSync(finalPath, buffer)
         }
 
-        return { success: true, filePaths: [result.filePath] }
+        return { success: true, filePaths: [finalPath] }
       } catch (err) {
         return { success: false, error: (err as Error).message }
       }
