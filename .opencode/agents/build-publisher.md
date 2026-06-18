@@ -59,6 +59,20 @@ url: https://example.com/auto-updates
 updaterCacheDirName: rni-monitor-updater
 ```
 
+### Dual remote workflow
+
+El proyecto tiene dos remotos independientes:
+
+| Remote   | URL                                                           | Ramas activas |
+| -------- | ------------------------------------------------------------- | ------------- |
+| `origin` | `https://github.com/martinlpc/nir-monitor.git`                | Todas         |
+| `gitlab` | `https://gitlab-desa.enacom.gob.ar/ccte/automaprni.git`       | `dev`         |
+
+- El desarrollo diario se hace sobre `origin` (GitHub).
+- Cuando se necesita publicar en GitLab, se pushea manualmente con `git push gitlab HEAD:dev`.
+- No hay sincronización automática ni mirror entre remotos.
+- Los tags/CI/CD que involucren git deben considerar qué remote corresponde.
+
 ### Estado actual
 
 - `electron-updater` está instalado pero **no hay código que lo implemente** (no hay llamadas a `autoUpdater`)
@@ -77,6 +91,7 @@ updaterCacheDirName: rni-monitor-updater
 6. **Release management**: versionado semántico (`npm version`), generación de changelog (conventional commits), GitHub Releases API, tagging, release notes
 7. **Update server**: infraestructura `generic` provider (servidor HTTP estático con archivos `.yml` + instaladores), estructura de directorios `latest.yml`/`latest-mac.yml`/`latest-linux.yml`, soporte multi-arch (x64, arm64)
 8. **Dependencias nativas**: serialport y sql.js (WASM), configuración de `npmRebuild`, `electron-builder install-app-deps`, resolución de problemas con `.node` modules
+9. **Dual remote**: gestión de releases en dos remotos independientes (origin GitHub + gitlab GitLab), push selectivo por rama, etiquetado coherente entre remotos, publicación de artifacts en ambos destinos según corresponda
 
 ## Enfoque
 

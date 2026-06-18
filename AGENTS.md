@@ -18,6 +18,19 @@ Desktop EMF mapper basado en ITU-T K.113. Electron 42 + React 19 + Leaflet + SQL
 - CSS plano (naming BEM-like), sin CSS-in-JS ni Tailwind
 - Sin estado global -- solo useState + hooks + IPC bridge
 
+## Git Remotes
+
+| Remote   | URL                                                   | Uso                          |
+| -------- | ----------------------------------------------------- | ---------------------------- |
+| `origin` | `https://github.com/martinlpc/nir-monitor.git`        | GitHub — desarrollo diario   |
+| `gitlab` | `https://gitlab-desa.enacom.gob.ar/ccte/automaprni.git` | GitLab — branch `dev`     |
+
+Flujo: se trabaja normalmente sobre `origin` (GitHub, cualquier rama). Cuando se necesita publicar en GitLab, se pushea manualmente a `gitlab dev`:
+```
+git push gitlab HEAD:dev
+```
+Los remotos son independientes. No hay sincronización automática entre ellos.
+
 ## Scripts clave
 
 | Comando                 | Proposito                             |
