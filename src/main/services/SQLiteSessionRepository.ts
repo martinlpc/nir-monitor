@@ -24,6 +24,8 @@ import { electricFieldToMepPercent } from '../../shared/emfConversion'
  * - session_stats: pre-calculated statistics (avgCorrected, maxCorrected, etc.)
  */
 export class SQLiteSessionRepository implements ISessionRepository {
+  static readonly MAX_EXPORT_POINTS = 2500
+
   private db: SqlJsDatabase | null = null
   private dbPath: string = ''
   private initialized = false
@@ -513,7 +515,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     }
   }
 
-  async getSession(sessionId: string): Promise<PersistedSession | null> {
+  async getSession(sessionId: string, pointLimit?: number): Promise<PersistedSession | null> {
     await this.initialize()
     const db = this.ensureDb()
 
@@ -543,10 +545,13 @@ export class SQLiteSessionRepository implements ISessionRepository {
       }
 
       // Obtener puntos
-      const pointsResult = db.exec(
-        'SELECT * FROM geo_points WHERE sessionId = ? ORDER BY timestamp ASC',
-        [sessionId]
-      )
+      let pointsSql = 'SELECT * FROM geo_points WHERE sessionId = ? ORDER BY timestamp ASC'
+      const pointsParams: (string | number)[] = [sessionId]
+      if (pointLimit !== undefined) {
+        pointsSql += ' LIMIT ?'
+        pointsParams.push(pointLimit)
+      }
+      const pointsResult = db.exec(pointsSql, pointsParams)
 
       const points: GeoTimestamp[] = (pointsResult[0]?.values || []).map((row) =>
         this.rowToGeoTimestamp(row, pointsResult[0].columns)
@@ -613,15 +618,18 @@ export class SQLiteSessionRepository implements ISessionRepository {
     }
   }
 
-  async getSessionPoints(sessionId: string): Promise<GeoTimestamp[]> {
+  async getSessionPoints(sessionId: string, limit?: number): Promise<GeoTimestamp[]> {
     await this.initialize()
     const db = this.ensureDb()
 
     try {
-      const result = db.exec(
-        'SELECT * FROM geo_points WHERE sessionId = ? ORDER BY timestamp ASC',
-        [sessionId]
-      )
+      let sql = 'SELECT * FROM geo_points WHERE sessionId = ? ORDER BY timestamp ASC'
+      const params: (string | number)[] = [sessionId]
+      if (limit !== undefined) {
+        sql += ' LIMIT ?'
+        params.push(limit)
+      }
+      const result = db.exec(sql, params)
 
       if (!result[0]) return []
 
@@ -635,7 +643,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
   }
 
   async exportAsGeoJSON(sessionId: string): Promise<string> {
-    const points = await this.getSessionPoints(sessionId)
+    const limit = SQLiteSessionRepository.MAX_EXPORT_POINTS + 1
+    const points = await this.getSessionPoints(sessionId, limit)
+    if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
+      points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
+      console.warn(`[SQLiteSessionRepository] GeoJSON export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+    }
     const session = await this.getSession(sessionId)
     const stats = await this.getSessionStats(sessionId)
 
@@ -704,7 +717,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
   }
 
   async exportAsCSV(sessionId: string): Promise<string> {
-    const points = await this.getSessionPoints(sessionId)
+    const limit = SQLiteSessionRepository.MAX_EXPORT_POINTS + 1
+    const points = await this.getSessionPoints(sessionId, limit)
+    if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
+      points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
+      console.warn(`[SQLiteSessionRepository] CSV export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+    }
 
     const headers = [
       'Timestamp',
@@ -733,10 +751,15 @@ export class SQLiteSessionRepository implements ISessionRepository {
   }
 
   async exportAsXLSX(sessionId: string, folderPath: string, label: string): Promise<string[]> {
-    const session = await this.getSession(sessionId)
+    const limit = SQLiteSessionRepository.MAX_EXPORT_POINTS + 1
+    const session = await this.getSession(sessionId, limit)
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
+    if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
+      points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
+      console.warn(`[SQLiteSessionRepository] XLSX export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+    }
     const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
 
     const templateDir = app.isPackaged
@@ -989,10 +1012,15 @@ export class SQLiteSessionRepository implements ISessionRepository {
   }
 
   async exportAsKMZ(sessionId: string): Promise<Buffer> {
-    const session = await this.getSession(sessionId)
+    const limit = SQLiteSessionRepository.MAX_EXPORT_POINTS + 1
+    const session = await this.getSession(sessionId, limit)
     if (!session) throw new Error(`Session ${sessionId} not found`)
 
     const { metadata, points } = session
+    if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
+      points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
+      console.warn(`[SQLiteSessionRepository] KMZ export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+    }
 
     // Generar KML
     const kml = this.buildKML(metadata, points)

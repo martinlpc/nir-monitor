@@ -1,18 +1,33 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron'
 import { IPC_HANDLERS, IPC_EVENTS } from './channels'
+import { toUserError } from '../../shared/errors/toUserError'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
+
+function sanitizeReThrow(err: unknown): never {
+  const { message, technical } = toUserError(err)
+  console.error(`[IPC] ${technical}`)
+  throw new Error(message)
+}
 
 export function registerTileCacheHandlers(
   window: BrowserWindow,
   tileCache: TileCacheService
 ): void {
   ipcMain.handle(IPC_HANDLERS.TILE_CACHE_STATS, async () => {
-    return await tileCache.getStats()
+    try {
+      return await tileCache.getStats()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   ipcMain.handle(IPC_HANDLERS.TILE_CLEAR_CACHE, async () => {
-    await tileCache.clearCache()
-    return { success: true }
+    try {
+      await tileCache.clearCache()
+      return { success: true }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   ipcMain.handle(
@@ -29,35 +44,43 @@ export function registerTileCacheHandlers(
         maxZoom: number
       }
     ) => {
-      const onProgress = (progress: unknown): void => {
-        if (!window.isDestroyed()) {
-          window.webContents.send(IPC_EVENTS.TILE_PRELOAD_PROGRESS, progress)
-        }
-      }
-
-      tileCache.on('preload-progress', onProgress)
-
       try {
-        await tileCache.preloadTiles(
-          options.providerId,
-          options.north,
-          options.south,
-          options.east,
-          options.west,
-          options.minZoom,
-          options.maxZoom
-        )
-      } finally {
-        tileCache.removeListener('preload-progress', onProgress)
-      }
+        const onProgress = (progress: unknown): void => {
+          if (!window.isDestroyed()) {
+            window.webContents.send(IPC_EVENTS.TILE_PRELOAD_PROGRESS, progress)
+          }
+        }
 
-      return { success: true }
+        tileCache.on('preload-progress', onProgress)
+
+        try {
+          await tileCache.preloadTiles(
+            options.providerId,
+            options.north,
+            options.south,
+            options.east,
+            options.west,
+            options.minZoom,
+            options.maxZoom
+          )
+        } finally {
+          tileCache.removeListener('preload-progress', onProgress)
+        }
+
+        return { success: true }
+      } catch (err) {
+        sanitizeReThrow(err)
+      }
     }
   )
 
   ipcMain.handle(IPC_HANDLERS.TILE_PRELOAD_CANCEL, async () => {
-    tileCache.cancelPreload()
-    return { success: true }
+    try {
+      tileCache.cancelPreload()
+      return { success: true }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   ipcMain.handle(
@@ -68,29 +91,33 @@ export function registerTileCacheHandlers(
         providerId: string
       }
     ) => {
-      const result = await dialog.showOpenDialog(window, {
-        properties: ['openFile', 'openDirectory'],
-        filters: [
-          { name: 'Tiles ZIP', extensions: ['zip'] },
-          { name: 'Todos', extensions: ['*'] }
-        ]
-      })
+      try {
+        const result = await dialog.showOpenDialog(window, {
+          properties: ['openFile', 'openDirectory'],
+          filters: [
+            { name: 'Tiles ZIP', extensions: ['zip'] },
+            { name: 'Todos', extensions: ['*'] }
+          ]
+        })
 
-      if (result.canceled || result.filePaths.length === 0) {
-        return { success: false, canceled: true }
-      }
-
-      const sourcePath = result.filePaths[0]
-
-      const onProgress = (imported: number, skipped: number, total: number): void => {
-        if (!window.isDestroyed()) {
-          window.webContents.send(IPC_EVENTS.TILE_IMPORT_PROGRESS, { imported, skipped, total })
+        if (result.canceled || result.filePaths.length === 0) {
+          return { success: false, canceled: true }
         }
+
+        const sourcePath = result.filePaths[0]
+
+        const onProgress = (imported: number, skipped: number, total: number): void => {
+          if (!window.isDestroyed()) {
+            window.webContents.send(IPC_EVENTS.TILE_IMPORT_PROGRESS, { imported, skipped, total })
+          }
+        }
+
+        const stats = await tileCache.importTiles(sourcePath, options.providerId, onProgress)
+
+        return { success: true, ...stats }
+      } catch (err) {
+        sanitizeReThrow(err)
       }
-
-      const stats = await tileCache.importTiles(sourcePath, options.providerId, onProgress)
-
-      return { success: true, ...stats }
     }
   )
 }

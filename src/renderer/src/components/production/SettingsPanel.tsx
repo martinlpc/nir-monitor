@@ -356,6 +356,25 @@ export default function SettingsPanel({
             <span className="settings-option__label">Versión de la aplicación</span>
             <span className="settings-option__value">{appVersion}</span>
           </div>
+          <div className="settings-option">
+            <button
+              className="settings-btn"
+              onClick={async () => {
+                try {
+                  const result = await window.api.logs.export()
+                  if (result.success) {
+                    alert(`Logs exportados a: ${result.path}`)
+                  } else {
+                    alert(`Error al exportar logs: ${result.error}`)
+                  }
+                } catch (err) {
+                  alert('Error al exportar logs.')
+                }
+              }}
+            >
+              Exportar logs
+            </button>
+          </div>
         </section>
       )}
     </div>

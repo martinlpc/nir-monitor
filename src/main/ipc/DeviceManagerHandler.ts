@@ -3,7 +3,14 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import { emitAlert } from './handlers'
+import { toUserError } from '../../shared/errors/toUserError'
 import type { DeviceManager } from '../services/DeviceManager'
+
+function sanitizeReThrow(err: unknown): never {
+  const { message, technical } = toUserError(err)
+  console.error(`[IPC] ${technical}`)
+  throw new Error(message)
+}
 
 /**
  * Registra handlers IPC para operaciones de dispositivos
@@ -15,30 +22,50 @@ export function registerDeviceManagerHandlers(
 ): void {
   // device:list - retorna estado actual de dispositivos
   ipcMain.handle(IPC_HANDLERS.DEVICE_LIST, async () => {
-    return deviceManager.getState()
+    try {
+      return deviceManager.getState()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   // device:scan - dispara escaneo de puertos
   ipcMain.handle(IPC_HANDLERS.DEVICE_SCAN, async () => {
-    return await deviceManager.scan()
+    try {
+      return await deviceManager.scan()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   // device:set-port - configura puerto manualmente
   ipcMain.handle(IPC_HANDLERS.DEVICE_SET_PORT, async (_, device: string, port: string) => {
-    await deviceManager.setPortManual(device as 'nbm550' | 'gps', port)
-    return deviceManager.getState()
+    try {
+      await deviceManager.setPortManual(device as 'nbm550' | 'gps', port)
+      return deviceManager.getState()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   // device:connect - reconecta un dispositivo ya configurado
   ipcMain.handle(IPC_HANDLERS.DEVICE_CONNECT, async (_, deviceId: string) => {
-    await deviceManager.connectDevice(deviceId as 'nbm550' | 'gps')
-    return deviceManager.getState()
+    try {
+      await deviceManager.connectDevice(deviceId as 'nbm550' | 'gps')
+      return deviceManager.getState()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   // device:disconnect - desconecta un dispositivo específico
   ipcMain.handle(IPC_HANDLERS.DEVICE_DISCONNECT, async (_, deviceId: string) => {
-    await deviceManager.disconnectDevice(deviceId as 'nbm550' | 'gps')
-    return deviceManager.getState()
+    try {
+      await deviceManager.disconnectDevice(deviceId as 'nbm550' | 'gps')
+      return deviceManager.getState()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 }
 

@@ -151,10 +151,12 @@ const api = {
 
     exportGeoJSON: (
       sessionId: string
-    ): Promise<{ success: boolean; data?: string; error?: string }> =>
+    ): Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }> =>
       ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_GEOJSON, sessionId),
 
-    exportCSV: (sessionId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
+    exportCSV: (
+      sessionId: string
+    ): Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }> =>
       ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_CSV, sessionId),
 
     export: (
@@ -166,6 +168,7 @@ const api = {
       filePaths?: string[]
       canceled?: boolean
       error?: string
+      truncated?: boolean
     }> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT, sessionId, format, label),
 
     importGeoJSON: (): Promise<{
@@ -334,6 +337,14 @@ const api = {
 
   app: {
     getVersion: (): Promise<{ version: string }> => ipcRenderer.invoke(IPC_HANDLERS.GET_APP_VERSION)
+  },
+
+  logs: {
+    getPath: (): Promise<{ success: boolean; path: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.LOGS_GET_PATH),
+
+    export: (): Promise<{ success: boolean; path?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.LOGS_EXPORT)
   }
 }
 

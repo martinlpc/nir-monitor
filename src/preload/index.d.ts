@@ -67,10 +67,10 @@ declare global {
         delete: (sessionId: string) => Promise<{ success: boolean; error?: string }>
         exportGeoJSON: (
           sessionId: string
-        ) => Promise<{ success: boolean; data?: string; error?: string }>
+        ) => Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }>
         exportCSV: (
           sessionId: string
-        ) => Promise<{ success: boolean; data?: string; error?: string }>
+        ) => Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }>
         export: (
           sessionId: string,
           format: 'geojson' | 'xlsx' | 'kmz',
@@ -80,6 +80,7 @@ declare global {
           filePaths?: string[]
           canceled?: boolean
           error?: string
+          truncated?: boolean
         }>
         importGeoJSON: () => Promise<{
           success: boolean
@@ -192,6 +193,10 @@ declare global {
       }
       app: {
         getVersion: () => Promise<{ version: string }>
+      }
+      logs: {
+        getPath: () => Promise<{ success: boolean; path: string }>
+        export: () => Promise<{ success: boolean; path?: string; error?: string }>
       }
     }
   }

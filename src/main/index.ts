@@ -7,6 +7,7 @@ import { createServices, setupSessionWiring } from './factories/ServiceFactory'
 import { setupIPC } from './ipc/handlers'
 import { TileCacheService } from './tile-cache/TileCacheService'
 import { registerTileProtocol } from './tile-cache/TileProtocolHandler'
+import { setupLogService, getAppLogPath, readAppLog } from './infrastructure/LogService'
 import type { Services } from './factories/ServiceFactory'
 
 const TILE_CACHE_SCHEME = 'tile-cache'
@@ -83,6 +84,9 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
+  setupLogService()
+  console.log('[Main] App starting...')
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -99,6 +103,24 @@ app.whenReady().then(() => {
   }
 
   ipcMain.on('ping', () => console.log('pong'))
+
+  ipcMain.handle('logs:get-path', async () => {
+    return { success: true, path: getAppLogPath() }
+  })
+
+  ipcMain.handle('logs:export', async () => {
+    try {
+      const logContent = readAppLog()
+      const desktop = app.getPath('desktop')
+      const { writeFileSync } = await import('fs')
+      const { join } = await import('path')
+      const destPath = join(desktop, `nir-monitor-${Date.now()}.log`)
+      writeFileSync(destPath, logContent, 'utf-8')
+      return { success: true, path: destPath }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
 
   // 1. Initialize tile cache service
   tileCache = new TileCacheService()

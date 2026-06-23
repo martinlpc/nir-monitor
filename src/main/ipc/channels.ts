@@ -48,5 +48,7 @@ export const IPC_HANDLERS = {
   TILE_IMPORT: 'tile:import',
   DRIVERS_CHECK: 'drivers:check',
   DRIVERS_INSTALL: 'drivers:install',
-  GET_APP_VERSION: 'app:get-version'
+  GET_APP_VERSION: 'app:get-version',
+  LOGS_GET_PATH: 'logs:get-path',
+  LOGS_EXPORT: 'logs:export'
 } as const

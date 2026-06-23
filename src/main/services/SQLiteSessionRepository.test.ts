@@ -421,4 +421,70 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect((customRepo as unknown as { FLUSH_INTERVAL_MS: number }).FLUSH_INTERVAL_MS).toBe(1000)
     customRepo.close()
   })
+
+  // ── export limit (MAX_EXPORT_POINTS) ─────────────────────────
+
+  it('does not truncate when points are within limit', async () => {
+    const meta = makeSession({ sampleCount: 1 })
+    await repo.initSession(meta.id, meta)
+    await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: 1 }))
+    await repo.finalizeSession(meta.id, { ...meta, sampleCount: 1 })
+
+    const geojson = await repo.exportAsGeoJSON(meta.id)
+    const parsed = JSON.parse(geojson)
+    expect(parsed.features).toHaveLength(1)
+  })
+
+  it('truncates GeoJSON export to MAX_EXPORT_POINTS', async () => {
+    const manyPoints = SQLiteSessionRepository.MAX_EXPORT_POINTS + 10
+    const meta = makeSession({ sampleCount: manyPoints })
+    await repo.initSession(meta.id, meta)
+    for (let i = 1; i <= manyPoints; i++) {
+      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
+    }
+    await repo.finalizeSession(meta.id, { ...meta, sampleCount: manyPoints })
+
+    const geojson = await repo.exportAsGeoJSON(meta.id)
+    const parsed = JSON.parse(geojson)
+    expect(parsed.features.length).toBeLessThanOrEqual(SQLiteSessionRepository.MAX_EXPORT_POINTS)
+  })
+
+  it('truncates CSV export to MAX_EXPORT_POINTS', async () => {
+    const manyPoints = SQLiteSessionRepository.MAX_EXPORT_POINTS + 5
+    const meta = makeSession({ sampleCount: manyPoints })
+    await repo.initSession(meta.id, meta)
+    for (let i = 1; i <= manyPoints; i++) {
+      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
+    }
+    await repo.finalizeSession(meta.id, { ...meta, sampleCount: manyPoints })
+
+    const csv = await repo.exportAsCSV(meta.id)
+    const lines = csv.trim().split('\n')
+    expect(lines.length - 1).toBeLessThanOrEqual(SQLiteSessionRepository.MAX_EXPORT_POINTS)
+  })
+
+  it('getSessionPoints respects explicit limit', async () => {
+    const meta = makeSession({ sampleCount: 5 })
+    await repo.initSession(meta.id, meta)
+    for (let i = 1; i <= 5; i++) {
+      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
+    }
+    await repo.finalizeSession(meta.id, { ...meta, sampleCount: 5 })
+
+    const points = await repo.getSessionPoints(meta.id, 3)
+    expect(points).toHaveLength(3)
+  })
+
+  it('getSession respects pointLimit', async () => {
+    const meta = makeSession({ sampleCount: 5 })
+    await repo.initSession(meta.id, meta)
+    for (let i = 1; i <= 5; i++) {
+      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
+    }
+    await repo.finalizeSession(meta.id, { ...meta, sampleCount: 5 })
+
+    const session = await repo.getSession(meta.id, 2)
+    expect(session).not.toBeNull()
+    expect(session!.points).toHaveLength(2)
+  })
 })

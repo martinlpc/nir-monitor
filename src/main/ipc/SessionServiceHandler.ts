@@ -1,20 +1,33 @@
-// Handlers IPC para SessionService - sin lógica de negocio
-// Solo orquesta: SessionService → Renderer
 import { ipcMain, BrowserWindow, dialog, app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import { emitAlert } from './handlers'
+import { toUserError } from '../../shared/errors/toUserError'
 import { encryptBuffer, decryptBuffer, isEncrypted } from '../services/CryptoService'
+import { isValidSessionId } from '../../shared/validate'
+import { SQLiteSessionRepository } from '../services/SQLiteSessionRepository'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 import { v4 as uuidv4 } from 'uuid'
 
+function validateSessionId(sessionId: string): { success: false; error: string } | null {
+  if (!sessionId || !isValidSessionId(sessionId)) {
+    return { success: false, error: 'ID de sesión inválido.' }
+  }
+  return null
+}
+
+function sanitizeReThrow(err: unknown): never {
+  const { message, technical } = toUserError(err)
+  console.error(`[IPC] ${technical}`)
+  throw new Error(message)
+}
+
 /**
  * Registra handlers IPC para operaciones de sesión
- * Responsabilidad: solo orquestar, sin lógica de negocio
  */
 export function registerSessionServiceHandlers(
   _window: BrowserWindow,
@@ -22,7 +35,6 @@ export function registerSessionServiceHandlers(
   sessionService: SessionService
 ): void {
   // session:start - inicia captura de puntos geofusionados
-  // Responsabilidad: SOLO delegar a SessionService, que maneja el wiring interno
   ipcMain.handle(
     IPC_HANDLERS.SESSION_START,
     async (
@@ -39,16 +51,7 @@ export function registerSessionServiceHandlers(
         apellido2?: string
       }
     ) => {
-      console.log(`[SessionServiceHandler] SESSION_START received, payload:`, payload)
-      // SessionService.start() internamente:
-      // 1. Accede a NBM y GPS desde DeviceManager
-      // 2. Valifica que estén conectados
-      // 3. Wirifica GeoFusionService
       const { label, provincia, localidad, apellido1, apellido2, ...fusionConfig } = payload
-      console.log(
-        `[SessionServiceHandler] Calling sessionService.start() with label="${label}" and fusionConfig:`,
-        fusionConfig
-      )
       try {
         const sessionId = await sessionService.start(label, fusionConfig, {
           provincia,
@@ -56,49 +59,56 @@ export function registerSessionServiceHandlers(
           apellido1,
           apellido2
         })
-        console.log(`[SessionServiceHandler] sessionService.start() returned: ${sessionId}`)
         return sessionId
-      } catch (err: unknown) {
-        // Emitir alerta global al frontend
-        const message = err instanceof Error ? err.message : String(err)
+      } catch (err) {
+        const { message, technical } = toUserError(err)
+        console.error(`[IPC] session:start error: ${technical}`)
         emitAlert(_window, message || 'Error al iniciar sesión', 'error')
-        throw err
+        throw new Error(message)
       }
     }
   )
 
   // session:stop - detiene captura y exporta GeoJSON al escritorio
   ipcMain.handle(IPC_HANDLERS.SESSION_STOP, async () => {
-    const summary = await sessionService.stop()
-
-    // Auto-export GeoJSON cifrado al escritorio (obligatorio)
-    const repository = sessionService.getRepository()
-    if (summary?.localidad && summary?.id && repository) {
-      try {
-        const desktop = app.getPath('desktop')
-        const startDate = new Date(summary.startedAt)
-        const fecha = startDate.toISOString().slice(0, 10)
-        const hora = startDate.toTimeString().slice(0, 8).replace(/:/g, '')
-        const loc = summary.localidad
-          .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
-          .replace(/\s+/g, '-')
-        const filename = `${loc}_${fecha}_${hora}.geojson.enc`
-        const filepath = path.join(desktop, filename)
-        const geojson = await repository.exportAsGeoJSON(summary.id)
-        const encrypted = encryptBuffer(Buffer.from(geojson, 'utf-8'))
-        fs.writeFileSync(filepath, encrypted)
-        console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
-      } catch (err) {
-        console.warn('[SessionServiceHandler] Failed to save encrypted GeoJSON to desktop:', err)
+    try {
+      const summary = await sessionService.stop()
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (summary?.localidad && summary?.id) {
+        const repository = sessionService.getRepository()
+        if (repository) {
+          try {
+            const desktop = app.getPath('desktop')
+            const startDate = new Date(summary.startedAt)
+            const fecha = startDate.toISOString().slice(0, 10)
+            const hora = startDate.toTimeString().slice(0, 8).replace(/:/g, '')
+            const loc = summary.localidad
+              .replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, '')
+              .replace(/\s+/g, '-')
+            const filename = `${loc}_${fecha}_${hora}.geojson.enc`
+            const filepath = path.join(desktop, filename)
+            const geojson = await repository.exportAsGeoJSON(summary.id)
+            const encrypted = encryptBuffer(Buffer.from(geojson, 'utf-8'))
+            fs.writeFileSync(filepath, encrypted)
+            console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
+          } catch (innerErr) {
+            console.warn('[SessionServiceHandler] Failed to save encrypted GeoJSON to desktop:', innerErr)
+          }
+        }
       }
+      return summary
+    } catch (err) {
+      sanitizeReThrow(err)
     }
-
-    return summary
   })
 
   // session:list - retorna metadata de sesión actual
   ipcMain.handle(IPC_HANDLERS.SESSION_LIST, async () => {
-    return sessionService.getSummary()
+    try {
+      return sessionService.getSummary()
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
   })
 
   // session:list-persisted - retorna lista de todas las sesiones guardadas
@@ -109,11 +119,7 @@ export function registerSessionServiceHandlers(
       return []
     }
     try {
-      console.log('[SessionServiceHandler] SESSION_LIST_PERSISTED - querying repository...')
       const sessions = await repository.listSessions()
-      console.log(
-        `[SessionServiceHandler] SESSION_LIST_PERSISTED - returning ${sessions.length} sessions`
-      )
       return sessions
     } catch (err) {
       console.error('[SessionServiceHandler] SESSION_LIST_PERSISTED Error:', err)
@@ -123,57 +129,77 @@ export function registerSessionServiceHandlers(
 
   // session:get - obtiene sesión completa con puntos
   ipcMain.handle(IPC_HANDLERS.SESSION_GET, async (_, sessionId: string) => {
+    const invalid = validateSessionId(sessionId)
+    if (invalid) return invalid
+
     const repository = sessionService.getRepository()
     if (!repository) {
-      return { success: false, error: 'Repository not available' }
+      return { success: false, error: 'Repositorio no disponible.' }
     }
     try {
       const session = await repository.getSession(sessionId)
       return { success: true, session }
     } catch (err) {
-      return { success: false, error: (err as Error).message }
+      return { success: false, error: 'Error al obtener la sesión.' }
     }
   })
 
   // session:delete - elimina sesión guardada
   ipcMain.handle(IPC_HANDLERS.SESSION_DELETE, async (_, sessionId: string) => {
+    const invalid = validateSessionId(sessionId)
+    if (invalid) return invalid
+
     const repository = sessionService.getRepository()
     if (!repository) {
-      return { success: false, error: 'Repository not available' }
+      return { success: false, error: 'Repositorio no disponible.' }
     }
     try {
       await repository.deleteSession(sessionId)
       return { success: true }
     } catch (err) {
-      return { success: false, error: (err as Error).message }
+      return { success: false, error: 'Error al eliminar la sesión.' }
     }
   })
 
   // session:export-geojson - exporta como GeoJSON
   ipcMain.handle(IPC_HANDLERS.SESSION_EXPORT_GEOJSON, async (_, sessionId: string) => {
+    const invalid = validateSessionId(sessionId)
+    if (invalid) return invalid
+
     const repository = sessionService.getRepository()
     if (!repository) {
-      return { success: false, error: 'Repository not available' }
+      return { success: false, error: 'Repositorio no disponible.' }
     }
     try {
+      const stats = await repository.getSessionStats(sessionId)
+      const pointCount = stats?.pointCount ?? 0
+      const truncated = pointCount > SQLiteSessionRepository.MAX_EXPORT_POINTS
+
       const geojson = await repository.exportAsGeoJSON(sessionId)
-      return { success: true, data: geojson }
+      return { success: true, data: geojson, truncated: truncated || undefined }
     } catch (err) {
-      return { success: false, error: (err as Error).message }
+      return { success: false, error: 'Error al exportar la sesión como GeoJSON.' }
     }
   })
 
   // session:export-csv - exporta como CSV
   ipcMain.handle(IPC_HANDLERS.SESSION_EXPORT_CSV, async (_, sessionId: string) => {
+    const invalid = validateSessionId(sessionId)
+    if (invalid) return invalid
+
     const repository = sessionService.getRepository()
     if (!repository) {
-      return { success: false, error: 'Repository not available' }
+      return { success: false, error: 'Repositorio no disponible.' }
     }
     try {
+      const stats = await repository.getSessionStats(sessionId)
+      const pointCount = stats?.pointCount ?? 0
+      const truncated = pointCount > SQLiteSessionRepository.MAX_EXPORT_POINTS
+
       const csv = await repository.exportAsCSV(sessionId)
-      return { success: true, data: csv }
+      return { success: true, data: csv, truncated: truncated || undefined }
     } catch (err) {
-      return { success: false, error: (err as Error).message }
+      return { success: false, error: 'Error al exportar la sesión como CSV.' }
     }
   })
 
@@ -181,13 +207,20 @@ export function registerSessionServiceHandlers(
   ipcMain.handle(
     IPC_HANDLERS.SESSION_EXPORT,
     async (_, sessionId: string, format: 'geojson' | 'xlsx' | 'kmz', label: string) => {
+      const invalid = validateSessionId(sessionId)
+      if (invalid) return invalid
+
       const repository = sessionService.getRepository()
       if (!repository) {
-        return { success: false, error: 'Repository not available' }
+        return { success: false, error: 'Repositorio no disponible.' }
       }
 
       const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
       const defaultName = `${safeLabel}.${format === 'geojson' ? 'geojson.enc' : format}`
+
+      const stats = await repository.getSessionStats(sessionId)
+      const pointCount = stats?.pointCount ?? 0
+      const truncated = pointCount > SQLiteSessionRepository.MAX_EXPORT_POINTS
 
       // XLSX: selector de carpeta, 2-3 archivos
       if (format === 'xlsx') {
@@ -204,9 +237,9 @@ export function registerSessionServiceHandlers(
 
         try {
           const filePaths = await repository.exportAsXLSX(sessionId, folderPath, label)
-          return { success: true, filePaths }
+          return { success: true, filePaths, truncated: truncated || undefined }
         } catch (err) {
-          return { success: false, error: (err as Error).message }
+          return { success: false, error: 'Error al exportar la sesión como XLSX.' }
         }
       }
 
@@ -246,9 +279,9 @@ export function registerSessionServiceHandlers(
           fs.writeFileSync(finalPath, buffer)
         }
 
-        return { success: true, filePaths: [finalPath] }
+        return { success: true, filePaths: [finalPath], truncated: truncated || undefined }
       } catch (err) {
-        return { success: false, error: (err as Error).message }
+        return { success: false, error: 'Error al exportar la sesión.' }
       }
     }
   )
@@ -257,7 +290,7 @@ export function registerSessionServiceHandlers(
   ipcMain.handle(IPC_HANDLERS.SESSION_IMPORT_GEOJSON, async () => {
     const repository = sessionService.getRepository()
     if (!repository) {
-      return { success: false, error: 'Repository not available' }
+      return { success: false, error: 'Repositorio no disponible.' }
     }
 
     try {
@@ -361,22 +394,24 @@ export function registerSessionServiceHandlers(
 
       return { success: true, sessionId }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Error al importar GeoJSON'
-      return { success: false, error: message }
+      return { success: false, error: 'Error al importar el archivo GeoJSON.' }
     }
   })
 
   // session:stats - obtiene estadísticas pre-calculadas
   ipcMain.handle(IPC_HANDLERS.SESSION_STATS, async (_, sessionId: string) => {
+    const invalid = validateSessionId(sessionId)
+    if (invalid) return invalid
+
     const repository = sessionService.getRepository()
     if (!repository) {
-      return { success: false, error: 'Repository not available' }
+      return { success: false, error: 'Repositorio no disponible.' }
     }
     try {
       const stats = await repository.getSessionStats(sessionId)
       return { success: true, stats }
     } catch (err) {
-      return { success: false, error: (err as Error).message }
+      return { success: false, error: 'Error al obtener las estadísticas.' }
     }
   })
 
@@ -384,15 +419,18 @@ export function registerSessionServiceHandlers(
   ipcMain.handle(
     IPC_HANDLERS.SESSION_POINTS_IN_BOUNDS,
     async (_, sessionId: string, north: number, south: number, east: number, west: number) => {
+      const invalid = validateSessionId(sessionId)
+      if (invalid) return invalid
+
       const repository = sessionService.getRepository()
       if (!repository) {
-        return { success: false, error: 'Repository not available' }
+        return { success: false, error: 'Repositorio no disponible.' }
       }
       try {
         const points = await repository.getPointsInBounds(sessionId, north, south, east, west)
         return { success: true, points }
       } catch (err) {
-        return { success: false, error: (err as Error).message }
+        return { success: false, error: 'Error al buscar puntos en la región.' }
       }
     }
   )
