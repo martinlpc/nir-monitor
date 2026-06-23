@@ -168,6 +168,70 @@ describe('SerialPortScanner', () => {
     expect(probeGPS).toHaveBeenCalledWith('COM2')
   })
 
+  it('probeNBM returns false on timeout', async () => {
+    vi.useFakeTimers()
+    const scanner = new SerialPortScanner({
+      createNBM: () =>
+        ({
+          quickProbe: vi.fn(
+            () => new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+          ),
+          disconnect: vi.fn(async () => {}),
+          removeAllListeners: vi.fn(),
+          on: vi.fn()
+        }) as unknown as NBM550Driver
+    })
+
+    const probePromise = scanner.probeNBM('COM5', 5000)
+    await vi.advanceTimersByTimeAsync(6000)
+    const result = await probePromise
+    expect(result).toBe(false)
+    vi.useRealTimers()
+  })
+
+  it('listAvailablePorts returns empty when no ports found', async () => {
+    serialPortListMock.mockResolvedValue([])
+    const scanner = new SerialPortScanner()
+    const ports = await scanner.listAvailablePorts()
+    expect(ports).toEqual([])
+  })
+
+  it('probeGPS returns false on connect error', async () => {
+    const scanner = new SerialPortScanner({
+      createGPS: () =>
+        ({
+          connect: vi.fn(async () => {
+            throw new Error('Connect refused')
+          }),
+          disconnect: vi.fn(async () => {}),
+          removeAllListeners: vi.fn(),
+          once: vi.fn(),
+          on: vi.fn()
+        }) as unknown as GPSDriver
+    })
+
+    const result = await scanner.probeGPS('COM6', 5000)
+    expect(result).toBe(false)
+  })
+
+  it('handles disconnect error gracefully during NBM probe cleanup', async () => {
+    const scanner = new SerialPortScanner({
+      createNBM: () =>
+        ({
+          quickProbe: vi.fn(async () => {}),
+          disconnect: vi.fn(async () => {
+            throw new Error('EPIPE: broken pipe')
+          }),
+          removeAllListeners: vi.fn(),
+          on: vi.fn()
+        }) as unknown as NBM550Driver
+    })
+
+    // Should not throw despite disconnect error
+    const result = await scanner.probeNBM('COM7')
+    expect(result).toBe(true)
+  })
+
   it('scanAndProbeAll returns null ports when nothing found', async () => {
     serialPortListMock.mockResolvedValue([{ path: 'COM1' }, { path: 'COM2' }])
 

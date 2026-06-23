@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { NBMPollingController } from './NBMPollingController'
+import { NBMPollingController, NBM_STANDBY_BATTERY_INTERVAL_MS } from './NBMPollingController'
 import type { NBMPollingCallbacks } from './NBMPollingController'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { NBM550Sample } from '../devices/nbm550/nbm550.types'
@@ -53,13 +53,42 @@ describe('NBMPollingController', () => {
     expect(controller.isPolling).toBe(false)
   })
 
-  it('starts polling and emits samples', async () => {
+  it('starts in standby mode', () => {
     const driver = createMockDriver()
     controller.start(driver)
+    expect(controller.mode).toBe('standby')
+  })
+
+  it('emits samples in active mode', async () => {
+    const driver = createMockDriver()
+    controller.start(driver)
+    controller.setSessionActive(true)
 
     await vi.waitFor(() => expect(driver.readMeasurement).toHaveBeenCalled(), { timeout: 1000 })
 
     expect(onSample).toHaveBeenCalledWith(expect.objectContaining({ rss: 12.5, unit: 'V/m' }))
+  })
+
+  it('does not read measurement in standby mode', async () => {
+    const driver = createMockDriver()
+    controller.start(driver)
+
+    await new Promise((r) => setTimeout(r, 600))
+
+    expect(driver.readMeasurement).not.toHaveBeenCalled()
+    expect(onSample).not.toHaveBeenCalled()
+  })
+
+  it('switches between standby and active', () => {
+    const driver = createMockDriver()
+    controller.start(driver)
+    expect(controller.mode).toBe('standby')
+
+    controller.setSessionActive(true)
+    expect(controller.mode).toBe('active')
+
+    controller.setSessionActive(false)
+    expect(controller.mode).toBe('standby')
   })
 
   it('stops polling and clears state', () => {
@@ -81,7 +110,7 @@ describe('NBMPollingController', () => {
     expect(onSample).not.toHaveBeenCalled()
   })
 
-  it('stops polling and emits error after max consecutive failures', async () => {
+  it('stops polling and emits error after max consecutive failures in active mode', async () => {
     const driver = createMockDriver({ readMeasurement: null })
     const failController = new NBMPollingController(3, {
       onSample,
@@ -89,6 +118,7 @@ describe('NBMPollingController', () => {
     })
 
     failController.start(driver)
+    failController.setSessionActive(true)
 
     await vi.waitFor(() => expect(onMaxFailuresExceeded).toHaveBeenCalled(), { timeout: 2000 })
 
@@ -99,15 +129,44 @@ describe('NBMPollingController', () => {
     )
   })
 
-  it('reads battery every 5 samples', async () => {
+  it('schedules battery reads on start using fake timers', async () => {
+    vi.useFakeTimers()
     const driver = createMockDriver({ readBattery: 75 })
-    controller.start(driver)
+    const batteryController = new NBMPollingController(8, {
+      onSample,
+      onMaxFailuresExceeded
+    })
 
-    await vi.waitFor(
-      () => {
-        expect(driver.readBattery).toHaveBeenCalled()
-      },
-      { timeout: 3000 }
-    )
+    batteryController.start(driver)
+
+    // Battery is read once immediately on start
+    expect(driver.readBattery).toHaveBeenCalledTimes(1)
+
+    // Then every NBM_STANDBY_BATTERY_INTERVAL_MS (30s)
+    await vi.advanceTimersByTimeAsync(NBM_STANDBY_BATTERY_INTERVAL_MS)
+    expect(driver.readBattery).toHaveBeenCalledTimes(2)
+
+    await vi.advanceTimersByTimeAsync(NBM_STANDBY_BATTERY_INTERVAL_MS)
+    expect(driver.readBattery).toHaveBeenCalledTimes(3)
+
+    batteryController.stop()
+    vi.useRealTimers()
+  })
+
+  it('does not accumulate failures in standby mode', async () => {
+    const driver = createMockDriver({ readMeasurement: null })
+    const failController = new NBMPollingController(3, {
+      onSample,
+      onMaxFailuresExceeded
+    })
+
+    failController.start(driver)
+    // En standby no hay mediciones, no debería fallar
+    await new Promise((r) => setTimeout(r, 600))
+
+    expect(onMaxFailuresExceeded).not.toHaveBeenCalled()
+    expect(failController.isPolling).toBe(true)
+
+    failController.stop()
   })
 })

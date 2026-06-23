@@ -1,10 +1,11 @@
 import { EventEmitter } from 'events'
 import type { GeoPosition } from '../../../shared/GeoTimestamp'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
+import type { IGPSDriver } from '../../../shared/driver-interfaces'
 import type { GPSState } from '../gps/gps.types'
 import { INITIAL_GPS_STATE } from '../gps/gps.types'
 
-export class SimulatedGPSDriver extends EventEmitter implements IDeviceDriver {
+export class SimulatedGPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver {
   readonly meta: DeviceMeta
   status: DeviceStatus = 'disconnected'
 

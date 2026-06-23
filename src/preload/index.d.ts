@@ -44,6 +44,8 @@ declare global {
         onSample: (
           cb: (data: { rss: number; unit: string; battery: number; timestamp: number }) => void
         ) => () => void
+        onBattery: (cb: (battery: number) => void) => () => void
+        onMode: (cb: (mode: 'active' | 'standby') => void) => () => void
       }
       session: {
         start: (payload: {

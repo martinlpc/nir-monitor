@@ -33,22 +33,26 @@ export default function DeviceCard({
   const gpsInfo = useGpsCardInfo(device.type === 'gps')
   const nbmInfo = useNbmCardInfo(device.type === 'emf', status)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
-
-  const statusColor = {
-    connected: '#4ade80',
-    connecting: '#facc15',
-    error: '#ef4444',
-    disconnected: '#6b7280'
-  }[status]
-
-  const statusLabel = {
-    connected: 'Conectado',
-    connecting: 'Conectando...',
-    error: 'Error',
-    disconnected: 'Desconectado'
-  }[status]
-
   const isConnected = status === 'connected'
+  const isStandby = device.type === 'emf' && isConnected && nbmInfo.mode === 'standby'
+
+  const statusColor = isStandby
+    ? '#3b82f6'
+    : {
+        connected: '#4ade80',
+        connecting: '#facc15',
+        error: '#ef4444',
+        disconnected: '#6b7280'
+      }[status]
+
+  const statusLabel = isStandby
+    ? 'Standby'
+    : {
+        connected: 'Conectado',
+        connecting: 'Conectando...',
+        error: 'Error',
+        disconnected: 'Desconectado'
+      }[status]
   const hasPort = device.port !== 'No detectado'
   const hasGPSFix = gpsInfo.lat !== undefined && gpsInfo.lon !== undefined
 
@@ -124,14 +128,22 @@ export default function DeviceCard({
           </>
         )}
 
-        {device.type === 'emf' && nbmInfo.rss !== undefined && (
+        {device.type === 'emf' && (
           <>
-            <div className="info-row primary">
-              <span className="info-label">Nivel:</span>
-              <span className="info-value">
-                {nbmInfo.rss?.toFixed(2) ?? '-'} {nbmInfo.unit ?? 'V/m'}
-              </span>
-            </div>
+            {nbmInfo.rss !== undefined ? (
+              <div className="info-row primary">
+                <span className="info-label">Nivel:</span>
+                <span className="info-value">
+                  {nbmInfo.rss?.toFixed(2) ?? '-'} {nbmInfo.unit ?? 'V/m'}
+                </span>
+              </div>
+            ) : isConnected && nbmInfo.mode === 'standby' ? (
+              <div className="info-row primary" style={{ justifyContent: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: '600' }}>
+                  Standby — sin medición
+                </span>
+              </div>
+            ) : null}
             {nbmInfo.probeModel && (
               <div className="info-row">
                 <span className="info-label">Sonda:</span>

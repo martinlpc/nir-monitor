@@ -7,6 +7,7 @@ import type { RMCPacket } from 'nmea-simple'
 import type { GSAPacket } from 'nmea-simple'
 import type { GeoPosition } from '../../../shared/GeoTimestamp'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
+import type { IGPSDriver } from '../../../shared/driver-interfaces'
 import { INITIAL_GPS_STATE, type GPSState } from './gps.types'
 import { AppError } from '../../../shared/errors/AppError'
 
@@ -20,7 +21,7 @@ export const GPS_DEFAULTS: GPSConfig = {
   baudRate: 4800
 }
 
-export class GPSDriver extends EventEmitter implements IDeviceDriver {
+export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver {
   readonly meta: DeviceMeta
   status: DeviceStatus = 'disconnected'
 

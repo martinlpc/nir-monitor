@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { DeviceManager } from '../services/DeviceManager'
 import { SessionService } from '../services/SessionService'
 import { GeoFusionService } from '../services/GeoFusionService'
+import { RealDriverFactory } from '../factories/RealDriverFactory'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 
 const { FakeSerialPort, gpsParserDataListeners, mockParseNmeaSentence } = vi.hoisted(() => {
@@ -133,7 +134,7 @@ describe('Smoke: full chain', () => {
       probeGPS: vi.fn(async () => false)
     }
 
-    deviceManager = new DeviceManager(mockScanner, false)
+    deviceManager = new DeviceManager(mockScanner, new RealDriverFactory())
     sessionService = new SessionService(new GeoFusionService())
   })
 

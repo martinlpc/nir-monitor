@@ -3,13 +3,14 @@ import { EventEmitter } from 'events'
 import { NBM550Parser } from './NBM550Parser'
 import type { NBM550Config, NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
+import type { INBMDriver } from '../../../shared/driver-interfaces'
 import { AppError } from '../../../shared/errors/AppError'
 
 const RESPONSE_TIMEOUT_MS = 6000 // Aumentado a 6s para permitir que NBM550 responda (necesita ~800ms)
 const INIT_DELAY_MS = 2000 // Aumentado a 2s - NBM550 necesita tiempo para sincronizar a 460800 baud tras abrir puerto
 const MAX_CONSECUTIVE_TIMEOUTS = 4
 
-export class NBM550Driver extends EventEmitter implements IDeviceDriver {
+export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDriver {
   readonly meta: DeviceMeta
   status: DeviceStatus = 'disconnected'
 
@@ -188,9 +189,11 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver {
 
     if (this.port?.isOpen) {
       try {
-        await this.sendCommand('REMOTE OFF').catch(() => {})
-      } catch {
-        /* disconnect errors ignored */
+        await this.sendCommand('REMOTE OFF').catch((err) => {
+          console.warn('[NBM550Driver] REMOTE OFF error (non-fatal):', err)
+        })
+      } catch (err) {
+        console.warn('[NBM550Driver] REMOTE OFF failed (non-fatal):', err)
       }
       await this.closePort()
     }

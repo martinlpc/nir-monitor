@@ -407,4 +407,18 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     const stats = await repo.getSessionStats('nonexistent')
     expect(stats).toBeNull()
   })
+
+  // ── flush config options ─────────────────────────────────────
+
+  it('accepts custom flush config via constructor', () => {
+    const customRepo = new SQLiteSessionRepository({
+      testDb: db,
+      flushEveryNPoints: 1,
+      flushIntervalMs: 1000
+    })
+
+    expect((customRepo as unknown as { FLUSH_EVERY_N_POINTS: number }).FLUSH_EVERY_N_POINTS).toBe(1)
+    expect((customRepo as unknown as { FLUSH_INTERVAL_MS: number }).FLUSH_INTERVAL_MS).toBe(1000)
+    customRepo.close()
+  })
 })

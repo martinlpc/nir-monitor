@@ -241,7 +241,11 @@ export class TileCacheService extends EventEmitter {
 
         const batch = tiles.slice(i, i + PRELOAD_CONCURRENCY)
         await Promise.allSettled(
-          batch.map(({ x, y }) => this.fetchAndCache(provider, z, x, y).catch(() => {}))
+          batch.map(({ x, y }) =>
+            this.fetchAndCache(provider, z, x, y).catch((err) => {
+              console.warn(`[TileCache] Fetch error at z=${z},x=${x},y=${y}:`, err)
+            })
+          )
         )
 
         current += batch.length

@@ -17,8 +17,7 @@ export interface IDeviceDriver {
   disconnect(): Promise<void>
   isConnected(): boolean
 
-  // El driver emite eventos — el DeviceManager los escucha
-  on(event: 'sample', listener: (sample: unknown) => void): void
+  on(event: 'sample', listener: (sample: { rss: number; unit: string; battery: number; timestamp: number }) => void): void
   on(event: 'status', listener: (status: DeviceStatus) => void): void
   on(event: 'error', listener: (err: Error) => void): void
   off(event: string, listener: (...args: unknown[]) => void): void

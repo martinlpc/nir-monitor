@@ -30,11 +30,14 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private initPromise: Promise<void> | null = null
   private pendingPoints = 0
   private flushInterval: ReturnType<typeof setInterval> | null = null
-  private readonly FLUSH_EVERY_N_POINTS = 10
-  private readonly FLUSH_INTERVAL_MS = 30_000
+  private readonly FLUSH_EVERY_N_POINTS: number
+  private readonly FLUSH_INTERVAL_MS: number
   private readonly isTestMode: boolean
 
-  constructor(options?: { testDb?: SqlJsDatabase }) {
+  constructor(options?: { testDb?: SqlJsDatabase; flushEveryNPoints?: number; flushIntervalMs?: number }) {
+    this.FLUSH_EVERY_N_POINTS = options?.flushEveryNPoints ?? 5
+    this.FLUSH_INTERVAL_MS = options?.flushIntervalMs ?? 5_000
+
     if (options?.testDb) {
       this.db = options.testDb
       this.isTestMode = true
@@ -67,6 +70,33 @@ export class SQLiteSessionRepository implements ISessionRepository {
    */
   private isoToUnix(isoString: string): number {
     return new Date(isoString).getTime()
+  }
+
+  /**
+   * Mapear una fila de geo_points a GeoTimestamp
+   */
+  private rowToGeoTimestamp(
+    row: unknown[],
+    columns: string[]
+  ): GeoTimestamp {
+    const rowMap = Object.fromEntries(columns.map((col, idx) => [col, row[idx]]))
+    return {
+      id: rowMap.id as string,
+      sessionId: rowMap.sessionId as string,
+      sequenceNumber: rowMap.sequenceNumber as number,
+      timestamp: this.isoToUnix(rowMap.timestamp as string),
+      position: {
+        lat: rowMap.lat as number,
+        lon: rowMap.lon as number,
+        alt: (rowMap.alt as number) || 0
+      },
+      emf: {
+        deviceId: 'nbm550',
+        rawMeasurement: rowMap.rawMeasurement as number,
+        unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
+      },
+      correctedMeasurement: rowMap.correctedMeasurement as number
+    }
   }
 
   /**
@@ -106,7 +136,18 @@ export class SQLiteSessionRepository implements ISessionRepository {
             data = new Uint8Array(raw)
           }
         } catch (err) {
-          console.warn('[SQLiteSessionRepository] Could not read existing database:', err)
+          console.error(
+            `[SQLiteSessionRepository] Could not read existing database at ${this.dbPath}:`,
+            err
+          )
+          // Backup corrupted DB before creating a fresh one
+          try {
+            const backupPath = this.dbPath + '.corrupted.' + Date.now()
+            fs.renameSync(this.dbPath, backupPath)
+            console.warn(`[SQLiteSessionRepository] Corrupted DB moved to ${backupPath}`)
+          } catch {
+            // ignore backup failure
+          }
         }
       }
 
@@ -249,25 +290,32 @@ export class SQLiteSessionRepository implements ISessionRepository {
         ]
       )
 
-      // Guardar puntos
-      for (const point of points) {
-        db.run(
-          `INSERT INTO geo_points 
-           (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            point.id,
-            point.sessionId,
-            point.sequenceNumber,
-            this.unixToISO(point.timestamp),
-            point.position.lat,
-            point.position.lon,
-            point.position.alt,
-            point.emf.rawMeasurement,
-            point.correctedMeasurement,
-            point.emf.unit
-          ]
-        )
+      // Guardar puntos en una transacción
+      db.run('BEGIN')
+      try {
+        for (const point of points) {
+          db.run(
+            `INSERT INTO geo_points 
+             (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              point.id,
+              point.sessionId,
+              point.sequenceNumber,
+              this.unixToISO(point.timestamp),
+              point.position.lat,
+              point.position.lon,
+              point.position.alt,
+              point.emf.rawMeasurement,
+              point.correctedMeasurement,
+              point.emf.unit
+            ]
+          )
+        }
+        db.run('COMMIT')
+      } catch (err) {
+        db.run('ROLLBACK')
+        throw err
       }
 
       // Calcular y guardar estadísticas (usando correctedMeasurement)
@@ -345,6 +393,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const db = this.ensureDb()
 
     try {
+      db.run('BEGIN')
+
       db.run(
         `INSERT INTO geo_points
          (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
@@ -363,16 +413,21 @@ export class SQLiteSessionRepository implements ISessionRepository {
         ]
       )
 
-      // Actualizar sampleCount en sessions
       db.run(`UPDATE sessions SET sampleCount = sampleCount + 1 WHERE id = ?`, [sessionId])
+
+      db.run('COMMIT')
 
       this.pendingPoints++
       if (this.pendingPoints >= this.FLUSH_EVERY_N_POINTS) {
         this.flush()
       }
     } catch (err) {
+      try {
+        db.run('ROLLBACK')
+      } catch {
+        /* rollback error ignored */
+      }
       console.error(`[SQLiteSessionRepository] Error adding point:`, err)
-      // No throw - continuar capturando aunque falle la persistencia de un punto
     }
   }
 
@@ -493,27 +548,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
         [sessionId]
       )
 
-      const points: GeoTimestamp[] = (pointsResult[0]?.values || []).map((row) => {
-        const cols = pointsResult[0].columns
-        const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
-        return {
-          id: rowMap.id as string,
-          sessionId: rowMap.sessionId as string,
-          sequenceNumber: rowMap.sequenceNumber as number,
-          timestamp: this.isoToUnix(rowMap.timestamp as string),
-          position: {
-            lat: rowMap.lat as number,
-            lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0
-          },
-          emf: {
-            deviceId: 'nbm550',
-            rawMeasurement: rowMap.rawMeasurement as number,
-            unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
-          },
-          correctedMeasurement: rowMap.correctedMeasurement as number
-        }
-      })
+      const points: GeoTimestamp[] = (pointsResult[0]?.values || []).map((row) =>
+        this.rowToGeoTimestamp(row, pointsResult[0].columns)
+      )
 
       return { metadata, points }
     } catch (err) {
@@ -588,27 +625,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) => {
-        const cols = result[0].columns
-        const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
-        return {
-          id: rowMap.id as string,
-          sessionId: rowMap.sessionId as string,
-          sequenceNumber: rowMap.sequenceNumber as number,
-          timestamp: this.isoToUnix(rowMap.timestamp as string),
-          position: {
-            lat: rowMap.lat as number,
-            lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0
-          },
-          emf: {
-            deviceId: 'nbm550',
-            rawMeasurement: rowMap.rawMeasurement as number,
-            unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
-          },
-          correctedMeasurement: rowMap.correctedMeasurement as number
-        }
-      })
+      return result[0].values.map((row) =>
+        this.rowToGeoTimestamp(row, result[0].columns)
+      )
     } catch (err) {
       console.error(`[SQLiteSessionRepository] Error loading points:`, err)
       return []
@@ -1197,27 +1216,9 @@ Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) => {
-        const cols = result[0].columns
-        const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
-        return {
-          id: rowMap.id as string,
-          sessionId: rowMap.sessionId as string,
-          sequenceNumber: rowMap.sequenceNumber as number,
-          timestamp: this.isoToUnix(rowMap.timestamp as string),
-          position: {
-            lat: rowMap.lat as number,
-            lon: rowMap.lon as number,
-            alt: (rowMap.alt as number) || 0
-          },
-          emf: {
-            deviceId: 'nbm550',
-            rawMeasurement: rowMap.rawMeasurement as number,
-            unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
-          },
-          correctedMeasurement: rowMap.correctedMeasurement as number
-        }
-      })
+      return result[0].values.map((row) =>
+        this.rowToGeoTimestamp(row, result[0].columns)
+      )
     } catch (err) {
       console.error('[SQLiteSessionRepository] Error querying bounds:', err)
       return []

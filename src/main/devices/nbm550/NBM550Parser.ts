@@ -1,9 +1,9 @@
-import type { NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
+import type { NBM550Sample, NBM550ProbeInfo, NBMUnit } from './nbm550.types'
 import type { AppErrorInfo } from '../../../shared/errors/error.types'
 import { getNBMErrorInfo } from '../../../shared/errors/nbmErrorCodes'
 
 export class NBM550Parser {
-  private unit: string = 'V/m'
+  private unit: NBMUnit = 'V/m'
 
   private stripQuotes(value: string | null | undefined): string | null {
     if (!value) return null
@@ -11,7 +11,7 @@ export class NBM550Parser {
     return sanitized.length > 0 ? sanitized : null
   }
 
-  setUnit(unit: string): void {
+  setUnit(unit: NBMUnit): void {
     this.unit = unit
   }
 
@@ -63,10 +63,10 @@ export class NBM550Parser {
   }
 
   // Parsea respuesta de RESULT_UNIT?;
-  parseUnit(raw: string): string | null {
+  parseUnit(raw: string): NBMUnit | null {
     const clean = this.cleanResponse(raw)
-    const valid = ['V/m', 'A/m', 'mW/cm^2', 'W/m^2']
-    return valid.includes(clean) ? clean : null
+    const valid: NBMUnit[] = ['V/m', 'A/m', 'mW/cm^2', 'W/m^2']
+    return valid.includes(clean as NBMUnit) ? (clean as NBMUnit) : null
   }
 
   // Parsea respuesta de BATTERY?; (retorna int 0-100)

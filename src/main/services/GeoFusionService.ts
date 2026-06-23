@@ -1,10 +1,8 @@
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import type { GeoTimestamp, GeoPosition, EMFSample } from '../../shared/GeoTimestamp'
-import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
-import type { GPSDriver } from '../devices/gps/GPSDriver'
-import type { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550Driver'
-import type { SimulatedGPSDriver } from '../devices/simulated/SimulatedGPSDriver'
+import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
+import { ConfigService } from './ConfigService'
 
 export type TriggerMode = 'distance' | 'time'
 
@@ -15,18 +13,13 @@ export interface GeoFusionConfig {
   testMode?: boolean
 }
 
-export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = {
-  triggerMode: 'distance',
-  minDistanceMeters: 20,
-  intervalMs: 5000,
-  testMode: false
-}
+export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = { ...ConfigService.DEFAULT_GEO_FUSION }
 
 export class GeoFusionService extends EventEmitter {
   private config: GeoFusionConfig
   private sessionId: string = ''
-  private nbm: NBM550Driver | SimulatedNBM550Driver | null = null
-  private _gps: GPSDriver | SimulatedGPSDriver | null = null
+  private nbm: INBMDriver | null = null
+  private _gps: IGPSDriver | null = null
 
   private lastSavedPosition: GeoPosition | null = null
   private timeTimer: NodeJS.Timeout | null = null
@@ -41,11 +34,11 @@ export class GeoFusionService extends EventEmitter {
 
   // ── Registrar devices ─────────────────────────────────────
 
-  setNBM(driver: NBM550Driver | SimulatedNBM550Driver): void {
+  setNBM(driver: INBMDriver): void {
     this.nbm = driver
   }
 
-  setGPS(driver: GPSDriver | SimulatedGPSDriver): void {
+  setGPS(driver: IGPSDriver): void {
     this._gps = driver
   }
 

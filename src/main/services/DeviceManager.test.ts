@@ -26,8 +26,6 @@ const {
   serialPortListMock,
   serialPortInstances,
   FakeSerialPort,
-  loadPortConfigMock,
-  savePortConfigMock,
   mockScanner
 } = vi.hoisted(() => {
   const serialPortListMock = vi.fn()
@@ -88,8 +86,6 @@ const {
     serialPortListMock,
     serialPortInstances,
     FakeSerialPort,
-    loadPortConfigMock: vi.fn(),
-    savePortConfigMock: vi.fn(),
     mockScanner
   }
 })
@@ -98,10 +94,7 @@ vi.mock('serialport', () => ({
   SerialPort: FakeSerialPort
 }))
 
-vi.mock('./PortConfig', () => ({
-  loadPortConfig: loadPortConfigMock,
-  savePortConfig: savePortConfigMock
-}))
+import { ConfigService } from './ConfigService'
 
 type FakeDevice = EventEmitter & {
   meta: { port: string }
@@ -109,6 +102,56 @@ type FakeDevice = EventEmitter & {
   connect: () => Promise<void>
   disconnect: ReturnType<typeof vi.fn>
   isConnected: () => boolean
+}
+
+import type { DriverFactory } from '../../shared/driver-factory'
+import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
+
+class FakeNBMDriver extends EventEmitter {
+  meta = { id: 'nbm550', port: '', name: 'Fake NBM', type: 'emf', baudRate: 460800 }
+  status: string = 'disconnected'
+  disconnect = vi.fn(async () => {})
+  readMeasurement = vi.fn()
+  readBattery = vi.fn()
+  resetMaxHold = vi.fn()
+  getProbeInfo = () => null
+  getMeterSerial = () => null
+
+  constructor(port: string) {
+    super()
+    this.meta = { ...this.meta, port }
+  }
+
+  async connect(): Promise<void> {
+    this.status = 'connected'
+    this.emit('status', 'connected')
+  }
+
+  isConnected(): boolean {
+    return true
+  }
+}
+
+class FakeGPSDriver extends EventEmitter {
+  meta = { id: 'gps', port: '', name: 'Fake GPS', type: 'gps', baudRate: 4800 }
+  status: string = 'disconnected'
+  disconnect = vi.fn(async () => {})
+  getLastPosition = () => null
+  isPositionValid = () => false
+
+  constructor(port: string) {
+    super()
+    this.meta = { ...this.meta, port }
+  }
+
+  async connect(): Promise<void> {
+    this.status = 'connected'
+    this.emit('status', 'connected')
+  }
+
+  isConnected(): boolean {
+    return true
+  }
 }
 
 function createFakeDevice(port: string): FakeDevice {
@@ -129,13 +172,16 @@ function createFakeDevice(port: string): FakeDevice {
   return emitter
 }
 
+const fakeFactory: DriverFactory = {
+  createNBM: (port: string) => new FakeNBMDriver(port) as unknown as INBMDriver,
+  createGPS: (port: string) => new FakeGPSDriver(port) as unknown as IGPSDriver
+}
+
 describe('DeviceManager', () => {
   beforeEach(() => {
     vi.useRealTimers()
     serialPortListMock.mockReset()
     serialPortInstances.length = 0
-    loadPortConfigMock.mockReset()
-    savePortConfigMock.mockReset()
   })
 
   afterEach(() => {
@@ -143,20 +189,22 @@ describe('DeviceManager', () => {
   })
 
   it('loads saved port config during initialization', async () => {
-    const manager = new DeviceManager(mockScanner)
-    const scanSpy = vi.spyOn(manager, 'scan').mockResolvedValue(manager.getState())
+    const config = new ConfigService()
+    const loadPortConfigSpy = vi.spyOn(config, 'loadPortConfig')
+    loadPortConfigSpy.mockReturnValue({ nbm550: 'COM9', gps: 'COM8' })
 
-    loadPortConfigMock.mockReturnValue({ nbm550: 'COM9', gps: 'COM8' })
+    const manager = new DeviceManager(mockScanner, fakeFactory, config)
+    const scanSpy = vi.spyOn(manager, 'scan').mockResolvedValue(manager.getState())
 
     await manager.initialize()
 
-    expect(loadPortConfigMock).toHaveBeenCalledTimes(1)
+    expect(loadPortConfigSpy).toHaveBeenCalledTimes(1)
     expect(scanSpy).toHaveBeenCalledTimes(1)
     expect(pvt(manager).portConfig).toEqual({ nbm550: 'COM9', gps: 'COM8' })
   })
 
   it('prioritizes persisted ports and saves detected devices after scanning', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
 
     // Mock scanner to return ports
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
@@ -172,7 +220,7 @@ describe('DeviceManager', () => {
   })
 
   it('falls back to the remaining ports when saved ports are missing or invalid', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
 
     // Mock scanner to return different ports
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
@@ -188,7 +236,10 @@ describe('DeviceManager', () => {
   })
 
   it('allows setting a port manually and persists the new mapping', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const config = new ConfigService()
+    const savePortConfigSpy = vi.spyOn(config, 'savePortConfig')
+
+    const manager = new DeviceManager(mockScanner, fakeFactory, config)
     const previousNBM = createFakeDevice('COM1')
     pvt(manager).nbm = previousNBM
 
@@ -202,12 +253,12 @@ describe('DeviceManager', () => {
 
     expect(previousNBM.disconnect).toHaveBeenCalledTimes(1)
     expect(initNBMSpy).toHaveBeenCalledWith('COM7')
-    expect(savePortConfigMock).toHaveBeenCalledWith({ nbm550: 'COM7' })
+    expect(savePortConfigSpy).toHaveBeenCalledWith({ nbm550: 'COM7' })
     expect(manager.getState().nbm550.port).toBe('COM7')
   })
 
   it('disconnects connected devices and clears the manager state', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
     const nbm = createFakeDevice('COM4')
     const gps = createFakeDevice('COM5')
 
@@ -226,7 +277,7 @@ describe('DeviceManager', () => {
   })
 
   it('identifies an NBM probe response and sends the expected commands', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
 
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
@@ -240,7 +291,7 @@ describe('DeviceManager', () => {
   })
 
   it('rejects an NBM probe when the response does not match the device', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
 
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
@@ -253,7 +304,7 @@ describe('DeviceManager', () => {
   })
 
   it('identifies a GPS probe from incoming NMEA data', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
 
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
@@ -266,7 +317,7 @@ describe('DeviceManager', () => {
   })
 
   it('times out a GPS probe when no NMEA frame arrives', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
 
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
@@ -279,7 +330,7 @@ describe('DeviceManager', () => {
   })
 
   it('disconnectDevice stops NBM reconnect and polling and nulls the driver', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
     const nbm = createFakeDevice('COM4')
     pvt(manager).nbm = nbm
     pvt(manager).nbmReconnect = { stop: vi.fn() }
@@ -294,7 +345,7 @@ describe('DeviceManager', () => {
   })
 
   it('disconnectDevice stops GPS reconnect and nulls the driver', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
     const gps = createFakeDevice('COM5')
     pvt(manager).gps = gps
     pvt(manager).gpsReconnect = { stop: vi.fn() }
@@ -307,7 +358,7 @@ describe('DeviceManager', () => {
   })
 
   it('connectDevice returns early when no port is configured', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
     const setPortManualSpy = vi.spyOn(pvt(manager), 'setPortManual').mockResolvedValue(undefined)
 
     await manager.connectDevice('nbm550')
@@ -316,7 +367,7 @@ describe('DeviceManager', () => {
   })
 
   it('connectDevice calls setPortManual with the configured port', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
     const nbm = createFakeDevice('COM7')
     pvt(manager).nbm = nbm
     const setPortManualSpy = vi.spyOn(pvt(manager), 'setPortManual').mockResolvedValue(undefined)
@@ -327,7 +378,7 @@ describe('DeviceManager', () => {
   })
 
   it('connectDevice falls back to portConfig when driver is null', async () => {
-    const manager = new DeviceManager(mockScanner)
+    const manager = new DeviceManager(mockScanner, fakeFactory)
     pvt(manager).portConfig = { nbm550: 'COM8' }
     const setPortManualSpy = vi.spyOn(pvt(manager), 'setPortManual').mockResolvedValue(undefined)
 

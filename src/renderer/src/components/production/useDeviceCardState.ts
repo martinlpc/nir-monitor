@@ -15,6 +15,7 @@ type NBMInfo = {
   probeModel?: string | null
   probeSerial?: string | null
   calibrationDate?: string | null
+  mode?: 'active' | 'standby'
 }
 
 export function useGpsCardInfo(enabled: boolean): GpsInfo {
@@ -47,6 +48,7 @@ export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo 
     })
   }, [enabled, status])
 
+  // Listen for live samples
   useEffect(() => {
     if (!enabled || status !== 'connected') return
 
@@ -64,6 +66,33 @@ export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo 
     }
   }, [enabled, status])
 
+  // Independent battery listener (fires even in standby, every 30s)
+  useEffect(() => {
+    if (!enabled || status !== 'connected') return
+
+    const unsubscribe = window.api.nbm.onBattery((battery) => {
+      setLiveData((prev) => ({ ...prev, battery }))
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [enabled, status])
+
+  // Mode listener (standby / active)
+  useEffect(() => {
+    if (!enabled || status !== 'connected') return
+
+    const unsubscribe = window.api.nbm.onMode((mode) => {
+      setLiveData((prev) => ({ ...prev, mode }))
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [enabled, status])
+
   const isActive = enabled && status === 'connected'
-  return isActive ? liveData : {}
+  if (!isActive) return {}
+  return { ...liveData, mode: liveData.mode ?? 'standby' }
 }

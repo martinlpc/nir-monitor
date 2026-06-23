@@ -2,14 +2,11 @@ import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
-import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
-import type { GPSDriver } from '../devices/gps/GPSDriver'
-import type { SimulatedNBM550Driver } from '../devices/simulated/SimulatedNBM550Driver'
-import type { SimulatedGPSDriver } from '../devices/simulated/SimulatedGPSDriver'
+import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
-import { loadAppConfig } from './AppConfig'
 import { resolveBuiltInFactor } from '../uncertainty/correctionFactor'
+import { ConfigService } from './ConfigService'
 import { AppError } from '../../shared/errors/AppError'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
@@ -21,11 +18,14 @@ export class SessionService extends EventEmitter {
   private pointCount: number = 0
   private label: string = ''
   private accumulatedPoints: GeoTimestamp[] = []
+  private pendingFinalize = false
+  private readonly MAX_SAVE_RETRIES = 3
 
   private fusion: GeoFusionService
-  private nbm: NBM550Driver | SimulatedNBM550Driver | null = null
-  private gps: GPSDriver | SimulatedGPSDriver | null = null
+  private nbm: INBMDriver | null = null
+  private gps: IGPSDriver | null = null
   private repository: ISessionRepository | null = null
+  private config: ConfigService | null = null
   private instrument: InstrumentInfo | null = null
   private correctionFactor: number | null = null
   private provincia: string = ''
@@ -47,10 +47,11 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository) {
+  constructor(fusion: GeoFusionService, repository?: ISessionRepository, config?: ConfigService) {
     super()
     this.fusion = fusion
     this.repository = repository || null
+    this.config = config ?? null
 
     this.fusion.on('point', (point: GeoTimestamp) => {
       this.pointCount++
@@ -60,18 +61,36 @@ export class SessionService extends EventEmitter {
       )
       this.emit('point', point)
 
-      // Guardar incrementalmente en la BD de forma asincrónica (no bloquea)
       if (this.state === 'running' && this.repository && this.currentSessionId) {
-        this.repository.addPoint(this.currentSessionId, point).catch((err) => {
-          console.error('[SessionService] Failed to save point:', err)
-        })
+        this.savePointWithRetry(this.currentSessionId, point)
       }
     })
   }
 
+  private async savePointWithRetry(
+    sessionId: string,
+    point: GeoTimestamp,
+    attempts = 0
+  ): Promise<void> {
+    if (!this.repository) return
+    try {
+      await this.repository.addPoint(sessionId, point)
+    } catch (err) {
+      if (attempts < this.MAX_SAVE_RETRIES) {
+        console.warn(
+          `[SessionService] Retrying save point (attempt ${attempts + 1}/${this.MAX_SAVE_RETRIES})`
+        )
+        await new Promise((r) => setTimeout(r, 200 * (attempts + 1)))
+        return this.savePointWithRetry(sessionId, point, attempts + 1)
+      }
+      console.error('[SessionService] Failed to save point after retries:', err)
+      this.emit('session:saveError', { sessionId, error: err })
+    }
+  }
+
   // ── Registro de devices ───────────────────────────────────
 
-  setNBM(driver: NBM550Driver | SimulatedNBM550Driver): void {
+  setNBM(driver: INBMDriver): void {
     this.nbm = driver
     this.fusion.setNBM(driver)
     const probeModel = driver.getProbeInfo()?.model ?? null
@@ -89,7 +108,7 @@ export class SessionService extends EventEmitter {
     }
   }
 
-  setGPS(driver: GPSDriver | SimulatedGPSDriver): void {
+  setGPS(driver: IGPSDriver): void {
     this.gps = driver
     this.fusion.setGPS(driver)
 
@@ -169,7 +188,7 @@ export class SessionService extends EventEmitter {
     console.log(`[SessionService] Starting session: ${this.currentSessionId}, label: ${this.label}`)
     console.log(`[SessionService] fusionConfig:`, fusionConfig)
 
-    const appConfig = loadAppConfig()
+    const appConfig = this.config?.loadAppConfig() ?? {}
     const merged: Partial<GeoFusionConfig> = {}
 
     if (appConfig.triggerMode) merged.triggerMode = appConfig.triggerMode
@@ -205,8 +224,12 @@ export class SessionService extends EventEmitter {
     try {
       await this.nbm.resetMaxHold()
     } catch (err) {
-      // Error 100 en RESET_MAX es normal en algunos casos - continuar sin bloquear
-      console.warn(`[SessionService] Warning: resetMaxHold failed (this may be normal):`, err)
+      const isNormalError = err instanceof AppError && err.code === 'NBM_100'
+      if (isNormalError) {
+        console.warn(`[SessionService] resetMaxHold returned code 100 (normal):`, err.message)
+      } else {
+        console.warn(`[SessionService] resetMaxHold failed (non-fatal):`, err)
+      }
     }
 
     // Inicializar sesión en el repositorio antes de empezar a capturar
@@ -258,6 +281,14 @@ export class SessionService extends EventEmitter {
         })
       } catch (err) {
         console.error('[SessionService] Failed to init session in repository:', err)
+        throw new AppError({
+          code: 'SESSION_INIT_FAILED',
+          message: 'No se pudo inicializar la sesión en la base de datos. Verifique el espacio en disco.',
+          severity: 'error',
+          category: 'session',
+          userAction: 'Verifique el espacio en disco y los permisos de escritura',
+          retryable: true
+        })
       }
     } else {
       this.syncCorrectionFactorFromProbe(null)
@@ -308,17 +339,18 @@ export class SessionService extends EventEmitter {
       apellido2: this.apellido2 || undefined
     }
 
-    // Finalizar sesión en el repositorio (actualizar metadatos + computar stats + flush a disco)
     if (this.repository && this.currentSessionId) {
       try {
         console.log(
           `[SessionService] Finalizing session with ${this.accumulatedPoints.length} points...`
         )
         await this.repository.finalizeSession(this.currentSessionId, summary)
+        this.pendingFinalize = false
         console.log(`[SessionService] Session ${this.currentSessionId} finalized successfully`)
       } catch (err) {
         console.error(`[SessionService] Failed to finalize session: ${err}`)
-        // No throw - sesión termina pero sin persistencia
+        this.pendingFinalize = true
+        this.emit('session:saveError', { sessionId: this.currentSessionId, error: err })
       }
     }
 
@@ -330,6 +362,10 @@ export class SessionService extends EventEmitter {
 
   getState(): SessionState {
     return this.state
+  }
+
+  hasPendingFinalize(): boolean {
+    return this.pendingFinalize
   }
 
   getCurrentSessionId(): string | null {

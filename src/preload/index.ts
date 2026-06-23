@@ -109,6 +109,18 @@ const api = {
       ): void => cb(data)
       ipcRenderer.on(IPC_EVENTS.NBM_SAMPLE, handler)
       return () => ipcRenderer.removeListener(IPC_EVENTS.NBM_SAMPLE, handler)
+    },
+
+    onBattery: (cb: (battery: number) => void) => {
+      const handler = (_: IpcRendererEvent, battery: number): void => cb(battery)
+      ipcRenderer.on(IPC_EVENTS.NBM_BATTERY, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.NBM_BATTERY, handler)
+    },
+
+    onMode: (cb: (mode: 'active' | 'standby') => void) => {
+      const handler = (_: IpcRendererEvent, mode: 'active' | 'standby'): void => cb(mode)
+      ipcRenderer.on(IPC_EVENTS.NBM_MODE, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENTS.NBM_MODE, handler)
     }
   },
 

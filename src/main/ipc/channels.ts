@@ -3,6 +3,8 @@ export const IPC_EVENTS = {
   GPS_NMEA: 'gps:nmea',
   GPS_FIX_LOST: 'gps:fix-lost',
   NBM_SAMPLE: 'nbm:sample',
+  NBM_BATTERY: 'nbm:battery',
+  NBM_MODE: 'nbm:mode',
   DEVICE_STATUS: 'device:status',
   DEVICE_ERROR: 'device:error',
   SESSION_SAMPLE: 'session:sample',

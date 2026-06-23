@@ -4,11 +4,10 @@ import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 import type { ProbedDeviceInfo } from '../../shared/dto/index'
+import { ConfigService } from '../services/ConfigService'
 
-const NBM_BAUD_RATE = 460800
-const GPS_BAUD_RATE = 4800
-const PROBE_TIMEOUT_MS = 6000 // Aumentado de 3s a 6s - NBM550 necesita tiempo para responder a REMOTE ON
-const NMEA_LISTEN_MS = 12000 // Aumentado a 12s para permitir sincronización GPS y evitar falsos negativos
+const PROBE_TIMEOUT_MS = ConfigService.DEFAULT_SERIAL_PROBE.nbmTimeoutMs
+const NMEA_LISTEN_MS = ConfigService.DEFAULT_SERIAL_PROBE.nmeaListenMs
 
 export interface DriverFactories {
   createNBM?: (port: string) => NBM550Driver
@@ -111,7 +110,7 @@ export class SerialPortScanner implements ISerialPortScanner {
       this.factories?.createNBM?.(port) ??
       new NBM550Driver({
         port,
-        baudRate: NBM_BAUD_RATE,
+        baudRate: ConfigService.NBM_BAUD_RATE,
         pollIntervalMs: 200,
         unit: 'V/m'
       })
@@ -126,8 +125,10 @@ export class SerialPortScanner implements ISerialPortScanner {
       console.log(`[SerialPortScanner] ✓ NBM550 detected on ${port}`)
       return true
     } catch (err: unknown) {
-      void err
-      console.log(`[SerialPortScanner] ✗ NBM550 not found on ${port}`)
+      console.log(
+        `[SerialPortScanner] ✗ NBM550 not found on ${port}:`,
+        err instanceof Error ? err.message : String(err)
+      )
       return false
     } finally {
       // Asegurar que el puerto se cierra aunque falle la conexión
@@ -151,7 +152,7 @@ export class SerialPortScanner implements ISerialPortScanner {
       this.factories?.createGPS?.(port) ??
       new GPSDriver({
         port,
-        baudRate: GPS_BAUD_RATE
+        baudRate: ConfigService.GPS_BAUD_RATE
       })
 
     try {

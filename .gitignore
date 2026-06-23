@@ -11,3 +11,4 @@ build/key.nsh
 coverage
 PLAN.md
 lint-errors.txt
+port-config.json

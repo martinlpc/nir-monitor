@@ -29,7 +29,7 @@ let services: Services | null = null
 let tileCache: TileCacheService | null = null
 
 function isDebugPanelEnabled(): boolean {
-  return process.env['NIR_APP_MODE'] === 'debug'
+  return services?.config.debugMode ?? process.env['NIR_APP_MODE'] === 'debug'
 }
 
 function createWindow(): BrowserWindow {

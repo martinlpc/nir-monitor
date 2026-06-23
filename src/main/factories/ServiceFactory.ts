@@ -1,12 +1,14 @@
-// Factory pattern manual - crea servicios con inyección de dependencias
-// Sin dependencias externas (no tsyringe), control total
 import { DeviceManager } from '../services/DeviceManager'
 import { SessionService } from '../services/SessionService'
 import { GeoFusionService } from '../services/GeoFusionService'
 import { SQLiteSessionRepository } from '../services/SQLiteSessionRepository'
 import { SerialPortScanner } from '../infrastructure/SerialPortScanner'
+import { RealDriverFactory } from './RealDriverFactory'
+import { SimulatedDriverFactory } from './SimulatedDriverFactory'
+import { ConfigService } from '../services/ConfigService'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
+import type { DriverFactory } from '../../shared/driver-factory'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -14,6 +16,7 @@ export interface Services {
   sessionService: SessionService
   sessionRepository: ISessionRepository
   geoFusion: GeoFusionService
+  config: ConfigService
 }
 
 function createSimulatedScanner(): ISerialPortScanner {
@@ -34,32 +37,32 @@ function createSimulatedScanner(): ISerialPortScanner {
  * Retorna todas las instancias ya configuradas y "wireadas"
  */
 export function createServices(): Services {
-  const simulationMode =
-    process.env.NIR_SIMULATION === 'true' || process.argv.includes('--simulation')
-  console.log(`[ServiceFactory] simulationMode: ${simulationMode}`)
+  const config = new ConfigService()
+  console.log(`[ServiceFactory] simulationMode: ${config.simulationMode}`)
 
-  // 1. Crear dependencias base (sin dependencias)
-  const scanner = simulationMode ? createSimulatedScanner() : new SerialPortScanner()
+  // 1. Crear dependencias base
+  const scanner: ISerialPortScanner = config.simulationMode ? createSimulatedScanner() : new SerialPortScanner()
+  const driverFactory: DriverFactory = config.simulationMode ? new SimulatedDriverFactory() : new RealDriverFactory()
   const geoFusion = new GeoFusionService()
-  const sessionRepository = new SQLiteSessionRepository()
+  const flushCfg = config.flushConfig
+  const sessionRepository = new SQLiteSessionRepository({
+    flushEveryNPoints: flushCfg.everyNPoints,
+    flushIntervalMs: flushCfg.intervalMs
+  })
 
-  // 2. Inyectar scanner en DeviceManager
-  const deviceManager = new DeviceManager(scanner, simulationMode)
+  // 2. Inyectar scanner y factory en DeviceManager
+  const deviceManager = new DeviceManager(scanner, driverFactory, config)
 
-  // 3. Inyectar geoFusion, repositorio y simulationMode en SessionService
-  const sessionService = new SessionService(geoFusion, sessionRepository)
-
-  // 4. Wire: después de que DeviceManager.initialize() se complete,
-  // necesitamos pasar las referencias de NBM y GPS a SessionService
-  // Esto se hace en setupSessionWiring() que se llama desde index.ts
-  // después de que deviceManager.initialize() se complete
+  // 3. Inyectar geoFusion y repositorio en SessionService
+  const sessionService = new SessionService(geoFusion, sessionRepository, config)
 
   return {
     scanner,
     deviceManager,
     sessionService,
     sessionRepository,
-    geoFusion
+    geoFusion,
+    config
   }
 }
 
@@ -87,6 +90,17 @@ export function setupSessionWiring(
   } else {
     console.warn('[ServiceFactory] GPS not available for wiring')
   }
+
+  // Sincronizar polling NBM con estado de sesión
+  sessionService.on('started', () => {
+    console.log('[ServiceFactory] Session started → NBM polling active')
+    deviceManager.setSessionActive(true)
+  })
+
+  sessionService.on('stopped', () => {
+    console.log('[ServiceFactory] Session stopped → NBM polling standby')
+    deviceManager.setSessionActive(false)
+  })
 
   // Re-wire cuando DeviceManager reinicia un dispositivo
   deviceManager.on('device:status', (data: { deviceId: string; status: string }) => {

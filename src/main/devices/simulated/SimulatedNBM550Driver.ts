@@ -1,8 +1,9 @@
 import { EventEmitter } from 'events'
 import type { NBM550Sample, NBM550ProbeInfo } from '../nbm550/nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
+import type { INBMDriver } from '../../../shared/driver-interfaces'
 
-export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver {
+export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver, INBMDriver {
   readonly meta: DeviceMeta
   status: DeviceStatus = 'disconnected'
 

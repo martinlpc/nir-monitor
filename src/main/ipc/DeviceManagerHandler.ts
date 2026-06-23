@@ -67,6 +67,8 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
     )
   })
   deviceManager.on('nbm:sample', (data) => sendIfReady(IPC_EVENTS.NBM_SAMPLE, data))
+  deviceManager.on('nbm:battery', (battery) => sendIfReady(IPC_EVENTS.NBM_BATTERY, battery))
+  deviceManager.on('nbm:mode', (mode) => sendIfReady(IPC_EVENTS.NBM_MODE, mode))
   deviceManager.on('device:status', (data) => {
     sendIfReady(IPC_EVENTS.DEVICE_STATUS, data)
     // Emitir alerta tipo info al conectar dispositivos
