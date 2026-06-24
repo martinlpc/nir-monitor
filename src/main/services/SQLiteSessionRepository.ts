@@ -24,7 +24,7 @@ import { electricFieldToMepPercent } from '../../shared/emfConversion'
  * - session_stats: pre-calculated statistics (avgCorrected, maxCorrected, etc.)
  */
 export class SQLiteSessionRepository implements ISessionRepository {
-  static readonly MAX_EXPORT_POINTS = 2500
+  static readonly MAX_EXPORT_POINTS = 5000
 
   private db: SqlJsDatabase | null = null
   private dbPath: string = ''
@@ -393,6 +393,24 @@ export class SQLiteSessionRepository implements ISessionRepository {
   async addPoint(sessionId: string, point: GeoTimestamp): Promise<void> {
     await this.initialize()
     const db = this.ensureDb()
+
+    const row = db.exec(
+      `SELECT sampleCount FROM sessions WHERE id = ?`,
+      [sessionId]
+    )
+    const sampleCount: number =
+      row.length > 0 && row[0].values.length > 0
+        ? (row[0].values[0][0] as number)
+        : 0
+
+    if (sampleCount >= SQLiteSessionRepository.MAX_EXPORT_POINTS) {
+      console.warn(
+        `[SQLiteSessionRepository] Session ${sessionId} reached MAX_EXPORT_POINTS (${SQLiteSessionRepository.MAX_EXPORT_POINTS}), rejecting point`
+      )
+      throw new Error(
+        `Límite de ${SQLiteSessionRepository.MAX_EXPORT_POINTS} puntos alcanzado para esta sesión`
+      )
+    }
 
     try {
       db.run('BEGIN')

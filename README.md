@@ -1,5 +1,7 @@
 # RNI Monitor
 
+![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)
+
 **Non-Ionizing Radiation Mapper** — Desktop application for mapping electromagnetic field (EMF) measurements based on **ITU-T Recommendation K.113**.
 
 Desarrollado por el [Ente Nacional de Comunicaciones (ENACOM)](https://www.enacom.gob.ar), organismo regulador de comunicaciones de la República Argentina.
@@ -243,6 +245,8 @@ session_stats (sessionId PK, avgCorrected, maxCorrected,
 ```
 
 **Flujo incremental:** `initSession()` → `addPoint()` × N → `finalizeSession()`. Flush cada 10 puntos o 30s.
+
+**Límite de exportación:** Toda exportación (GeoJSON, CSV, XLSX, KMZ) se trunca a `MAX_EXPORT_POINTS = 5000` puntos por sesión.
 
 #### Canales IPC — `src/main/ipc/`
 
