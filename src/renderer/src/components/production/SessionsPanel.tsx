@@ -26,7 +26,10 @@ export default function SessionsPanel({
     bounds: { north: number; south: number; east: number; west: number } | null
   ) => void
   onDeleteSession: (sessionId: string) => Promise<void>
-  onExportSession: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => Promise<void>
+  onExportSession: (
+    sessionId: string,
+    format: 'geojson' | 'xlsx' | 'kmz'
+  ) => Promise<{ canceled?: boolean }>
   onImportSession?: () => Promise<{ sessionId?: string; canceled?: boolean }>
   onGetSession: (sessionId: string) => Promise<PersistedSession>
 }): React.JSX.Element {
@@ -139,21 +142,15 @@ export default function SessionsPanel({
     sessionId: string,
     format: 'geojson' | 'xlsx' | 'kmz'
   ): Promise<void> => {
-    try {
-      const found = sessions.find((s) => s.id === sessionId)
-      if (!found) return
+    const found = sessions.find((s) => s.id === sessionId)
+    if (!found) return
 
-      await onExportSession(sessionId, format)
+    const result = await onExportSession(sessionId, format)
 
+    if (result && !result.canceled) {
       setLoadStatus({
         message: `✓ Sesión exportada correctamente`,
         type: 'success'
-      })
-    } catch (err) {
-      console.error(`Error exporting to ${format}:`, err)
-      setLoadStatus({
-        message: `Error al exportar: ${err instanceof Error ? err.message : 'desconocido'}`,
-        type: 'error'
       })
     }
   }

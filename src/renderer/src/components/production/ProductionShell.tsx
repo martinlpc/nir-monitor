@@ -17,6 +17,7 @@ import DevicesPanel from './DevicesPanel'
 import SessionsPanel from './SessionsPanel'
 import SettingsPanel from './SettingsPanel'
 import AllSessionsDrawer from './AllSessionsDrawer'
+import { useToast } from './ToastProvider'
 import './production.css'
 
 export default function ProductionShell(): React.JSX.Element {
@@ -25,6 +26,7 @@ export default function ProductionShell(): React.JSX.Element {
   const geoData = useGeoData(session.points, session.pointCount)
   const multipleSessions = useMultipleSessions()
   const persistedSessions = usePersistentSessions()
+  const { notify } = useToast()
   const { theme, setTheme } = useTheme()
   const { provider, setProvider, providers } = useTileProvider()
   const tileCache = useTileCache()
@@ -169,14 +171,19 @@ export default function ProductionShell(): React.JSX.Element {
                   }}
                   onExportSession={async (sessionId, format) => {
                     const found = persistedSessions.sessions.find((s) => s.id === sessionId)
-                    if (!found) return
-                    const result = await persistedSessions.exportSession(
-                      sessionId,
-                      format,
-                      found.label
-                    )
-                    if (result.canceled) {
-                      throw new Error('Export canceled')
+                    if (!found) return { canceled: true }
+                    try {
+                      const result = await persistedSessions.exportSession(
+                        sessionId,
+                        format,
+                        found.label
+                      )
+                      return result
+                    } catch (err) {
+                      const message =
+                        err instanceof Error ? err.message : 'Desconocido'
+                      notify({ type: 'error', message: `Error al exportar: ${message}` })
+                      return { canceled: true }
                     }
                   }}
                   onGetSession={async (sessionId) => {
@@ -305,20 +312,19 @@ export default function ProductionShell(): React.JSX.Element {
                 console.error('[ProductionShell] Error loading session as primary:', err)
               })
           }}
-          onExport={(sessionId, format) => {
+          onExport={async (sessionId, format) => {
             const found = persistedSessions.sessions.find((s) => s.id === sessionId)
             if (!found) return
 
-            persistedSessions
-              .exportSession(sessionId, format, found.label)
-              .then((result) => {
-                if (!result.canceled) {
-                  console.log(`[ProductionShell] Exported to: ${result.filePaths?.join(', ')}`)
-                }
-              })
-              .catch((err) => {
-                console.error(`[ProductionShell] Error exporting to ${format}:`, err)
-              })
+            try {
+              const result = await persistedSessions.exportSession(sessionId, format, found.label)
+              if (!result.canceled) {
+                console.log(`[ProductionShell] Exported to: ${result.filePaths?.join(', ')}`)
+              }
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Desconocido'
+              notify({ type: 'error', message: `Error al exportar: ${message}` })
+            }
           }}
           onDelete={(sessionId) => {
             multipleSessions.removeSession(sessionId)
