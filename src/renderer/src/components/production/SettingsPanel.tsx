@@ -290,25 +290,43 @@ export default function SettingsPanel({
 
             <div className="settings-option">
               <span className="settings-option__label">Zoom min</span>
-              <input
-                className="settings-input"
-                type="number"
-                min={1}
-                max={19}
-                value={preloadMinZoom}
-                onChange={(e) => setPreloadMinZoom(parseInt(e.target.value, 10) || 10)}
-              />
+              <div className="settings-zoom-group">
+                <button
+                  className="settings-zoom-group__btn"
+                  onClick={() => setPreloadMinZoom(Math.max(1, preloadMinZoom - 1))}
+                  aria-label="Reducir zoom mínimo"
+                >
+                  −
+                </button>
+                <span className="settings-zoom-group__value">{preloadMinZoom}</span>
+                <button
+                  className="settings-zoom-group__btn"
+                  onClick={() => setPreloadMinZoom(Math.min(preloadMaxZoom, preloadMinZoom + 1))}
+                  aria-label="Aumentar zoom mínimo"
+                >
+                  +
+                </button>
+              </div>
             </div>
             <div className="settings-option">
               <span className="settings-option__label">Zoom max</span>
-              <input
-                className="settings-input"
-                type="number"
-                min={1}
-                max={19}
-                value={preloadMaxZoom}
-                onChange={(e) => setPreloadMaxZoom(parseInt(e.target.value, 10) || 18)}
-              />
+              <div className="settings-zoom-group">
+                <button
+                  className="settings-zoom-group__btn"
+                  onClick={() => setPreloadMaxZoom(Math.max(preloadMinZoom, preloadMaxZoom - 1))}
+                  aria-label="Reducir zoom máximo"
+                >
+                  −
+                </button>
+                <span className="settings-zoom-group__value">{preloadMaxZoom}</span>
+                <button
+                  className="settings-zoom-group__btn"
+                  onClick={() => setPreloadMaxZoom(Math.min(19, preloadMaxZoom + 1))}
+                  aria-label="Aumentar zoom máximo"
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             {!isPreloading ? (
