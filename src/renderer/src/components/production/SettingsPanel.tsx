@@ -23,7 +23,13 @@ interface SettingsPanelProps {
   }) => void
   onCancelPreload: () => void
   preloadProgress: PreloadProgress | null
-  onSelectMapBounds?: () => { north: number; south: number; east: number; west: number } | null
+  onSelectMapBounds?: () => {
+    north: number
+    south: number
+    east: number
+    west: number
+    zoom: number
+  } | null
 }
 
 interface BuiltInRecord {
@@ -77,6 +83,7 @@ export default function SettingsPanel({
     south: number
     east: number
     west: number
+    zoom?: number
   } | null>(null)
   const [preloadMinZoom, setPreloadMinZoom] = useState(10)
   const [preloadMaxZoom, setPreloadMaxZoom] = useState(18)
@@ -124,7 +131,11 @@ export default function SettingsPanel({
   const handleSelectBounds = (): void => {
     const bounds = onSelectMapBounds?.()
     if (bounds) {
-      setPreloadBounds(bounds)
+      const { zoom, ...rest } = bounds
+      setPreloadBounds(rest)
+      if (zoom != null) {
+        setPreloadMinZoom(Math.max(1, Math.min(zoom, 18)))
+      }
     }
   }
 
@@ -321,7 +332,7 @@ export default function SettingsPanel({
                 <span className="settings-zoom-group__value">{preloadMaxZoom}</span>
                 <button
                   className="settings-zoom-group__btn"
-                  onClick={() => setPreloadMaxZoom(Math.min(19, preloadMaxZoom + 1))}
+                  onClick={() => setPreloadMaxZoom(Math.min(18, preloadMaxZoom + 1))}
                   aria-label="Aumentar zoom máximo"
                 >
                   +

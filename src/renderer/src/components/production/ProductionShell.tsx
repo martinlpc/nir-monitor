@@ -55,7 +55,8 @@ export default function ProductionShell(): React.JSX.Element {
       north: bounds.getNorth(),
       south: bounds.getSouth(),
       east: bounds.getEast(),
-      west: bounds.getWest()
+      west: bounds.getWest(),
+      zoom: map.getZoom()
     }
   }, [])
 
