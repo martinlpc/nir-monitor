@@ -1,6 +1,6 @@
 # RNI Monitor
 
-![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)
 
 **Non-Ionizing Radiation Mapper** — Desktop application for mapping electromagnetic field (EMF) measurements based on **ITU-T Recommendation K.113**.
 
