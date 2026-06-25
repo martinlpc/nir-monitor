@@ -1,6 +1,6 @@
 # RNI Monitor
 
-![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.8.1-blue.svg)
 
 **Non-Ionizing Radiation Mapper** — Desktop application for mapping electromagnetic field (EMF) measurements based on **ITU-T Recommendation K.113**.
 
@@ -302,6 +302,33 @@ Renderiza condicionalmente según `?debug=1`:
 #### ProductionShell — Orquestador de UI
 
 Gestiona 3 pestañas laterales (Dispositivos | Historial | Configuración), MapView con Leaflet, PointsTable y AllSessionsDrawer. Coordina hooks: `useDevices`, `useSession`, `useMultipleSessions`, `usePersistentSessions`.
+
+##### Portrait / Hybrid Layout
+
+En **modo vertical** (`orientation: portrait`) el layout cambia automáticamente a un esquema híbrido:
+
+```
+┌──────────────────────────────────┐
+│ [Dispositivos] [Historial] [⚙]  │ ← barra tabs compacta
+├──────────────────────────────────┤
+│ ┌─ panel-content (dropdown) ──┐  │ ← se abre al tocar un tab,
+│ │ GPS: Connected    [▶]       │  │    se cierra al mismo tab
+│ │ NBM: Connected              │  │    o tocando fuera (backdrop)
+│ │ [Modo Time] [10s]           │  │
+│ └─────────────────────────────┘  │
+│            M A P                 │ ← ancho completo
+├──────────────────────────────────┤
+│ Puntos (32)                [▼]  │ ← tabla colapsable
+└──────────────────────────────────┘
+```
+
+- La sidebar se convierte en una **barra delgada de tabs** en la parte superior
+- El contenido del tab activo se despliega como **dropdown overlay**
+- El mapa ocupa el **ancho completo** con padding reducido
+- La tabla de puntos es un **acordeón colapsable** (▼/▲)
+- Los controles de tamaño de fuente, info de dispositivos y session-ID se ocultan en vertical
+- Un **backdrop transparente** cierra el panel al tocar fuera
+- La detección de orientación es en **tiempo real** via `matchMedia`; al rotar a landscape se restaura el layout original sin cambios
 
 #### Hooks Principales
 
