@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { app, shell, BrowserWindow, ipcMain, protocol, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, protocol, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -47,6 +47,7 @@ function createWindow(): BrowserWindow {
   })
 
   window.on('ready-to-show', () => {
+    window.maximize()
     window.show()
   })
 
@@ -64,6 +65,13 @@ function createWindow(): BrowserWindow {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
+
+  if (app.isPackaged) {
+    Menu.setApplicationMenu(null)
+    window.webContents.on('devtools-opened', () => {
+      window.webContents.closeDevTools()
+    })
+  }
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     const rendererUrl = new URL(process.env['ELECTRON_RENDERER_URL'])
