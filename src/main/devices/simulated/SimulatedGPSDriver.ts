@@ -82,10 +82,14 @@ export class SimulatedGPSDriver extends EventEmitter implements IDeviceDriver, I
     const deltaLat = this.RADIUS * Math.cos(rad) * progress
     const deltaLon = this.RADIUS * Math.sin(rad) * progress
 
+    const now = Date.now()
+    this.state.nmeaTimestamp = now
+
     const pos: GeoPosition = {
       lat: this.CENTER_LAT + deltaLat,
       lon: this.CENTER_LON + deltaLon,
-      alt: 25 + Math.random() * 5
+      alt: 25 + Math.random() * 5,
+      nmeaUtcMs: now
     }
 
     this.state.position = pos

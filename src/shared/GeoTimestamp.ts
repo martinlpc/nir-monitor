@@ -3,6 +3,7 @@ export interface GeoPosition {
   lon: number
   alt: number // metros sobre el nivel del mar
   hdop?: number
+  nmeaUtcMs?: number // Unix ms desde UTC NMEA (RMC), o undefined si no disponible
 }
 
 export interface EMFSample {

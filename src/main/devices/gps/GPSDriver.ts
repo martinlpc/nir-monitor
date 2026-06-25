@@ -88,7 +88,11 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver
   // ── API pública para GeoFusionService ─────────────────────
 
   getLastPosition(): GeoPosition | null {
-    return this.state.position
+    if (!this.state.position) return null
+    return {
+      ...this.state.position,
+      nmeaUtcMs: this.state.nmeaTimestamp ?? undefined
+    }
   }
 
   isPositionValid(): boolean {
@@ -151,7 +155,8 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver
               lat: gga.latitude,
               lon: gga.longitude,
               alt: gga.altitudeMeters,
-              hdop: gga.horizontalDilution
+              hdop: gga.horizontalDilution,
+              nmeaUtcMs: this.state.nmeaTimestamp ?? undefined
             }
             this.state.satelliteCount = gga.satellitesInView
 
@@ -159,6 +164,7 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver
             this.fixLossTimeoutRef = setTimeout(() => {
               this.state.valid = false
               this.state.position = null
+              this.state.nmeaTimestamp = null
               this.emit('fix-lost')
               this.fixLossTimeoutRef = null
             }, 5000)
@@ -173,11 +179,14 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver
         }
 
         case 'RMC': {
-          // Velocidad y heading — complementa GGA
+          // Velocidad, heading y timestamp UTC — complementa GGA
           const rmc = sentence as RMCPacket
           if (rmc.status === 'valid') {
             this.state.speed = rmc.speedKnots * 1.852 // nudos → km/h
             this.state.heading = rmc.trackTrue
+            if (rmc.datetime && !isNaN(rmc.datetime.getTime())) {
+              this.state.nmeaTimestamp = rmc.datetime.getTime()
+            }
           }
           break
         }

@@ -87,7 +87,8 @@ describe('GPSDriver', () => {
       fixType: 'none',
       satelliteCount: 0,
       speed: 0,
-      heading: 0
+      heading: 0,
+      nmeaTimestamp: null
     })
   })
 
@@ -126,6 +127,9 @@ describe('GPSDriver', () => {
       alt: 25,
       hdop: 0.9
     })
+    // Sin RMC, nmeaUtcMs debe ser undefined
+    expect(driver.getLastPosition()?.nmeaUtcMs).toBeUndefined()
+    expect(driver.getState().nmeaTimestamp).toBeNull()
     expect(driver.isPositionValid()).toBe(true)
     expect(positionSpy).toHaveBeenCalledWith(
       expect.objectContaining({ lat: -34.6037, lon: -58.3816 }),
@@ -185,6 +189,114 @@ describe('GPSDriver', () => {
     const state = driver.getState()
     expect(state.speed).toBeCloseTo(20.0, 0) // 10.8 nudos * 1.852 ≈ 20 km/h
     expect(state.heading).toBe(180.5)
+    // Sin datetime en el mock, nmeaTimestamp no debe cambiar
+    expect(state.nmeaTimestamp).toBeNull()
+  })
+
+  // ── NMEA timestamp (RMC datetime) ──
+
+  it('RMC with valid datetime populates nmeaTimestamp and position.nmeaUtcMs', async () => {
+    const driver = createDriver()
+    await driver.connect()
+
+    const rmcDatetime = new Date(Date.UTC(2026, 5, 25, 12, 35, 19))
+    const expectedMs = rmcDatetime.getTime()
+
+    mockParseNmeaSentence
+      .mockReturnValueOnce({
+        sentenceId: 'GGA',
+        fixType: '3D',
+        latitude: -34.6037,
+        longitude: -58.3816,
+        altitudeMeters: 25,
+        horizontalDilution: 0.9,
+        satellitesInView: 8
+      })
+      .mockReturnValueOnce({
+        sentenceId: 'RMC',
+        status: 'valid',
+        speedKnots: 10.8,
+        trackTrue: 180.5,
+        datetime: rmcDatetime
+      })
+
+    emitNMEA('$GPGGA,...')
+    emitNMEA('$GPRMC,...')
+
+    const state = driver.getState()
+    expect(state.nmeaTimestamp).toBe(expectedMs)
+
+    const pos = driver.getLastPosition()
+    expect(pos?.nmeaUtcMs).toBe(expectedMs)
+  })
+
+  it('RMC without datetime keeps nmeaTimestamp as null', async () => {
+    const driver = createDriver()
+    await driver.connect()
+
+    mockParseNmeaSentence
+      .mockReturnValueOnce({
+        sentenceId: 'GGA',
+        fixType: '3D',
+        latitude: -34.6037,
+        longitude: -58.3816,
+        altitudeMeters: 25,
+        horizontalDilution: 0.9,
+        satellitesInView: 8
+      })
+      .mockReturnValueOnce({
+        sentenceId: 'RMC',
+        status: 'valid',
+        speedKnots: 10.8,
+        trackTrue: 180.5
+      })
+
+    emitNMEA('$GPGGA,...')
+    emitNMEA('$GPRMC,...')
+
+    expect(driver.getState().nmeaTimestamp).toBeNull()
+    expect(driver.getLastPosition()?.nmeaUtcMs).toBeUndefined()
+  })
+
+  it('RMC with NaN datetime does not overwrite nmeaTimestamp', async () => {
+    const driver = createDriver()
+    await driver.connect()
+
+    // Primero un RMC válido para setear nmeaTimestamp
+    const rmcDatetime = new Date(Date.UTC(2026, 5, 25, 12, 35, 19))
+
+    mockParseNmeaSentence
+      .mockReturnValueOnce({
+        sentenceId: 'GGA',
+        fixType: '3D',
+        latitude: -34.6037,
+        longitude: -58.3816,
+        altitudeMeters: 25,
+        horizontalDilution: 0.9,
+        satellitesInView: 8
+      })
+      .mockReturnValueOnce({
+        sentenceId: 'RMC',
+        status: 'valid',
+        speedKnots: 10.8,
+        trackTrue: 180.5,
+        datetime: rmcDatetime
+      })
+      // Segundo RMC con datetime inválido (NaN)
+      .mockReturnValueOnce({
+        sentenceId: 'RMC',
+        status: 'valid',
+        speedKnots: 5.0,
+        trackTrue: 90.0,
+        datetime: new Date(NaN)
+      })
+
+    emitNMEA('$GPGGA,...')
+    emitNMEA('$GPRMC,...') // RMC válido, setea nmeaTimestamp
+    emitNMEA('$GPRMC,...') // RMC con NaN, no debe pisar
+
+    const expectedMs = rmcDatetime.getTime()
+    expect(driver.getState().nmeaTimestamp).toBe(expectedMs)
   })
 
   // ── NMEA: GSA ──
@@ -232,6 +344,7 @@ describe('GPSDriver', () => {
     expect(fixLostSpy).toHaveBeenCalledTimes(1)
     expect(driver.isPositionValid()).toBe(false)
     expect(driver.getLastPosition()).toBeNull()
+    expect(driver.getState().nmeaTimestamp).toBeNull()
     vi.useRealTimers()
   })
 

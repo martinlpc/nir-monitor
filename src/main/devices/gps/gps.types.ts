@@ -8,6 +8,7 @@ export interface GPSState {
   speed: number // km/h
   heading: number // grados 0-360
   lastUpdateAt: number // ms
+  nmeaTimestamp: number | null // Unix ms desde UTC NMEA (RMC), o null si no disponible
 }
 
 export const INITIAL_GPS_STATE: GPSState = {
@@ -17,5 +18,6 @@ export const INITIAL_GPS_STATE: GPSState = {
   satelliteCount: 0,
   speed: 0,
   heading: 0,
-  lastUpdateAt: 0
+  lastUpdateAt: 0,
+  nmeaTimestamp: null
 }

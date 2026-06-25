@@ -283,4 +283,61 @@ describe('GeoFusionService', () => {
     expect(nbm.readMeasurement).toHaveBeenCalledTimes(2)
     expect(nbm.resetMaxHold).toHaveBeenCalledTimes(2)
   })
+
+  // ── NMEA timestamp ──
+
+  it('uses nmeaUtcMs as the point timestamp when present', async () => {
+    const nbm = new FakeNBMDriver()
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    const nmeaTimestamp = Date.UTC(2026, 5, 25, 12, 35, 19)
+
+    gps.setPosition({
+      lat: -34.6037,
+      lon: -58.3816,
+      alt: 25,
+      nmeaUtcMs: nmeaTimestamp
+    })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-nmea')
+
+    const pointPromise = new Promise<GeoTimestamp>((resolve) => service.once('point', resolve))
+    service.onGPSPosition(true)
+    const point = await pointPromise
+
+    expect(point.timestamp).toBe(nmeaTimestamp)
+  })
+
+  it('falls back to Date.now() when nmeaUtcMs is not present', async () => {
+    vi.useFakeTimers()
+    const fixedDate = new Date('2025-06-15T10:30:00Z')
+    vi.setSystemTime(fixedDate)
+
+    const nbm = new FakeNBMDriver()
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    // Posición sin nmeaUtcMs
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-fallback')
+
+    const pointPromise = new Promise<GeoTimestamp>((resolve) => service.once('point', resolve))
+    service.onGPSPosition(true)
+    const point = await pointPromise
+
+    expect(point.timestamp).toBe(fixedDate.getTime())
+    vi.useRealTimers()
+  })
 })

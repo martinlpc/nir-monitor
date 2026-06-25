@@ -217,7 +217,7 @@ export class GeoFusionService extends EventEmitter {
         id: uuidv4(),
         sessionId: this.sessionId,
         sequenceNumber: this.sequenceNumber,
-        timestamp: Date.now(),
+        timestamp: position.nmeaUtcMs ?? Date.now(),
         position: { ...position },
         emf: {
           deviceId: 'nbm550',
