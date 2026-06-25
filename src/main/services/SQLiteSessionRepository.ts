@@ -1078,7 +1078,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     ]
     const OVER_100_HEX = '#FF0000'
 
-    const hexToKmlColor = (hex: string, alpha = '7f'): string => {
+    const hexToKmlColor = (hex: string, alpha = '9a'): string => {
       const r = hex.slice(1, 3)
       const g = hex.slice(3, 5)
       const b = hex.slice(5, 7)
@@ -1103,15 +1103,33 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
     const iconStyles = allUniqueHex
       .map((hex, i) => {
-        const kmlColor = hexToKmlColor(hex)
+        const kmlColorNormal = hexToKmlColor(hex, '9a')
+        const kmlColorHl = hexToKmlColor(hex, 'ff')
         return `
-    <Style id="icon_${i}">
+    <Style id="icon_${i}_normal">
       <IconStyle>
-        <color>${kmlColor}</color>
+        <color>${kmlColorNormal}</color>
         <scale>1.2</scale>
-        <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
+        <Icon><href>http://maps.google.com/mapfiles/kml/shapes/shaded_dot.png</href></Icon>
       </IconStyle>
-    </Style>`
+    </Style>
+    <Style id="icon_${i}_hl">
+      <IconStyle>
+        <color>${kmlColorHl}</color>
+        <scale>1.4</scale>
+        <Icon><href>http://maps.google.com/mapfiles/kml/shapes/shaded_dot.png</href></Icon>
+      </IconStyle>
+    </Style>
+    <StyleMap id="icon_${i}">
+      <Pair>
+        <key>normal</key>
+        <styleUrl>#icon_${i}_normal</styleUrl>
+      </Pair>
+      <Pair>
+        <key>highlight</key>
+        <styleUrl>#icon_${i}_hl</styleUrl>
+      </Pair>
+    </StyleMap>`
       })
       .join('')
 
@@ -1128,6 +1146,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const hexToStyleId = (hex: string, prefix: string): string =>
       `${prefix}_${allUniqueHex.indexOf(hex)}`
 
+    const appVersion = app.getVersion()
+
     // Puntos de medición con nuevo formato de descripción
     const pointPlacemarks = points
       .map((p) => {
@@ -1135,13 +1155,26 @@ export class SQLiteSessionRepository implements ISessionRepository {
         const fecha = new Date(p.timestamp).toLocaleDateString('es-AR')
         const hora = new Date(p.timestamp).toLocaleTimeString('es-AR')
         const mepPct = electricFieldToMepPercent(p.correctedMeasurement)
+        const mepStr = mepPct.toLocaleString('es-AR', {
+          minimumFractionDigits: 4,
+          maximumFractionDigits: 4
+        })
         const rssU = metadata.correctionFactor != null ? p.correctedMeasurement.toFixed(2) : ''
+
+        const inst = metadata.instrument
+        const instLines = inst
+          ? `\nInstrumento - N°/S: ${esc(inst.meter.brand)} ${esc(inst.meter.model)} - ${esc(inst.meter.serial)}` +
+            `\nSonda - N°/S: ${esc(inst.probe.brand)} ${esc(inst.probe.model)} - ${esc(inst.probe.serial)}`
+          : ''
+
         return `
     <Placemark>
       <description>Fecha: ${esc(fecha)}
 Hora: ${esc(hora)}
-Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
-% MEP: ${mepPct.toFixed(1)}%</description>
+
+Porcentaje MEP mas estricta: ${esc(mepStr)}%
+Tipo de resultado: Valor máximo detectado (Max Hold) sobre móvil${instLines}
+RNI Monitor v${appVersion}</description>
       <styleUrl>#${hexToStyleId(hex, 'icon')}</styleUrl>
       <TimeStamp><when>${new Date(p.timestamp).toISOString()}</when></TimeStamp>
       <Point><coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0}</coordinates></Point>
@@ -1175,9 +1208,16 @@ Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
             .join('')
 
     const startDate = new Date(metadata.startedAt).toLocaleString('es-AR')
+    const dateOnly = new Date(metadata.startedAt).toLocaleDateString('es-AR')
     const endDate = metadata.stoppedAt
       ? new Date(metadata.stoppedAt).toLocaleString('es-AR')
       : 'N/A'
+
+    const locationParts = [metadata.provincia, metadata.localidad].filter(Boolean)
+    const layerName =
+      locationParts.length > 0
+        ? `${locationParts.join(' - ')} - ${dateOnly}`
+        : escXml(metadata.label)
 
     const inst = metadata.instrument
     const instrumentDesc = inst
@@ -1190,8 +1230,8 @@ Valor corregido: ${p.correctedMeasurement.toFixed(2)} V/m
     return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
 <Document>
-  <name>${escXml(metadata.label)}</name>
-  <description>Sesión: ${escXml(metadata.label)}\nInicio: ${startDate}\nFin: ${endDate}\nPuntos: ${metadata.sampleCount}${instrumentDesc}</description>
+  <name>${escXml(layerName)}</name>
+  <description>Sesión: ${escXml(metadata.label)}\nInicio: ${startDate}\nFin: ${endDate}\nPuntos: ${metadata.sampleCount}${instrumentDesc}\nRNI Monitor v${appVersion}</description>
   ${iconStyles}
   ${segStyles}
   <Folder>
