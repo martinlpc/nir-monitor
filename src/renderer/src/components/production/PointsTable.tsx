@@ -62,6 +62,22 @@ export default function PointsTable({
 }: PointsTableProps): React.JSX.Element {
   const [fontSize, setFontSize] = useState(getStoredFontSize)
 
+  /* ── Portrait accordion ── */
+  const [isPortrait, setIsPortrait] = useState(
+    () => window.matchMedia('(orientation: portrait)').matches
+  )
+  const [tableCollapsed, setTableCollapsed] = useState(isPortrait)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: portrait)')
+    const handler = (e: MediaQueryListEvent) => {
+      setIsPortrait(e.matches)
+      setTableCollapsed(e.matches)
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   useEffect(() => {
     storeFontSize(fontSize)
   }, [fontSize])
@@ -129,6 +145,16 @@ export default function PointsTable({
                 {tableMaximized ? '⊡' : '⊞'}
               </button>
             )}
+            {isPortrait && (
+              <button
+                className="btn-collapse"
+                onClick={() => setTableCollapsed((prev) => !prev)}
+                title={tableCollapsed ? 'Expandir tabla' : 'Colapsar tabla'}
+                aria-label={tableCollapsed ? 'Expandir tabla' : 'Colapsar tabla'}
+              >
+                {tableCollapsed ? '▼' : '▲'}
+              </button>
+            )}
           </div>
         </div>
         {(sessionLabel || sessionId) && (
@@ -157,7 +183,7 @@ export default function PointsTable({
           </div>
         )}
       </div>
-      <div className="table-wrapper">
+      <div className={`table-wrapper${tableCollapsed ? ' table-collapsed' : ''}`}>
         <table className="points-table" style={{ fontSize }}>
           <thead>
             <tr>

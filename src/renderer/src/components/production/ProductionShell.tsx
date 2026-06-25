@@ -43,6 +43,22 @@ export default function ProductionShell(): React.JSX.Element {
   } | null>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
+  /* ── Portrait / hybrid mode ── */
+  const [isPortrait, setIsPortrait] = useState(
+    () => window.matchMedia('(orientation: portrait)').matches
+  )
+  const [panelOpen, setPanelOpen] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: portrait)')
+    const handler = (e: MediaQueryListEvent) => {
+      setIsPortrait(e.matches)
+      if (!e.matches) setPanelOpen(false)
+    }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   const handleMapReady = useCallback((map: L.Map) => {
     mapInstanceRef.current = map
   }, [])
@@ -60,22 +76,43 @@ export default function ProductionShell(): React.JSX.Element {
     }
   }, [])
 
-  const handleTabKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
-      e.preventDefault()
-      setActiveTab((prev) => {
-        const tabs: Array<'devices' | 'sessions' | 'settings'> = ['devices', 'sessions', 'settings']
-        const idx = tabs.indexOf(prev)
+  const handleTabClick = useCallback(
+    (tab: 'devices' | 'sessions' | 'settings') => {
+      if (isPortrait) {
+        if (panelOpen && activeTab === tab) {
+          setPanelOpen(false)
+        } else {
+          setActiveTab(tab)
+          setPanelOpen(true)
+        }
+      } else {
+        setActiveTab(tab)
+      }
+    },
+    [isPortrait, panelOpen, activeTab]
+  )
+
+  const handleTabKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        e.preventDefault()
+        const tabs: Array<'devices' | 'sessions' | 'settings'> = [
+          'devices',
+          'sessions',
+          'settings'
+        ]
+        const idx = tabs.indexOf(activeTab)
         const next =
           e.key === 'ArrowRight'
             ? tabs[(idx + 1) % tabs.length]
             : tabs[(idx - 1 + tabs.length) % tabs.length]
         const btn = document.getElementById(`tab-${next}`)
         btn?.focus()
-        return next
-      })
-    }
-  }, [])
+        handleTabClick(next)
+      }
+    },
+    [activeTab, handleTabClick]
+  )
 
   useEffect(() => {
     if (multipleSessions.loadedSessions.length > 0) {
@@ -88,7 +125,7 @@ export default function ProductionShell(): React.JSX.Element {
     <GpsPositionProvider>
       <main className="prod-shell">
         <div className="prod-layout">
-          <div className="side-panel">
+          <div className={`side-panel${isPortrait && panelOpen ? ' panel-open' : ''}`}>
             <div
               className="panel-tabs"
               role="tablist"
@@ -97,7 +134,7 @@ export default function ProductionShell(): React.JSX.Element {
             >
               <button
                 className={`tab-button ${activeTab === 'devices' ? 'active' : ''}`}
-                onClick={() => setActiveTab('devices')}
+                onClick={() => handleTabClick('devices')}
                 role="tab"
                 id="tab-devices"
                 aria-selected={activeTab === 'devices'}
@@ -109,7 +146,7 @@ export default function ProductionShell(): React.JSX.Element {
               </button>
               <button
                 className={`tab-button ${activeTab === 'sessions' ? 'active' : ''}`}
-                onClick={() => setActiveTab('sessions')}
+                onClick={() => handleTabClick('sessions')}
                 role="tab"
                 id="tab-sessions"
                 aria-selected={activeTab === 'sessions'}
@@ -121,7 +158,7 @@ export default function ProductionShell(): React.JSX.Element {
               </button>
               <button
                 className={`tab-button tab-button--icon ${activeTab === 'settings' ? 'active' : ''}`}
-                onClick={() => setActiveTab('settings')}
+                onClick={() => handleTabClick('settings')}
                 role="tab"
                 id="tab-settings"
                 aria-selected={activeTab === 'settings'}
@@ -269,6 +306,10 @@ export default function ProductionShell(): React.JSX.Element {
             )}
           </div>
         </div>
+
+        {isPortrait && panelOpen && (
+          <div className="portrait-backdrop" onClick={() => setPanelOpen(false)} />
+        )}
 
         <AllSessionsDrawer
           isOpen={allSessionsDrawerOpen}
