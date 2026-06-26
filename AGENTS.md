@@ -23,7 +23,7 @@ Desktop EMF mapper basado en ITU-T K.113. Electron 42 + React 19 + Leaflet + SQL
 | Remote   | URL                                                   | Uso                          |
 | -------- | ----------------------------------------------------- | ---------------------------- |
 | `origin` | `https://github.com/martinlpc/nir-monitor.git`        | GitHub — desarrollo diario   |
-| `gitlab` | `https://gitlab-desa.enacom.gob.ar/ccte/automaprni.git` | GitLab — branch `main`     |
+| `gitlab` | `https://gitlab-desa.enacom.gob.ar/esartor/rni-monitor.git` | GitLab — branch `main`     |
 
 Flujo: se trabaja normalmente sobre `origin` (GitHub, cualquier rama). Cuando se necesita publicar en GitLab, se pushea manualmente a `gitlab main`:
 ```
