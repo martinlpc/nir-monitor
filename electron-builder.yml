@@ -20,6 +20,8 @@ extraResources:
     to: probe-data.json
   - from: resources/plantillas
     to: plantillas
+  - from: docs/manual-rapido.html
+    to: manual-rapido.html
 win:
   executableName: rni-monitor
 nsis:

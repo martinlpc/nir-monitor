@@ -69,10 +69,20 @@
   ${Else}
     DetailPrint "✓ Drivers Prolific ya instalados (skip)"
   ${EndIf}
+
+  ; ──────────────────────────────────────────────
+  ; Manual de uso rápido
+  ; ──────────────────────────────────────────────
+  CopyFiles "$INSTDIR\resources\manual-rapido.html" "$INSTDIR\manual-rapido.html"
+  CreateShortCut "$DESKTOP\Manual de uso rápido RNI Monitor.lnk" \
+    "$INSTDIR\manual-rapido.html"
 !macroend
 
 !macro customUnInstall
   DeleteRegValue HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" \
     "NIR_DB_ENCRYPTION_KEY"
   SendMessage 0xFFFF 0x001A 0 "STR:Environment"
+
+  Delete "$INSTDIR\manual-rapido.html"
+  Delete "$DESKTOP\Manual de uso rápido RNI Monitor.lnk"
 !macroend
