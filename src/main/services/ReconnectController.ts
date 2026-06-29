@@ -14,6 +14,8 @@ export class ReconnectController {
 
   private _reconnecting = false
   private _port: string | null = null
+  private _attemptInProgress = false
+  private _deadlineReached = false
   private intervalTimer: NodeJS.Timeout | null = null
   private deadlineTimer: NodeJS.Timeout | null = null
 
@@ -43,6 +45,7 @@ export class ReconnectController {
     if (this._reconnecting) return
     this._reconnecting = true
     this._port = port
+    this._deadlineReached = false
     this.stop()
     console.log(
       `[ReconnectController:${this.deviceId}] Unexpected disconnect — retrying for ${this.timeoutMs / 1000}s...`
@@ -52,6 +55,7 @@ export class ReconnectController {
     const attemptReconnect = async (): Promise<void> => {
       if (!this._reconnecting) return
       console.log(`[ReconnectController:${this.deviceId}] Reconnect attempt on ${port}...`)
+      this._attemptInProgress = true
       try {
         const success = await this.connectFn(port)
         if (success) {
@@ -62,6 +66,13 @@ export class ReconnectController {
         }
       } catch (err) {
         console.warn(`[ReconnectController:${this.deviceId}] Reconnect attempt failed:`, err)
+      } finally {
+        this._attemptInProgress = false
+      }
+
+      if (!this._reconnecting && this._deadlineReached) {
+        this.onStatus(this.deviceId, 'disconnected')
+        return
       }
 
       if (this._reconnecting) {
@@ -74,7 +85,11 @@ export class ReconnectController {
       console.log(`[ReconnectController:${this.deviceId}] Reconnect timeout — giving up`)
       this._reconnecting = false
       this.stop()
-      this.onStatus(this.deviceId, 'disconnected')
+      if (!this._attemptInProgress) {
+        this.onStatus(this.deviceId, 'disconnected')
+      } else {
+        this._deadlineReached = true
+      }
     }, this.timeoutMs)
   }
 
@@ -87,5 +102,11 @@ export class ReconnectController {
       clearTimeout(this.deadlineTimer)
       this.deadlineTimer = null
     }
+  }
+
+  reset(): void {
+    this._reconnecting = false
+    this._deadlineReached = false
+    this.stop()
   }
 }
