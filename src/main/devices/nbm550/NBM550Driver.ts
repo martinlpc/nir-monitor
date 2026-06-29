@@ -92,7 +92,15 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDri
 
       // Solo enviar REMOTE ON para probe - si responde, es un NBM550
       console.log(`[NBM550Driver] Quick probe: sending REMOTE ON...`)
-      await this.sendCommand('REMOTE ON')
+      try {
+        await this.sendCommand('REMOTE ON')
+      } catch (err) {
+        if (err instanceof AppError && err.code === 'NBM_401') {
+          console.warn('[NBM550Driver] Quick probe: REMOTE ON refused (already in remote mode), continuing...')
+        } else {
+          throw err
+        }
+      }
 
       console.log(`[NBM550Driver] Quick probe successful!`)
       // NO cerramos aquí - dejamos que se cierre en disconnect()
@@ -126,7 +134,15 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDri
       await this.delay(INIT_DELAY_MS)
 
       console.log(`[NBM550Driver] Sending REMOTE ON...`)
-      await this.sendCommand('REMOTE ON')
+      try {
+        await this.sendCommand('REMOTE ON')
+      } catch (err) {
+        if (err instanceof AppError && err.code === 'NBM_401') {
+          console.warn('[NBM550Driver] REMOTE ON refused (already in remote mode), continuing...')
+        } else {
+          throw err
+        }
+      }
 
       await this.delay(INIT_DELAY_MS)
 

@@ -26,6 +26,10 @@ export class DeviceManager extends EventEmitter {
   private gpsReconnect: ReconnectController
   private nbmPolling: NBMPollingController
   private gpsIntentionalDisconnect: boolean = false
+  private _nbmEverConnected = false
+  private _gpsEverConnected = false
+  private _nbmInsideConnectFn = false
+  private _gpsInsideConnectFn = false
   private factory: DriverFactory
   private config: ConfigService
 
@@ -45,15 +49,21 @@ export class DeviceManager extends EventEmitter {
       intervalMs: nbmReconnect.intervalMs,
       timeoutMs: nbmReconnect.timeoutMs,
       connectFn: async (port) => {
-        this.nbmPolling.stop()
-        if (this.nbm) {
-          await this.nbm.disconnect().catch(() => {})
-          this.nbm.removeAllListeners()
-          this.nbm = null
+        this._nbmInsideConnectFn = true
+        try {
+          this.nbmPolling.stop()
+          if (this.nbm) {
+            const oldNbm = this.nbm
+            this.nbm.removeAllListeners()
+            this.nbm = null
+            await oldNbm.disconnect().catch(() => {})
+          }
+          await new Promise((r) => setTimeout(r, 800))
+          const nbmDriver = await this.initNBM(port)
+          return nbmDriver?.isConnected() ?? false
+        } finally {
+          this._nbmInsideConnectFn = false
         }
-        await new Promise((r) => setTimeout(r, 800))
-        const nbmDriver = await this.initNBM(port)
-        return nbmDriver?.isConnected() ?? false
       },
       onStatus: (deviceId, status) => this.emit('device:status', { deviceId, status })
     })
@@ -63,14 +73,20 @@ export class DeviceManager extends EventEmitter {
       intervalMs: gpsReconnect.intervalMs,
       timeoutMs: gpsReconnect.timeoutMs,
       connectFn: async (port) => {
-        if (this.gps) {
-          await this.gps.disconnect().catch(() => {})
-          this.gps.removeAllListeners()
-          this.gps = null
+        this._gpsInsideConnectFn = true
+        try {
+          if (this.gps) {
+            const oldGps = this.gps
+            this.gps.removeAllListeners()
+            this.gps = null
+            await oldGps.disconnect().catch(() => {})
+          }
+          await new Promise((r) => setTimeout(r, 800))
+          const gpsDriver = await this.initGPS(port)
+          return gpsDriver?.isConnected() ?? false
+        } finally {
+          this._gpsInsideConnectFn = false
         }
-        await new Promise((r) => setTimeout(r, 800))
-        const gpsDriver = await this.initGPS(port)
-        return gpsDriver?.isConnected() ?? false
       },
       onStatus: (deviceId, status) => this.emit('device:status', { deviceId, status })
     })
@@ -164,14 +180,16 @@ export class DeviceManager extends EventEmitter {
   async setPortManual(device: 'nbm550' | 'gps', port: string): Promise<void> {
     if (device === 'nbm550') {
       this.nbmIntentionalDisconnect = true
-      this.nbmReconnect.stop()
+      this.nbmReconnect.reset()
+      this._nbmEverConnected = false
       this.nbmPolling.stop()
       if (this.nbm) await this.nbm.disconnect()
       await this.initNBM(port)
       this.portConfig.nbm550 = port
     } else {
       this.gpsIntentionalDisconnect = true
-      this.gpsReconnect.stop()
+      this.gpsReconnect.reset()
+      this._gpsEverConnected = false
       if (this.gps) await this.gps.disconnect()
       await this.initGPS(port)
       this.portConfig.gps = port
@@ -184,7 +202,8 @@ export class DeviceManager extends EventEmitter {
   async disconnectDevice(device: 'nbm550' | 'gps'): Promise<void> {
     if (device === 'nbm550') {
       this.nbmIntentionalDisconnect = true
-      this.nbmReconnect.stop()
+      this.nbmReconnect.reset()
+      this._nbmEverConnected = false
       this.nbmPolling.stop()
       if (this.nbm) {
         await this.nbm.disconnect().catch(() => {})
@@ -193,7 +212,8 @@ export class DeviceManager extends EventEmitter {
       this.nbm = null
     } else {
       this.gpsIntentionalDisconnect = true
-      this.gpsReconnect.stop()
+      this.gpsReconnect.reset()
+      this._gpsEverConnected = false
       if (this.gps) {
         await this.gps.disconnect().catch(() => {})
         this.gps.removeAllListeners()
@@ -206,8 +226,10 @@ export class DeviceManager extends EventEmitter {
   async disconnectAll(): Promise<void> {
     this.nbmIntentionalDisconnect = true
     this.gpsIntentionalDisconnect = true
-    this.nbmReconnect.stop()
-    this.gpsReconnect.stop()
+    this.nbmReconnect.reset()
+    this.gpsReconnect.reset()
+    this._nbmEverConnected = false
+    this._gpsEverConnected = false
     this.nbmPolling.stop()
     if (this.nbm) {
       await this.nbm.disconnect().catch(() => {})
@@ -252,12 +274,15 @@ export class DeviceManager extends EventEmitter {
 
       if (status === 'connected') {
         console.log(`[DeviceManager] Starting NBM polling`)
+        this._nbmEverConnected = true
         this.nbmReconnect.stop()
         this.nbmPolling.start(this.nbm!)
         this.emit('nbm:mode', 'standby')
       } else if (
         (status === 'disconnected' || status === 'error') &&
-        !this.nbmIntentionalDisconnect
+        !this.nbmIntentionalDisconnect &&
+        this._nbmEverConnected &&
+        !this._nbmInsideConnectFn
       ) {
         this.nbmPolling.stop()
         this.nbmReconnect.start(port)
@@ -312,10 +337,13 @@ export class DeviceManager extends EventEmitter {
       })
 
       if (status === 'connected') {
+        this._gpsEverConnected = true
         this.gpsReconnect.stop()
       } else if (
         (status === 'disconnected' || status === 'error') &&
-        !this.gpsIntentionalDisconnect
+        !this.gpsIntentionalDisconnect &&
+        this._gpsEverConnected &&
+        !this._gpsInsideConnectFn
       ) {
         this.gpsReconnect.start(port)
       }

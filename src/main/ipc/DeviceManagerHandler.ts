@@ -75,6 +75,7 @@ export function registerDeviceManagerHandlers(
  */
 export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: DeviceManager): void {
   let lastGpsFixState = false
+  const hasBeenConnected = new Set<string>()
   const reconnecting = new Set<string>()
 
   const sendIfReady = (event: string, data: unknown): void => {
@@ -106,12 +107,15 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
     }
 
     if (data?.status === 'connected' && data.deviceId) {
-      const wasReconnecting = reconnecting.has(data.deviceId)
       reconnecting.delete(data.deviceId)
+      const isFirstConnection = !hasBeenConnected.has(data.deviceId)
+      if (isFirstConnection) {
+        hasBeenConnected.add(data.deviceId)
+      }
       if (data.deviceId === 'gps') {
-        emitAlert(window, wasReconnecting ? 'GPS reconectado' : 'GPS conectado', 'info')
+        emitAlert(window, isFirstConnection ? 'GPS conectado' : 'GPS reconectado', 'info')
       } else if (data.deviceId === 'nbm550') {
-        emitAlert(window, wasReconnecting ? 'NBM-550 reconectado' : 'NBM-550 conectado', 'info')
+        emitAlert(window, isFirstConnection ? 'NBM-550 conectado' : 'NBM-550 reconectado', 'info')
       }
       return
     }
