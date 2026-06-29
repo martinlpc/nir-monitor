@@ -107,3 +107,20 @@ Definidos en `.opencode/agents/` -- invocar con `@backend-expert`, `@frontend-st
 ## Skills del proyecto
 
 Definidos en `.opencode/skills/` -- se cargan automaticamente segun la tarea.
+
+## Manual de uso rápido
+
+El archivo `docs/manual-rapido.html` es el manual de uso rápido para el personal técnico
+de campo. Debe mantenerse actualizado ante cualquier cambio en:
+
+- Flujo de conexión de dispositivos
+- Parámetros de captura (modos, defaults)
+- Comportamiento al iniciar/detener sesión
+- Formatos de exportación
+- Configuración y caché de mapa
+- Modo simulación
+
+Al realizar cambios relevantes en el código que afecten alguno de estos puntos,
+actualizar el manual en el mismo commit o PR. La versión de la aplicación
+indicada en el manual (portada y footer) debe coincidir con la versión del
+`package.json`.

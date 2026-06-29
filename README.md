@@ -193,7 +193,7 @@ El wiring de drivers a SessionService ocurre en **dos fases**: creación de serv
 
 **Simuladores** (`src/main/devices/simulated/`)
 
-- `SimulatedGPSDriver`: emite posiciones falsas sobre Av. del Libertador (CABA) cada 3s
+- `SimulatedGPSDriver`: emite posiciones falsas alrededor del Obelisco (CABA) cada 3s
 - `SimulatedNBM550Driver`: emite lecturas senoidales con ruido aleatorio
 - Activados con `NIR_SIMULATION=true` o flag `--simulation`
 

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RNI Monitor — Manual de uso rápido</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
+
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: Calibri, 'Segoe UI', Arial, sans-serif;
+      color: #1E293B;
+      background: #FFFFFF;
+      line-height: 1.6;
+    }
+
+    a { color: #0074A6; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Cover ── */
+    .cover {
+      background: #0B1742;
+      color: #FFFFFF;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 3rem 2rem;
+      position: relative;
+    }
+    .cover::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #EEAE42, #0B1742, #0074A6, #00B5E5);
+    }
+    .cover h1 {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 3rem;
+      font-weight: 300;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .cover h1 span { color: #FFFFFF; }
+    .cover .subtitle {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 300;
+      color: #BCE4F4;
+      margin-bottom: 2rem;
+    }
+    .cover .meta {
+      font-size: 0.9rem;
+      color: #C6C6C6;
+    }
+    .cover .meta strong { color: #EEAE42; }
+    .cover-org {
+      margin-top: 3rem;
+      font-size: 0.85rem;
+      color: #C6C6C6;
+    }
+    .cover-org strong { color: #FFFFFF; }
+
+    /* ── Navigation ── */
+    .toc {
+      background: #F8FAFC;
+      padding: 2.5rem 2rem;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    .toc h2 {
+      color: #0B1742;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    .toc ol {
+      max-width: 720px;
+      margin: 0 auto;
+      columns: 2;
+      column-gap: 2rem;
+      list-style: none;
+      counter-reset: toc-counter;
+    }
+    .toc ol li {
+      counter-increment: toc-counter;
+      break-inside: avoid;
+      margin-bottom: 0.4rem;
+    }
+    .toc ol li::before {
+      content: counter(toc-counter) ". ";
+      color: #0074A6;
+      font-weight: 600;
+    }
+    .toc ol li a {
+      color: #005297;
+      font-size: 0.95rem;
+    }
+    .toc ol li a:hover { color: #0B1742; text-decoration: underline; }
+
+    /* ── Sections ── */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    section {
+      margin-bottom: 3rem;
+    }
+
+    section h2 {
+      color: #0B1742;
+      font-size: 1.6rem;
+      border-bottom: 3px solid #EEAE42;
+      padding-bottom: 0.35rem;
+      margin-bottom: 1rem;
+    }
+
+    section h3 {
+      color: #005297;
+      font-size: 1.15rem;
+      margin: 1.2rem 0 0.4rem;
+    }
+
+    section p {
+      margin-bottom: 0.75rem;
+    }
+
+    section ul, section ol {
+      margin: 0.5rem 0 1rem 1.5rem;
+    }
+    section li {
+      margin-bottom: 0.3rem;
+    }
+
+    /* ── Info box ── */
+    .info-box {
+      background: #BCE4F4;
+      border-left: 4px solid #0074A6;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .info-box strong { color: #003667; }
+
+    .warn-box {
+      background: #FFF3D8;
+      border-left: 4px solid #EEAE42;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+    .warn-box strong { color: #7A4D00; }
+
+    .alert-box {
+      background: #FEF2F2;
+      border-left: 4px solid #E74242;
+      padding: 1rem 1.2rem;
+      margin: 1rem 0;
+      border-radius: 0 6px 6px 0;
+    }
+
+    /* ── Tables ── */
+    .table-wrap {
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    thead th {
+      background: #003667;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      font-weight: 600;
+    }
+    tbody td {
+      padding: 0.45rem 0.75rem;
+      border-bottom: 1px solid #E2E8F0;
+    }
+    tbody tr:nth-child(even) {
+      background: #F8FAFC;
+    }
+
+    /* ── Step-by-step ── */
+    .step {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.6rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      background: #0B1742;
+      color: #FFFFFF;
+      width: 1.6rem;
+      height: 1.6rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 0.15rem;
+    }
+    .step-body { flex: 1; }
+
+    /* ── Keyboard ── */
+    kbd {
+      display: inline-block;
+      background: #E2E8F0;
+      border: 1px solid #CBD5E1;
+      border-radius: 4px;
+      padding: 0.1rem 0.45rem;
+      font-size: 0.8rem;
+      font-family: inherit;
+      font-weight: 600;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: #0B1742;
+      color: #C6C6C6;
+      text-align: center;
+      padding: 1.5rem 2rem;
+      font-size: 0.85rem;
+    }
+    footer strong { color: #FFFFFF; }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      html { font-size: 14px; }
+      .cover h1 { font-size: 2rem; }
+      .toc ol { columns: 1; }
+      .container { padding: 1.25rem; }
+    }
+
+    @media print {
+      .cover { min-height: auto; break-after: page; }
+      section { break-inside: avoid; }
+      .toc { break-after: page; }
+    }
+
+    /* ── Back to top ── */
+    .back-top {
+      display: inline-block;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+      color: #0074A6;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ COVER ═══════════════════ -->
+<header class="cover">
+  <h1>RNI <span>Monitor</span></h1>
+  <p class="subtitle">Manual de uso rápido</p>
+  <p class="meta">Versión <strong>0.9.1</strong> &mdash; Junio 2026</p>
+  <p class="cover-org">
+    <strong>Ente Nacional de Comunicaciones</strong><br>
+    Dirección Nacional de Control y Fiscalización
+  </p>
+</header>
+
+<!-- ═══════════════════ TOC ═══════════════════ -->
+<nav class="toc">
+  <h2>Índice</h2>
+  <ol>
+    <li><a href="#que-es">¿Qué es RNI Monitor?</a></li>
+    <li><a href="#requisitos">Requisitos de hardware</a></li>
+    <li><a href="#instalacion">Instalación y primer inicio</a></li>
+    <li><a href="#conexion">Conexión de dispositivos</a></li>
+    <li><a href="#iniciar-sesion">Iniciar una sesión de medición</a></li>
+    <li><a href="#durante-medicion">Durante la medición</a></li>
+    <li><a href="#finalizar">Finalizar sesión</a></li>
+    <li><a href="#exportacion">Exportación de datos</a></li>
+    <li><a href="#gestion">Gestión de sesiones guardadas</a></li>
+    <li><a href="#configuracion">Configuración</a></li>
+    <li><a href="#problemas">Solución de problemas comunes</a></li>
+    <li><a href="#anexo">Anexo: modos especiales</a></li>
+  </ol>
+</nav>
+
+<!-- ═══════════════════ CONTENT ═══════════════════ -->
+<main class="container">
+
+  <!-- ─── 1 ─── -->
+  <section id="que-es">
+    <h2>1. ¿Qué es RNI Monitor?</h2>
+    <p>
+      <strong>RNI Monitor</strong> es una aplicación de escritorio desarrollada por ENACOM para
+      relevar y mapear niveles de radiación no ionizante (RNI) conforme a la
+      Recomendación <strong>ITU-T K.113</strong>.
+    </p>
+    <p>
+      Se conecta por puerto serie a un <strong>Narda NBM-550</strong> (medidor de campo eléctrico
+      de banda ancha) y a un <strong>receptor GPS</strong> (NMEA 0183) para capturar lecturas
+      georreferenciadas. Los datos se visualizan en tiempo real sobre un mapa interactivo,
+      se almacenan en una base de datos local y pueden exportarse en múltiples formatos
+      normalizados (GeoJSON, XLSX, KMZ).
+    </p>
+  </section>
+
+  <!-- ─── 2 ─── -->
+  <section id="requisitos">
+    <h2>2. Requisitos de hardware</h2>
+    <p>Para operar la aplicación necesitás:</p>
+    <ul>
+      <li>
+        <strong>Medidor Narda NBM-550</strong> con su sonda correspondiente.
+        Se conecta a la notebook mediante el <strong>cable propietario Narda a USB</strong>.
+      </li>
+      <li>
+        <strong>Receptor GPS</strong> (pastilla con cable USB integrado — todo en uno).
+        Compatible con protocolo NMEA 0183.
+      </li>
+      <li>
+        <strong>Notebook con Windows</strong> (los instaladores NSIS están disponibles para
+        Windows 10/11).
+      </li>
+    </ul>
+    <div class="info-box">
+      <strong>Tip:</strong> Podés verificar que los dispositivos son detectados por Windows
+      abriendo el Administrador de dispositivos. Deberían aparecer como puertos COM bajo
+      "Puertos (COM &amp; LPT)".
+    </div>
+  </section>
+
+  <!-- ─── 3 ─── -->
+  <section id="instalacion">
+    <h2>3. Instalación y primer inicio</h2>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        Ejecutá el instalador <strong>RNI Monitor Setup X.X.X.exe</strong>.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        Seguí el asistente: <em>Siguiente &rarr; Siguiente &rarr; Instalar &rarr; Finalizar</em>.
+        No requiere configuración adicional. Los drivers USB-serie de los dispositivos
+        (NBM-550 y GPS) vienen empaquetados y se instalan automáticamente junto con la aplicación.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        Iniciá la aplicación desde el acceso directo <strong>RNI Monitor</strong> en el
+        escritorio o desde el menú Inicio.
+      </div>
+    </div>
+    <p>
+      La aplicación se abre mostrando el mapa y el panel lateral de
+      <strong>Dispositivos</strong>.
+    </p>
+  </section>
+
+  <!-- ─── 4 ─── -->
+  <section id="conexion">
+    <h2>4. Conexión de dispositivos</h2>
+
+    <h3>4.1 Conexión física</h3>
+    <ol>
+      <li>Conectá el <strong>GPS</strong> a un puerto USB libre de la notebook.</li>
+      <li>Conectá el <strong>NBM-550</strong> mediante su cable propietario a otro puerto USB.</li>
+      <li>Encendé el NBM-550.</li>
+    </ol>
+
+    <h3>4.2 Escaneo de puertos</h3>
+    <p>
+      Apenas se inicia, la aplicación <strong>escanéa automáticamente</strong> los puertos
+      serie para detectar los dispositivos conectados. Si el GPS y el NBM-550 ya están
+      conectados a la notebook al abrir la app, el escaneo los encuentra solo.
+    </p>
+    <p>
+      La aplicación <strong>recuerda</strong> en qué puertos COM se conectaron los
+      dispositivos la última vez. Si los volvés a conectar en los mismos puertos,
+      el escaneo y la conexión son más rápidos.
+    </p>
+    <p>
+      Si conectaste los dispositivos después de iniciar la app, o si querés forzar una
+      nueva detección, presioná el botón <strong>"Escanear puertos"</strong> en el panel
+      <strong>Dispositivos</strong>.
+    </p>
+    <p>
+      El escaneo sondea cada puerto disponible: primero busca el GPS (escuchando tramas
+      NMEA durante 12 segundos) y luego el NBM-550 (enviando el comando REMOTE ON y
+      esperando respuesta hasta 6 segundos).
+    </p>
+
+    <h3>4.3 Conexión</h3>
+    <p>
+      Una vez detectados, cada dispositivo muestra su puerto COM asignado.
+      Presioná <strong>"Conectar"</strong> en cada uno. El LED de estado indica:
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>LED</th><th>Significado</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Verde</td><td>Conectado y funcionando</td></tr>
+          <tr><td>Azul</td><td>NBM-550 conectado en <strong>standby</strong> (sin enviar lecturas, solo consulta batería cada 30 segundos para ahorrar batería)</td></tr>
+          <tr><td>Amarillo</td><td>Conectando / en proceso</td></tr>
+          <tr><td>Rojo</td><td>Error de conexión, o GPS conectado pero sin fix</td></tr>
+          <tr><td>Gris</td><td>Desconectado</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="info-box">
+      <strong>Tip:</strong> El GPS necesita <strong>fix válido</strong> (visibilidad del cielo)
+      para poder iniciar una sesión. Mientras no tenga fix, el LED se muestra en rojo y el
+      cartel indica "Buscando posición...". Puede tomar desde segundos hasta varios minutos
+      según las condiciones.
+    </div>
+  </section>
+
+  <!-- ─── 5 ─── -->
+  <section id="iniciar-sesion">
+    <h2>5. Iniciar una sesión de medición</h2>
+
+    <h3>Precondiciones</h3>
+    <ul>
+      <li>NBM-550 conectado (LED verde).</li>
+      <li>GPS conectado con fix válido (LED verde, muestra coordenadas).</li>
+    </ul>
+
+    <h3>Configuración de captura</h3>
+    <p>Antes de iniciar, elegí el modo de captura:</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Modo</th><th>Descripción</th><th>Cuándo usarlo</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Distancia</strong></td>
+            <td>Captura un punto cada vez que te desplazás una distancia mínima
+              (por defecto 20 metros, ajustable de 1 a 1000 m).</td>
+            <td>Recorridos vehiculares o a pie con desplazamiento continuo.
+              <br><strong>El protocolo actual exige medición por distancia a 20 m.</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Tiempo</strong></td>
+            <td>Captura un punto a intervalos fijos (por defecto 5 segundos,
+              ajustable de 1 a 3600 segundos).</td>
+            <td>Mediciones fijas o recorridos muy lentos.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p>También podés ingresar un <strong>nombre opcional</strong> para la sesión.</p>
+
+    <h3>Inicio</h3>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">Presioná <strong>"Iniciar sesión de medición"</strong>.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        Completá el formulario con los datos del recorrido:
+        <ul>
+          <li><strong>Provincia</strong> y <strong>Localidad</strong> (de la base de datos incorporada).</li>
+          <li><strong>Apellido del operador 1</strong> y <strong>Apellido del operador 2</strong> (mínimo 2 caracteres cada uno).</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">Presioná <strong>"Comenzar"</strong>.</div>
+    </div>
+
+    <div class="alert-box">
+      <strong>Importante:</strong> La aplicación verifica que la sonda conectada al NBM-550
+      tenga un <strong>factor de corrección</strong> registrado en la tabla incorporada.
+      Si la sonda no está en la tabla o no se puede determinar el factor,
+      <strong>la sesión no arranca</strong> y se muestra una alerta.
+    </div>
+
+    <p>
+      Una vez iniciada, el panel muestra el contador de puntos, la duración y la distancia
+      al último punto capturado.
+    </p>
+  </section>
+
+  <!-- ─── 6 ─── -->
+  <section id="durante-medicion">
+    <h2>6. Durante la medición</h2>
+
+    <p>Mientras la sesión está activa podés monitorear:</p>
+
+    <h3>Mapa</h3>
+    <ul>
+      <li>
+        <strong>Círculos color-coded:</strong> cada punto capturado se muestra como un
+        círculo cuyo color varía de <strong>verde</strong> (valores bajos) a
+        <strong>amarillo</strong> (valores medios) y <strong>rojo</strong> (valores
+        cercanos o superiores al 50% del nivel de referencia).
+      </li>
+      <li>
+        <strong>Polyline del recorrido:</strong> los puntos se unen con una línea
+        segmentada que también refleja el nivel de intensidad.
+      </li>
+      <li>
+        <strong>Seguimiento de posición:</strong> si está activo el check
+        "Seguir mi posición", el mapa se centra automáticamente en la ubicación actual del GPS.
+      </li>
+    </ul>
+
+    <h3>Tabla de puntos</h3>
+    <p>
+      Debajo del mapa se muestra la tabla con todos los puntos capturados en orden
+      inverso (el más reciente primero). Columnas:
+    </p>
+    <ul>
+      <li>Número de secuencia</li>
+      <li>Timestamp (fecha y hora local)</li>
+      <li>Latitud / Longitud (WGS 84, 6 decimales)</li>
+      <li>Altitud (metros)</li>
+      <li>Valor medido (RSS en V/m)</li>
+      <li>Factor de corrección aplicado</li>
+      <li><strong>Valor final</strong> (RSS × factor de corrección)</li>
+    </ul>
+
+    <div class="warn-box">
+      <strong>⚠ UMBRAL 50% SUPERADO:</strong> Si algún punto supera el 50% del nivel de
+      referencia (19.44 V/m), aparece una etiqueta naranja en el encabezado de la tabla
+      y la celda del valor final se marca en color.
+    </div>
+
+    <p>
+      Podés ajustar el <strong>tamaño de fuente</strong> de la tabla con los botones
+      <strong>A−</strong> y <strong>A+</strong>, y maximizar la tabla con el botón
+      <strong>⊞</strong>.
+    </p>
+  </section>
+
+  <!-- ─── 7 ─── -->
+  <section id="finalizar">
+    <h2>7. Finalizar sesión</h2>
+
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        Presioná el botón <strong>"Detener sesión"</strong>.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        Confirmá la detención presionando <strong>"✓ Detener"</strong>
+        (o <strong>"✕"</strong> para cancelar).
+      </div>
+    </div>
+
+    <p>Al detener la sesión, la aplicación:</p>
+    <ul>
+      <li>Detiene la captura de nuevos puntos.</li>
+      <li>Guarda todos los datos en la base de datos local.</li>
+      <li>
+        <strong>Auto-exporta un archivo GeoJSON al Escritorio.</strong>
+      </li>
+      <li>Muestra el resumen de la sesión (puntos totales, duración, factor aplicado).</li>
+    </ul>
+
+    <div class="info-box">
+      <strong>Tip:</strong> Los datos quedan guardados en la base de datos local.
+      Podés volver a cargar la sesión más tarde desde el panel <strong>Historial</strong>.
+    </div>
+  </section>
+
+  <!-- ─── 8 ─── -->
+  <section id="exportacion">
+    <h2>8. Exportación de datos</h2>
+
+    <p>
+      Las sesiones guardadas pueden exportarse en tres formatos. Desde el panel
+      <strong>Historial</strong> (o desde el drawer <strong>"Ver todas"</strong>),
+      cada sesión tiene botones de exportación:
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Formato</th><th>Botón</th><th>Descripción</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>GeoJSON</strong></td>
+            <td>GEOJSON</td>
+            <td>
+              FeatureCollection RFC 7946 con puntos [lon, lat, alt].
+              Incluye metadata de sesión, instrumento, factor de corrección y estadísticas.
+              Ideal para interoperabilidad con otros sistemas GIS.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>XLSX</strong></td>
+            <td>XLSX</td>
+            <td>
+              Genera tres planillas ENACOM:
+              <em>reporte</em> (16 columnas), <em>reporte_p</em> (% MEP) y
+              <em>averif</em> (solo puntos con MEP ≥ 50%).
+            </td>
+          </tr>
+          <tr>
+            <td><strong>KMZ</strong></td>
+            <td>KMZ</td>
+            <td>
+              KML comprimido para Google Earth. Puntos color-coded
+              (verde → amarillo → rojo según % MEP) con polyline del recorrido.
+              Incluye datos extendidos (RSS, factor, HDOP, interpolación).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>
+      También podés <strong>importar</strong> archivos GeoJSON existentes desde el
+      panel Historial con el botón <strong>"📥 Importar"</strong>.
+    </p>
+
+    <div class="info-box">
+      <strong>Límite:</strong> La sesión guarda hasta <strong>5000 puntos</strong>.
+      Al alcanzar ese número se detiene la captura automáticamente.
+    </div>
+  </section>
+
+  <!-- ─── 9 ─── -->
+  <section id="gestion">
+    <h2>9. Gestión de sesiones guardadas</h2>
+
+    <h3>Panel Historial</h3>
+    <p>
+      En la pestaña <strong>Historial</strong> se muestran las últimas 5 sesiones
+      guardadas. Cada una permite:
+    </p>
+    <ul>
+      <li><strong>▶ Cargar</strong> la sesión en el mapa (centra automáticamente la vista).</li>
+      <li><strong>Exportar</strong> en cualquiera de los tres formatos.</li>
+      <li><strong>🗑 Eliminar</strong> la sesión de la base de datos.</li>
+    </ul>
+
+    <h3>Ver todas (drawer)</h3>
+    <p>
+      Presionando <strong>"📋 Ver todas"</strong> se abre un panel lateral con el
+      listado completo de sesiones guardadas, con opciones de:
+    </p>
+    <ul>
+      <li><strong>Búsqueda</strong> por nombre o fecha.</li>
+      <li><strong>Ordenamiento</strong>: más recientes, más antiguas, nombre A-Z.</li>
+      <li><strong>Checkbox</strong> para superponer múltiples sesiones en el mapa
+        (comparación visual de recorridos).</li>
+      <li><strong>▶ Cargar</strong> como sesión principal.</li>
+      <li>Exportación y eliminación individual.</li>
+    </ul>
+
+    <div class="info-box">
+      <strong>Tip:</strong> Para limpiar la sesión cargada del mapa, presioná
+      <strong>"✕ Limpiar sesión cargada"</strong> arriba del mapa.
+    </div>
+  </section>
+
+  <!-- ─── 10 ─── -->
+  <section id="configuracion">
+    <h2>10. Configuración</h2>
+
+    <p>
+      En la pestaña <strong>⚙</strong> (Configuración) podés ajustar los siguientes parámetros:
+    </p>
+
+    <h3>Mapa</h3>
+    <ul>
+      <li>
+        <strong>Proveedor de tiles:</strong> elegí entre OpenStreetMap,
+        OSM Humanitarian, CartoDB Positron, CartoDB Dark Matter o ESRI Satélite.
+      </li>
+      <li>
+        <strong>Caché automática:</strong> la aplicación guarda automáticamente en
+        disco los tiles del área que estás visualizando en el mapa (mientras haya
+        conexión a internet). Así, si después pasás por la misma zona sin conexión,
+        los tiles ya están disponibles.
+      </li>
+      <li>
+        <strong>Caché en disco:</strong> muestra el tamaño y cantidad de tiles
+        almacenados localmente. Podés <strong>vaciar la caché</strong> o
+        <strong>importar tiles</strong> desde un archivo.
+      </li>
+      <li>
+        <strong>Precarga offline:</strong> seleccioná el área visible del mapa,
+        definí el rango de zoom (min/max) y descargá los tiles para operar
+        sin conexión a internet.
+      </li>
+    </ul>
+
+    <h3>Interfaz</h3>
+    <ul>
+      <li>
+        <strong>Tema:</strong> <em>Oscuro</em> (fondo oscuro, texto claro) o
+        <em>Soft</em> (fondo suave, contraste reducido).
+      </li>
+    </ul>
+
+    <h3>Factor de corrección</h3>
+    <p>
+      La aplicación incluye una tabla incorporada con los factores de corrección
+      para sondas Narda. Se actualiza con cada versión del software.
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Sonda</th><th>Rango (MHz)</th><th>Factor</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>EF0391</td><td>0.1 – 3000</td><td>1.370</td></tr>
+          <tr><td>EF1891</td><td>3 – 18000</td><td>1.432</td></tr>
+          <tr><td>EF6091</td><td>100 – 6000</td><td>1.594</td></tr>
+          <tr><td>EF6092</td><td>0.1 – 3000</td><td>1.604</td></tr>
+          <tr><td>HF3061</td><td>0.3 – 30</td><td>1.000</td></tr>
+          <tr><td>HF0191</td><td>27 – 1000</td><td>1.000</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>
+      En la sección <strong>"Sonda detectada"</strong> se muestra el modelo de sonda
+      detectado al conectar el NBM-550 y el factor de corrección que se aplicará.
+    </p>
+
+    <h3>Información del sistema</h3>
+    <ul>
+      <li>Versión de la aplicación.</li>
+      <li>Botón <strong>"Exportar logs"</strong> para generar un archivo de registro
+        útil para soporte técnico.</li>
+    </ul>
+  </section>
+
+  <!-- ─── 11 ─── -->
+  <section id="problemas">
+    <h2>11. Solución de problemas comunes</h2>
+
+    <table>
+      <thead>
+        <tr><th style="width:30%">Problema</th><th>Causa probable</th><th>Solución</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>No se detectan puertos</strong></td>
+          <td>Falta driver USB-serie; cable defectuoso; puerto USB sin energía.</td>
+          <td>
+            Verificá en Administrador de dispositivos que aparezcan los puertos COM.
+            Probá otro puerto USB o reiniciá la notebook.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>GPS no tiene fix</strong></td>
+          <td>Sin visibilidad del cielo; pastilla GPS en interior; necesita más tiempo.</td>
+          <td>
+            Ubicá la pastilla GPS con vista despejada al cielo. Puede tomar
+            desde 30 segundos hasta 5-10 minutos en la primera sincronización.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>No arranca la sesión</strong></td>
+          <td>Factor de corrección no resuelto para la sonda conectada.</td>
+          <td>
+            Verificá en Configuración que la sonda detectada aparezca en la tabla.
+            Si la sonda no está soportada, no se puede iniciar la sesión.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Error de conexión NBM-550</strong></td>
+          <td>Cable propietario mal conectado; baud rate incorrecto; NBM apagado.</td>
+          <td>
+            Verificá que el NBM-550 esté encendido. Revisá el cable en ambos extremos.
+            Volvé a escanear y reconectar.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>El mapa no carga tiles</strong></td>
+          <td>Sin conexión a internet y sin caché offline.</td>
+          <td>
+            Conectate a internet o usá la precarga offline desde Configuración
+            antes de salir a campo.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>La aplicación no inicia</strong></td>
+          <td>Falta variable de entorno; instalación corrupta.</td>
+          <td>
+            Reinstalá la aplicación con el instalador NSIS. Si el problema persiste,
+            contactá al área de sistemas.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ─── 12 ─── -->
+  <section id="anexo">
+    <h2>12. Anexo: modos especiales</h2>
+
+    <h3>Modo simulación</h3>
+    <p>
+      Agregando <code>--simulation</code> al final del destino del acceso directo
+      (ej: <code>"C:\Program Files\ENACOM\RNI Monitor\RNI Monitor.exe" --simulation</code>)
+      los dispositivos físicos se reemplazan por simuladores:
+    </p>
+    <ul>
+      <li>GPS simulado: emite posiciones alrededor del Obelisco (CABA) cada 3 segundos.</li>
+      <li>NBM-550 simulado: emite valores de RSS variables entre 0.1 y 50 V/m.</li>
+    </ul>
+    <p>
+      Este modo es útil para <strong>capacitación</strong> y <strong>pruebas</strong>
+      sin necesidad de hardware.
+    </p>
+  </section>
+
+  <p class="back-top"><a href="#">&uarr; Volver al inicio</a></p>
+
+</main>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer>
+  <p>
+    <strong>RNI Monitor</strong> &mdash; Desarrollado por el
+    <strong>Ente Nacional de Comunicaciones (ENACOM)</strong>
+  </p>
+  <p style="margin-top:0.3rem;font-size:0.75rem;">
+    Creado por <strong>Martin Pacheco</strong> &mdash; Área Laboratorio Buenos Aires<br>
+    Contacto: <a href="mailto:mpacheco@enacom.gob.ar" style="color:#BCE4F4;">mpacheco@enacom.gob.ar</a>
+  </p>
+  <p style="margin-top:0.3rem;font-size:0.75rem;">
+    Versión 0.9.1 &mdash; Junio 2026
+  </p>
+</footer>
+
+</body>
+</html>

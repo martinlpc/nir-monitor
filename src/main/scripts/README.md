@@ -42,7 +42,7 @@ Esto:
 1. ✓ Genera 6 sesiones con rutas realistas alrededor de Neuquén
 2. ✓ Guarda metadatos (label, fecha, puntos, instrumento)
 3. ✓ Guarda todos los puntos con GPS + EMF
-4. ✓ Calcula estadísticas (avg/max/min RSS)
+4. ✓ Genera valores RSS variados para cada ruta
 5. ✓ Persiste en `userData/sessions.db`
 
 ## Después del seed
