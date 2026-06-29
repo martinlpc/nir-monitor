@@ -41,6 +41,12 @@ export default function ProductionShell(): React.JSX.Element {
     east: number
     west: number
   } | null>(null)
+  const [preloadBounds, setPreloadBounds] = useState<{
+    north: number
+    south: number
+    east: number
+    west: number
+  } | null>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
   /* ── Portrait / hybrid mode ── */
@@ -67,13 +73,15 @@ export default function ProductionShell(): React.JSX.Element {
     const map = mapInstanceRef.current
     if (!map) return null
     const bounds = map.getBounds()
-    return {
+    const result = {
       north: bounds.getNorth(),
       south: bounds.getSouth(),
       east: bounds.getEast(),
       west: bounds.getWest(),
       zoom: map.getZoom()
     }
+    setPreloadBounds(result)
+    return result
   }, [])
 
   const handleTabClick = useCallback(
@@ -96,11 +104,7 @@ export default function ProductionShell(): React.JSX.Element {
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
         e.preventDefault()
-        const tabs: Array<'devices' | 'sessions' | 'settings'> = [
-          'devices',
-          'sessions',
-          'settings'
-        ]
+        const tabs: Array<'devices' | 'sessions' | 'settings'> = ['devices', 'sessions', 'settings']
         const idx = tabs.indexOf(activeTab)
         const next =
           e.key === 'ArrowRight'
@@ -218,8 +222,7 @@ export default function ProductionShell(): React.JSX.Element {
                       )
                       return result
                     } catch (err) {
-                      const message =
-                        err instanceof Error ? err.message : 'Desconocido'
+                      const message = err instanceof Error ? err.message : 'Desconocido'
                       notify({ type: 'error', message: `Error al exportar: ${message}` })
                       return { canceled: true }
                     }
@@ -252,6 +255,8 @@ export default function ProductionShell(): React.JSX.Element {
                   onCancelPreload={tileCache.cancelPreload}
                   preloadProgress={tileCache.preloadProgress}
                   onSelectMapBounds={selectMapBounds}
+                  preloadBounds={preloadBounds}
+                  onPreloadBoundsChange={setPreloadBounds}
                 />
               </div>
             </div>
@@ -288,6 +293,7 @@ export default function ProductionShell(): React.JSX.Element {
                 focusSessionBounds={focusSessionBounds}
                 tileProvider={provider}
                 onMapReady={handleMapReady}
+                preloadBounds={preloadBounds}
               />
             </div>
             {!mapMaximized && (

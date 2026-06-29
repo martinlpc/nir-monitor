@@ -99,6 +99,7 @@ export default function PointsTable({
   const derivedFactor = points.map(deriveFactorFromPoint).find((f) => f != null) ?? null
   const effectiveFactor = correctionFactor ?? derivedFactor
   const thresholdExceeded = sessionExceedsThreshold(points.map((p) => p.correctedMeasurement))
+  const displayPoints = sessionId ? [...points].reverse() : points
 
   return (
     <div className={`points-table-container ${tableMaximized ? 'table-maximized' : ''}`}>
@@ -198,7 +199,7 @@ export default function PointsTable({
             </tr>
           </thead>
           <tbody>
-            {points.map((point, idx) => (
+            {displayPoints.map((point, idx) => (
               <tr key={point.id}>
                 <td className="cell-number">{point.sequenceNumber || idx + 1}</td>
                 <td className="cell-timestamp">{formatTimestamp(point.timestamp)}</td>

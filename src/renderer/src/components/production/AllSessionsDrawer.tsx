@@ -178,7 +178,7 @@ export default function AllSessionsDrawer({
                             title="Exportar como Excel"
                             aria-label={`Exportar ${session.label} como Excel`}
                           >
-                            📊
+                            XLSX
                           </button>
                           <button
                             className="action-btn action-btn-export"
@@ -186,7 +186,7 @@ export default function AllSessionsDrawer({
                             title="Exportar como KMZ"
                             aria-label={`Exportar ${session.label} como KMZ`}
                           >
-                            🗺
+                            KMZ
                           </button>
                           <button
                             className="action-btn action-btn-export"
@@ -194,7 +194,7 @@ export default function AllSessionsDrawer({
                             title="Exportar como GeoJSON"
                             aria-label={`Exportar ${session.label} como GeoJSON`}
                           >
-                            🔗
+                            GEOJSON
                           </button>
                         </>
                       )}

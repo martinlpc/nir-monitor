@@ -105,7 +105,7 @@ export default function SessionItem({
             onClick={() => onExport(session.id, 'xlsx')}
             title="Exportar como Excel (reporte)"
           >
-            Excel
+            XLSX
           </button>
           <button
             className="btn-secondary"
@@ -119,7 +119,7 @@ export default function SessionItem({
             onClick={() => onExport(session.id, 'geojson')}
             title="Exportar como GeoJSON"
           >
-            GeoJSON
+            GEOJSON
           </button>
         </div>
       )}

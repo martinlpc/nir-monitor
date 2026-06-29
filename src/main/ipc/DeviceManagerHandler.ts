@@ -75,6 +75,7 @@ export function registerDeviceManagerHandlers(
  */
 export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: DeviceManager): void {
   let lastGpsFixState = false
+  const reconnecting = new Set<string>()
 
   const sendIfReady = (event: string, data: unknown): void => {
     if (!window.webContents.isDestroyed()) {
@@ -98,17 +99,35 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
   deviceManager.on('nbm:mode', (mode) => sendIfReady(IPC_EVENTS.NBM_MODE, mode))
   deviceManager.on('device:status', (data) => {
     sendIfReady(IPC_EVENTS.DEVICE_STATUS, data)
-    // Emitir alerta tipo info al conectar dispositivos
-    if (data?.status === 'connected') {
-      if (data.deviceId === 'gps') {
-        emitAlert(window, 'GPS conectado', 'info')
-      } else if (data.deviceId === 'nbm550') {
-        emitAlert(window, 'NBM-550 conectado', 'info')
-      }
+
+    if (data?.status === 'connecting' && data.deviceId) {
+      reconnecting.add(data.deviceId)
+      return
     }
 
-    // Alerta de desconexión inesperada
+    if (data?.status === 'connected' && data.deviceId) {
+      const wasReconnecting = reconnecting.has(data.deviceId)
+      reconnecting.delete(data.deviceId)
+      if (data.deviceId === 'gps') {
+        emitAlert(window, wasReconnecting ? 'GPS reconectado' : 'GPS conectado', 'info')
+      } else if (data.deviceId === 'nbm550') {
+        emitAlert(window, wasReconnecting ? 'NBM-550 reconectado' : 'NBM-550 conectado', 'info')
+      }
+      return
+    }
+
     if (data?.status === 'disconnected' && !data.intentional && data.deviceId) {
+      if (reconnecting.has(data.deviceId)) {
+        reconnecting.delete(data.deviceId)
+        const label = data.deviceId === 'gps' ? 'GPS' : 'NBM-550'
+        emitAlert(
+          window,
+          `${label} — no se pudo reconectar`,
+          'error',
+          'Verifique el cable USB y que el dispositivo esté encendido'
+        )
+        return
+      }
       const label = data.deviceId === 'gps' ? 'GPS' : 'NBM-550'
       emitAlert(window, `${label} desconectado`, 'warning')
     }

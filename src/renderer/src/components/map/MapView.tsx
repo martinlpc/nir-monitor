@@ -12,6 +12,7 @@ import SyncMapView from './SyncMapView'
 import PanControl from './PanControl'
 import MaximizeControl from './MaximizeControl'
 import NbmStatusBadge from './NbmStatusBadge'
+import PreloadBoundsOverlay from './PreloadBoundsOverlay'
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
 const DEFAULT_ZOOM = 13
@@ -27,6 +28,7 @@ interface MapViewProps {
   focusSessionBounds?: { north: number; south: number; east: number; west: number } | null
   tileProvider?: TileProvider
   onMapReady?: (map: L.Map) => void
+  preloadBounds?: { north: number; south: number; east: number; west: number } | null
 }
 
 function ZoomLevelIndicator(): null {
@@ -82,7 +84,8 @@ export default function MapView({
   loadedSessions = [],
   focusSessionBounds = null,
   tileProvider = getProvider('osm')!,
-  onMapReady
+  onMapReady,
+  preloadBounds = null
 }: MapViewProps): React.JSX.Element {
   const { position: livePosition, lastKnownPosition } = useGpsPosition()
 
@@ -169,6 +172,7 @@ export default function MapView({
             <MaximizeControl maximized={maximized} onToggle={onToggleMaximize} />
           )}
           <NbmStatusBadge />
+          <PreloadBoundsOverlay bounds={preloadBounds} />
           {activeSegments.map((seg) => (
             <Polyline key={seg.key} positions={seg.positions} color={seg.color} weight={4} />
           ))}

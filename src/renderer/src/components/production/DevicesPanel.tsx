@@ -186,10 +186,14 @@ export default function DevicesPanel({
         <button
           className="btn-scan"
           onClick={() => devices.scan()}
-          disabled={devices.scanning}
-          title="Escanear puertos disponibles"
+          disabled={devices.scanning || session.isRunning}
+          title={
+            session.isRunning
+              ? 'No disponible durante una sesión activa'
+              : 'Escanear puertos disponibles'
+          }
         >
-          {devices.scanning ? '⟳ Escaneando...' : '⟳ Escanear'}
+          {devices.scanning ? '⟳ Escaneando...' : '⟳ Escanear puertos'}
         </button>
       </div>
 
@@ -268,27 +272,49 @@ export default function DevicesPanel({
             {triggerMode === 'distance' ? (
               <label className="trigger-value-row">
                 <span>Distancia mínima:</span>
-                <input
-                  type="number"
-                  className="trigger-value-input"
-                  value={minDistanceMeters}
-                  onChange={(e) => setMinDistanceMeters(Number(e.target.value))}
-                  min={1}
-                  max={1000}
-                />
+                <div className="trigger-value-group">
+                  <button
+                    className="trigger-value-group__btn"
+                    onClick={() => setMinDistanceMeters(Math.max(1, minDistanceMeters - 5))}
+                    aria-label="Reducir distancia mínima"
+                    type="button"
+                  >
+                    −
+                  </button>
+                  <span className="trigger-value-group__value">{minDistanceMeters}</span>
+                  <button
+                    className="trigger-value-group__btn"
+                    onClick={() => setMinDistanceMeters(Math.min(1000, minDistanceMeters + 5))}
+                    aria-label="Aumentar distancia mínima"
+                    type="button"
+                  >
+                    +
+                  </button>
+                </div>
                 <span>m</span>
               </label>
             ) : (
               <label className="trigger-value-row">
                 <span>Intervalo:</span>
-                <input
-                  type="number"
-                  className="trigger-value-input"
-                  value={intervalSec}
-                  onChange={(e) => setIntervalSec(Number(e.target.value))}
-                  min={1}
-                  max={3600}
-                />
+                <div className="trigger-value-group">
+                  <button
+                    className="trigger-value-group__btn"
+                    onClick={() => setIntervalSec(Math.max(1, intervalSec - 1))}
+                    aria-label="Reducir intervalo"
+                    type="button"
+                  >
+                    −
+                  </button>
+                  <span className="trigger-value-group__value">{intervalSec}</span>
+                  <button
+                    className="trigger-value-group__btn"
+                    onClick={() => setIntervalSec(Math.min(3600, intervalSec + 1))}
+                    aria-label="Aumentar intervalo"
+                    type="button"
+                  >
+                    +
+                  </button>
+                </div>
                 <span>seg</span>
               </label>
             )}

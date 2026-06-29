@@ -30,6 +30,10 @@ interface SettingsPanelProps {
     west: number
     zoom: number
   } | null
+  preloadBounds: { north: number; south: number; east: number; west: number } | null
+  onPreloadBoundsChange: (
+    bounds: { north: number; south: number; east: number; west: number } | null
+  ) => void
 }
 
 interface BuiltInRecord {
@@ -70,7 +74,9 @@ export default function SettingsPanel({
   onPreloadTiles,
   onCancelPreload,
   preloadProgress,
-  onSelectMapBounds
+  onSelectMapBounds,
+  preloadBounds,
+  onPreloadBoundsChange
 }: SettingsPanelProps): React.JSX.Element {
   const [probeRecords, setProbeRecords] = useState<BuiltInRecord[]>([])
   const [dataVersion, setDataVersion] = useState<number | null>(null)
@@ -78,13 +84,6 @@ export default function SettingsPanel({
   const [activeCorrection, setActiveCorrection] = useState<ActiveCorrectionFactor | null>(null)
   const [appVersion, setAppVersion] = useState<string | null>(null)
 
-  const [preloadBounds, setPreloadBounds] = useState<{
-    north: number
-    south: number
-    east: number
-    west: number
-    zoom?: number
-  } | null>(null)
   const [preloadMinZoom, setPreloadMinZoom] = useState(10)
   const [preloadMaxZoom, setPreloadMaxZoom] = useState(18)
   const [showPreload, setShowPreload] = useState(false)
@@ -132,7 +131,7 @@ export default function SettingsPanel({
     const bounds = onSelectMapBounds?.()
     if (bounds) {
       const { zoom, ...rest } = bounds
-      setPreloadBounds(rest)
+      onPreloadBoundsChange(rest)
       if (zoom != null) {
         setPreloadMinZoom(Math.max(1, Math.min(zoom, 18)))
       }
@@ -158,82 +157,6 @@ export default function SettingsPanel({
 
   return (
     <div className="settings-panel">
-      {probeInfo && (
-        <section className="settings-section">
-          <h3 className="settings-section__title">Sonda detectada</h3>
-          <div className="settings-option">
-            <span className="settings-option__label">Modelo</span>
-            <span className="settings-option__value">{probeInfo.model ?? '—'}</span>
-          </div>
-          {activeCorrection?.matchedRecord && (
-            <div className="settings-option">
-              <span className="settings-option__label">Factor de corrección aplicado</span>
-              <span className="settings-option__value settings-option__highlight">
-                ×{activeCorrection.matchedRecord.factor}
-              </span>
-            </div>
-          )}
-        </section>
-      )}
-
-      <section className="settings-section">
-        <h3 className="settings-section__title">Tabla de factores de corrección</h3>
-        <p className="settings-section__desc">
-          Datos de sondas incorporados (v{dataVersion ?? '?'}). Se actualizan con cada versión de la
-          aplicación.
-        </p>
-
-        {probeRecords.length > 0 && (
-          <div className="settings-uncertainty">
-            <div className="settings-table-wrapper">
-              <table className="settings-table">
-                <thead>
-                  <tr>
-                    <th>Sonda</th>
-                    <th>f Min (MHz)</th>
-                    <th>f Max (MHz)</th>
-                    <th>Factor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {probeRecords.map((rec, i) => (
-                    <tr
-                      key={i}
-                      className={
-                        activeCorrection?.matchedRecord?.name === rec.name &&
-                        activeCorrection?.matchedRecord?.fMin === rec.fMin
-                          ? 'row-active'
-                          : ''
-                      }
-                    >
-                      <td>{rec.name}</td>
-                      <td>{rec.fMin}</td>
-                      <td>{rec.fMax}</td>
-                      <td>{rec.factor}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section className="settings-section">
-        <h3 className="settings-section__title">Interfaz</h3>
-        <div className="settings-option">
-          <span className="settings-option__label">Tema</span>
-          <select
-            className="settings-select"
-            value={theme}
-            onChange={(e) => onThemeChange(e.target.value as 'dark' | 'soft')}
-          >
-            <option value="dark">Oscuro</option>
-            <option value="soft">Soft</option>
-          </select>
-        </div>
-      </section>
-
       <section className="settings-section">
         <h3 className="settings-section__title">Mapa</h3>
         <div className="settings-option">
@@ -375,6 +298,82 @@ export default function SettingsPanel({
             {preloadProgress?.phase === 'cancelled' && (
               <p className="settings-preload-progress__cancelled">Precarga cancelada</p>
             )}
+          </div>
+        )}
+      </section>
+
+      <section className="settings-section">
+        <h3 className="settings-section__title">Interfaz</h3>
+        <div className="settings-option">
+          <span className="settings-option__label">Tema</span>
+          <select
+            className="settings-select"
+            value={theme}
+            onChange={(e) => onThemeChange(e.target.value as 'dark' | 'soft')}
+          >
+            <option value="dark">Oscuro</option>
+            <option value="soft">Soft</option>
+          </select>
+        </div>
+      </section>
+
+      {probeInfo && (
+        <section className="settings-section">
+          <h3 className="settings-section__title">Sonda detectada</h3>
+          <div className="settings-option">
+            <span className="settings-option__label">Modelo</span>
+            <span className="settings-option__value">{probeInfo.model ?? '—'}</span>
+          </div>
+          {activeCorrection?.matchedRecord && (
+            <div className="settings-option">
+              <span className="settings-option__label">Factor de corrección aplicado</span>
+              <span className="settings-option__value settings-option__highlight">
+                ×{activeCorrection.matchedRecord.factor}
+              </span>
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="settings-section">
+        <h3 className="settings-section__title">Tabla de factores de corrección</h3>
+        <p className="settings-section__desc">
+          Datos de sondas incorporados (v{dataVersion ?? '?'}). Se actualizan con cada versión de la
+          aplicación.
+        </p>
+
+        {probeRecords.length > 0 && (
+          <div className="settings-uncertainty">
+            <div className="settings-table-wrapper">
+              <table className="settings-table">
+                <thead>
+                  <tr>
+                    <th>Sonda</th>
+                    <th>f Min (MHz)</th>
+                    <th>f Max (MHz)</th>
+                    <th>Factor</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {probeRecords.map((rec, i) => (
+                    <tr
+                      key={i}
+                      className={
+                        activeCorrection?.matchedRecord?.name === rec.name &&
+                        activeCorrection?.matchedRecord?.fMin === rec.fMin
+                          ? 'row-active'
+                          : ''
+                      }
+                    >
+                      <td>{rec.name}</td>
+                      <td>{rec.fMin}</td>
+                      <td>{rec.fMax}</td>
+                      <td>{rec.factor}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </section>
