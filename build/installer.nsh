@@ -71,11 +71,36 @@
   ${EndIf}
 
   ; ──────────────────────────────────────────────
-  ; Manual de uso rápido
+  ; Manual de uso
   ; ──────────────────────────────────────────────
-  CopyFiles "$INSTDIR\resources\manual-rapido.html" "$INSTDIR\manual-rapido.html"
-  CreateShortCut "$DESKTOP\Manual de uso rápido RNI Monitor.lnk" \
-    "$INSTDIR\manual-rapido.html"
+  CopyFiles "$INSTDIR\resources\manual.html" "$INSTDIR\manual.html"
+  CreateShortCut "$DESKTOP\Manual de uso RNI Monitor.lnk" \
+    "$INSTDIR\manual.html"
+
+  ; ──────────────────────────────────────────────
+  ; Acceso directo DEMO (modo simulación)
+  ; ──────────────────────────────────────────────
+  CreateShortCut "$DESKTOP\RNI Monitor (DEMO).lnk" \
+    "$INSTDIR\rni-monitor.exe" \
+    "--simulation" \
+    "$INSTDIR\rni-monitor.exe" 0
+  CreateShortCut "$SMPROGRAMS\ENACOM\RNI Monitor (DEMO).lnk" \
+    "$INSTDIR\rni-monitor.exe" \
+    "--simulation" \
+    "$INSTDIR\rni-monitor.exe" 0
+
+  ; ──────────────────────────────────────────────
+  ; Forzar recreación del acceso directo principal (actualiza el icono)
+  ; ──────────────────────────────────────────────
+  Delete "$DESKTOP\RNI Monitor.lnk"
+  CreateShortCut "$DESKTOP\RNI Monitor.lnk" "$INSTDIR\rni-monitor.exe" "" "$INSTDIR\rni-monitor.exe" 0
+  Delete "$SMPROGRAMS\ENACOM\RNI Monitor.lnk"
+  CreateShortCut "$SMPROGRAMS\ENACOM\RNI Monitor.lnk" "$INSTDIR\rni-monitor.exe" "" "$INSTDIR\rni-monitor.exe" 0
+
+  ; ──────────────────────────────────────────────
+  ; Refrescar iconos de Windows
+  ; ──────────────────────────────────────────────
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, i 0, i 0)'
 !macroend
 
 !macro customUnInstall
@@ -83,6 +108,8 @@
     "NIR_DB_ENCRYPTION_KEY"
   SendMessage 0xFFFF 0x001A 0 "STR:Environment"
 
-  Delete "$INSTDIR\manual-rapido.html"
-  Delete "$DESKTOP\Manual de uso rápido RNI Monitor.lnk"
+  Delete "$INSTDIR\manual.html"
+  Delete "$DESKTOP\Manual de uso RNI Monitor.lnk"
+  Delete "$DESKTOP\RNI Monitor (DEMO).lnk"
+  Delete "$SMPROGRAMS\ENACOM\RNI Monitor (DEMO).lnk"
 !macroend

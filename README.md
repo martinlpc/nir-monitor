@@ -1,6 +1,6 @@
 # RNI Monitor
 
-![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)
 
 **Non-Ionizing Radiation Mapper** — Desktop application for mapping electromagnetic field (EMF) measurements based on **ITU-T Recommendation K.113**.
 
@@ -19,7 +19,7 @@ Desarrollado por el [Ente Nacional de Comunicaciones (ENACOM)](https://www.enaco
 - **Mapa interactivo** — Visualización de puntos de medición sobre Leaflet con marcadores color-coded (verde → rojo según % MEP) y polilíneas de recorrido.
 - **Gestión de sesiones** — Inicio, pausa y finalización de sesiones de medición. Carga y comparación de sesiones históricas.
 - **Factores de corrección** — Factores de incertidumbre embebidos para sondas Narda (EF0391, EF1891, EF6091, EF6092, HF3061, HF0191) aplicados automáticamente.
-- **Modo simulación** — Ejecución con `NIR_SIMULATION=true` o flag `--simulation` para desarrollo y testing sin hardware físico.
+- **Modo simulación** — El instalador crea un acceso directo dedicado `RNI Monitor (DEMO)` con flag `--simulation`. También se puede activar con `NIR_SIMULATION=true` para desarrollo y testing sin hardware físico.
 - **Exportación multi-formato** — GeoJSON (cifrado), CSV, XLSX (tres archivos ENACOM) y KMZ (Google Earth).
 - **Caché de tiles offline** — Precarga y almacenamiento local de tiles de mapas para operación sin conexión.
 - **Base de datos cifrada** — SQLite con AES-256-GCM, protección contra manipulación externa.
@@ -77,6 +77,8 @@ npm run build:linux
 ```
 
 La ruta de instalación en Windows es `Program Files\ENACOM\RNI Monitor`. Los artefactos de build se generan en `dist/`.
+
+El instalador crea dos accesos directos en el escritorio y menú Inicio: **RNI Monitor** (modo normal) y **RNI Monitor (DEMO)** (modo simulación con `--simulation`).
 
 ### Build en Windows — Clave de cifrado
 
