@@ -2,7 +2,7 @@
 
 ![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)
 
-**Non-Ionizing Radiation Mapper** — Desktop application for mapping electromagnetic field (EMF) measurements based on **ITU-T Recommendation K.113**.
+**Mapeador de Radiaciones No Ionizantes** — Aplicación de escritorio para relevar y mapear mediciones de campo electromagnético basada en la **Recomendación ITU-T K.113**.
 
 Desarrollado por el [Ente Nacional de Comunicaciones (ENACOM)](https://www.enacom.gob.ar), organismo regulador de comunicaciones de la República Argentina.
 
@@ -17,13 +17,12 @@ Desarrollado por el [Ente Nacional de Comunicaciones (ENACOM)](https://www.enaco
 - **Gestión de dispositivos** — Escaneo automático de puertos serie, conexión/desconexión de NBM-550 y GPS, reconexión automática ante desconexión inesperada.
 - **Captura en tiempo real** — Sondeo del NBM-550 cada 200 ms con fusión de posición GPS mediante trigger por distancia (Haversine) o por tiempo.
 - **Mapa interactivo** — Visualización de puntos de medición sobre Leaflet con marcadores color-coded (verde → rojo según % MEP) y polilíneas de recorrido.
-- **Gestión de sesiones** — Inicio, pausa y finalización de sesiones de medición. Carga y comparación de sesiones históricas.
+- **Gestión de sesiones** — Inicio y finalización de sesiones de medición. Carga y comparación de sesiones históricas.
 - **Factores de corrección** — Factores de incertidumbre embebidos para sondas Narda (EF0391, EF1891, EF6091, EF6092, HF3061, HF0191) aplicados automáticamente.
 - **Modo simulación** — El instalador crea un acceso directo dedicado `RNI Monitor (DEMO)` con flag `--simulation`. También se puede activar con `NIR_SIMULATION=true` para desarrollo y testing sin hardware físico.
 - **Exportación multi-formato** — GeoJSON (cifrado), CSV, XLSX (tres archivos ENACOM) y KMZ (Google Earth).
 - **Caché de tiles offline** — Precarga y almacenamiento local de tiles de mapas para operación sin conexión.
 - **Base de datos cifrada** — SQLite con AES-256-GCM, protección contra manipulación externa.
-- **Auto-update** — Mecanismo de actualización integrado via electron-updater.
 
 ## Tech Stack
 
@@ -349,7 +348,7 @@ En **modo vertical** (`orientation: portrait`) el layout cambia automáticamente
 
 Leaflet map con:
 
-- `CircleMarker` por punto (color según intensidad via paleta verde-amarillo-rojo)
+- `CircleMarker` por punto (color según intensidad via paleta ITU-T K.113 de 10 niveles: azul → verde → amarillo → naranja → rojo)
 - `Polyline` entre puntos (segmentos color-coded)
 - `GpsPositionProvider` para seguir posición actual
 - Soporte multi-sesión (sesiones históricas superpuestas)
@@ -378,7 +377,7 @@ Leaflet map con:
 | **GeoJSON** (RFC 7946) | FeatureCollection con Point [lon, lat, alt]. Incluye metadata de sesión, instrumento, stats. Cifrado (.geojson.enc). |
 | **CSV**                | Quoted comma-separated. Cabecera en español.                                                                         |
 | **XLSX**               | 3 archivos via exceljs usando plantillas ENACOM: reporte (16 cols), reporte_p (% MEP), averif (solo MEP ≥ 50%).      |
-| **KMZ**                | KML comprimido para Google Earth. Color-coded por % MEP. Puntos + segmentos + timestamps.                            |
+| **KMZ**                | KML comprimido para Google Earth. Color-coded por % MEP (paleta ITU-T K.113). Puntos + segmentos + timestamps. Embebe paleta de colores e icono de la app como overlays. |
 
 ## Database Encryption
 

@@ -19,7 +19,7 @@ const INTENSITY_LEVELS: IntensityLevel[] = [
   { maxPercent: 20, color: '#008000', label: '≤ 20%' },
   { maxPercent: 35, color: '#FFDF00', label: '≤ 35%' },
   { maxPercent: 50, color: '#FFA500', label: '≤ 50%' },
-  { maxPercent: 250, color: '#FF4500', label: '≤ 250%' }
+  { maxPercent: 100, color: '#FF4500', label: '≤ 100%' }
 ]
 
 const OVER_100_COLOR = '#FF0000'

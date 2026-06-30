@@ -1055,6 +1055,11 @@ export class SQLiteSessionRepository implements ISessionRepository {
       archive.on('error', reject)
       archive.pipe(passthrough)
       archive.append(kml, { name: 'doc.kml' })
+      archive.append(this.buildPaletteBMP(), { name: 'palette.bmp' })
+      const iconPath = path.join(app.getAppPath(), 'resources', 'icon.png')
+      if (fs.existsSync(iconPath)) {
+        archive.file(iconPath, { name: 'icon.png' })
+      }
       archive.finalize()
     })
   }
@@ -1074,7 +1079,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       { maxPercent: 20, hex: '#008000' },
       { maxPercent: 35, hex: '#FFDF00' },
       { maxPercent: 50, hex: '#FFA500' },
-      { maxPercent: 250, hex: '#FF4500' }
+      { maxPercent: 100, hex: '#FF4500' }
     ]
     const OVER_100_HEX = '#FF0000'
 
@@ -1242,6 +1247,21 @@ RNI Monitor v${appVersion}</description>
     <name>Puntos de medición</name>
     ${pointPlacemarks}
   </Folder>
+  <ScreenOverlay>
+    <name>Referencia de colores</name>
+    <overlayXY x="0" y="0" xunits="fraction" yunits="fraction"/>
+    <screenXY x="0.01" y="0.01" xunits="fraction" yunits="fraction"/>
+    <rotationXY x="0" y="0" xunits="fraction" yunits="fraction"/>
+    <size x="0" y="0" xunits="pixel" yunits="pixel"/>
+    <Icon><href>palette.bmp</href></Icon>
+  </ScreenOverlay>
+  <ScreenOverlay>
+    <name>RNI Monitor</name>
+    <overlayXY x="0" y="0" xunits="fraction" yunits="fraction"/>
+    <screenXY x="0.01" y="364" xunits="fraction" yunits="pixel"/>
+    <size x="48" y="48" xunits="pixel" yunits="pixel"/>
+    <Icon><href>icon.png</href></Icon>
+  </ScreenOverlay>
 </Document>
 </kml>`
   }
@@ -1309,6 +1329,135 @@ RNI Monitor v${appVersion}</description>
       console.error('[SQLiteSessionRepository] Error querying bounds:', err)
       return []
     }
+  }
+
+  private buildPaletteBMP(): Buffer {
+    const W = 220
+    const H = 340
+    const bpp = 24
+    const rowSize = ((W * bpp + 31) >> 3) & ~3
+    const pixelOff = 54
+    const fileSize = pixelOff + rowSize * H
+    const buf = Buffer.alloc(fileSize)
+
+    // BMP file header (14 bytes)
+    buf.write('BM', 0)
+    buf.writeUInt32LE(fileSize, 2)
+    buf.writeUInt32LE(0, 6)
+    buf.writeUInt32LE(pixelOff, 10)
+
+    // DIB header BITMAPINFOHEADER (40 bytes)
+    buf.writeUInt32LE(40, 14)
+    buf.writeInt32LE(W, 18)
+    buf.writeInt32LE(-H, 22) // top-down
+    buf.writeUInt16LE(1, 26)
+    buf.writeUInt16LE(bpp, 28)
+    buf.writeUInt32LE(0, 30)
+    buf.writeUInt32LE(0, 34)
+    buf.writeInt32LE(2835, 38) // 72 DPI
+    buf.writeInt32LE(2835, 42)
+    buf.writeUInt32LE(0, 46)
+    buf.writeUInt32LE(0, 50)
+
+    const pixel = (x: number, y: number, r: number, g: number, b: number): void => {
+      if (x < 0 || x >= W || y < 0 || y >= H) return
+      const off = pixelOff + y * rowSize + x * 3
+      buf[off] = b
+      buf[off + 1] = g
+      buf[off + 2] = r
+    }
+
+    const fillRect = (x: number, y: number, w: number, h: number, r: number, g: number, b: number): void => {
+      for (let row = 0; row < h; row++)
+        for (let col = 0; col < w; col++)
+          pixel(x + col, y + row, r, g, b)
+    }
+
+    // 5x7 bitmap font — each char: 7 rows of 5 bits, row by row
+    const FONT_ROWS: Record<string, string[]> = {
+      ' ': ['00000', '00000', '00000', '00000', '00000', '00000', '00000'],
+      '<': ['00010', '00100', '01000', '10000', '01000', '00100', '00010'],
+      '=': ['00000', '00000', '11111', '00000', '11111', '00000', '00000'],
+      '>': ['01000', '00100', '00010', '00001', '00010', '00100', '01000'],
+      '%': ['00000', '10001', '01010', '00100', '01010', '10001', '00000'],
+      '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
+      '.': ['00000', '00000', '00000', '00000', '00000', '00000', '11000'],
+      '0': ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+      '1': ['00100', '01100', '00100', '00100', '00100', '00100', '11111'],
+      '2': ['01110', '00001', '00001', '01110', '10000', '10000', '11111'],
+      '3': ['01110', '00001', '00001', '00110', '00001', '00001', '01110'],
+      '4': ['00010', '00110', '01010', '10010', '11111', '00010', '00010'],
+      '5': ['11111', '10000', '11110', '00001', '00001', '00001', '11110'],
+      '6': ['01110', '10000', '10000', '11110', '10001', '10001', '01110'],
+      '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
+      '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
+      '9': ['01110', '10001', '10001', '01111', '00001', '00001', '01110'],
+      'A': ['00100', '01010', '10001', '10001', '11111', '10001', '10001'],
+      'B': ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
+      'C': ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
+      'D': ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
+      'E': ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+      'F': ['11111', '10000', '10000', '11110', '10000', '10000', '10000'],
+      'I': ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
+      'K': ['10001', '10010', '10100', '11000', '10100', '10010', '10001'],
+      'L': ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+      'M': ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
+      'N': ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
+      'O': ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+      'P': ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
+      'R': ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+      'S': ['01110', '10001', '10000', '01110', '00001', '10001', '01110'],
+      'T': ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+      'U': ['10001', '10001', '10001', '10001', '10001', '10001', '01110']
+    }
+
+    const drawText = (x: number, y: number, text: string, r: number, g: number, b: number, spacing = 1): void => {
+      let cx = x
+      for (const ch of text) {
+        const rows = FONT_ROWS[ch]
+        if (!rows) { cx += 6; continue }
+        for (let col = 0; col < 5; col++) {
+          for (let row = 0; row < 7; row++) {
+            if (rows[row][col] === '1') pixel(cx + col, y + row, r, g, b)
+          }
+        }
+        cx += 5 + spacing
+      }
+    }
+
+    // Background
+    fillRect(0, 0, W, H, 0x2d, 0x2d, 0x2d)
+
+    // Title & subtitle
+    drawText(12, 10, 'REFERENCIA DE COLORES', 0xff, 0xff, 0xff)
+    drawText(12, 24, '% MEP - ITU-T K.113', 0xaa, 0xaa, 0xaa)
+
+    // Palette rows
+    const levels: { r: number; g: number; b: number; label: string }[] = [
+      { r: 0x73, g: 0xc2, b: 0xfb, label: '<= 1%' },
+      { r: 0x1e, g: 0x90, b: 0xff, label: '1-2%' },
+      { r: 0x2a, g: 0x52, b: 0xbe, label: '2-4%' },
+      { r: 0x90, g: 0xee, b: 0x90, label: '4-8%' },
+      { r: 0x32, g: 0xcd, b: 0x32, label: '8-15%' },
+      { r: 0x00, g: 0x80, b: 0x00, label: '15-20%' },
+      { r: 0xff, g: 0xdf, b: 0x00, label: '20-35%' },
+      { r: 0xff, g: 0xa5, b: 0x00, label: '35-50%' },
+      { r: 0xff, g: 0x45, b: 0x00, label: '50-100%' },
+      { r: 0xff, g: 0x00, b: 0x00, label: '> 100%' }
+    ]
+
+    const swatchSize = 20
+    const rowGap = 4
+    const labelX = 12 + swatchSize + 6
+    const startY = 42
+
+    levels.forEach((l, i) => {
+      const sy = startY + i * (swatchSize + rowGap)
+      fillRect(12, sy, swatchSize, swatchSize, l.r, l.g, l.b)
+      drawText(labelX, sy + 6, l.label, 0xe0, 0xe0, 0xe0)
+    })
+
+    return buf
   }
 
   /**
