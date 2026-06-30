@@ -110,7 +110,7 @@ Definidos en `.opencode/skills/` -- se cargan automaticamente segun la tarea.
 
 ## Manual de uso rápido
 
-El archivo `docs/manual-rapido.html` es el manual de uso rápido para el personal técnico
+El archivo `docs/manual.html` es el manual de uso para el personal técnico
 de campo. Debe mantenerse actualizado ante cualquier cambio en:
 
 - Flujo de conexión de dispositivos

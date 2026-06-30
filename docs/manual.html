@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RNI Monitor — Manual de uso rápido</title>
+  <title>RNI Monitor — Manual de uso</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap');
 
@@ -70,6 +70,13 @@
       color: #C6C6C6;
     }
     .cover .meta strong { color: #EEAE42; }
+    .cover-icon {
+      width: 96px;
+      height: 96px;
+      margin-bottom: 1rem;
+      border-radius: 18px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
     .cover-org {
       margin-top: 3rem;
       font-size: 0.85rem;
@@ -272,9 +279,10 @@
 
 <!-- ═══════════════════ COVER ═══════════════════ -->
 <header class="cover">
+  <img src="icon.png" alt="RNI Monitor" class="cover-icon">
   <h1>RNI <span>Monitor</span></h1>
-  <p class="subtitle">Manual de uso rápido</p>
-  <p class="meta">Versión <strong>0.9.1</strong> &mdash; Junio 2026</p>
+  <p class="subtitle">Manual de uso</p>
+  <p class="meta">Versión <strong>0.10.0</strong> &mdash; Junio 2026</p>
   <p class="cover-org">
     <strong>Ente Nacional de Comunicaciones</strong><br>
     Dirección Nacional de Control y Fiscalización
@@ -312,8 +320,10 @@
       Recomendación <strong>ITU-T K.113</strong>.
     </p>
     <p>
-      Se conecta por puerto serie a un <strong>Narda NBM-550</strong> (medidor de campo eléctrico
-      de banda ancha) y a un <strong>receptor GPS</strong> (NMEA 0183) para capturar lecturas
+      Es la evolución de la aplicación AutoMap RNI. Está diseñada para un funcionamiento robusto con las últimas tecnologías y en constante actualización, facilitando las tareas del técnico operativo y su posterior análisis.
+    </p>
+    <p>
+      Se conecta por puerto serie a un <strong>NARDA-STS NBM-550</strong> (medidor de radiaciones no ionizantes de banda ancha) y a un <strong>receptor GPS</strong> (NMEA 0183) para capturar lecturas
       georreferenciadas. Los datos se visualizan en tiempo real sobre un mapa interactivo,
       se almacenan en una base de datos local y pueden exportarse en múltiples formatos
       normalizados (GeoJSON, XLSX, KMZ).
@@ -326,16 +336,15 @@
     <p>Para operar la aplicación necesitás:</p>
     <ul>
       <li>
-        <strong>Medidor Narda NBM-550</strong> con su sonda correspondiente.
+        <strong>Medidor de RNI NARDA-STS NBM-550</strong> con su sonda correspondiente.
         Se conecta a la notebook mediante el <strong>cable propietario Narda a USB</strong>.
       </li>
       <li>
         <strong>Receptor GPS</strong> (pastilla con cable USB integrado — todo en uno).
-        Compatible con protocolo NMEA 0183.
+        Compatible con protocolo NMEA 0183. Idealmente utilizar el GPS <strong>GlobalSat BU-353S4</strong>.
       </li>
       <li>
-        <strong>Notebook con Windows</strong> (los instaladores NSIS están disponibles para
-        Windows 10/11).
+        <strong>Notebook o tablet con Windows 10 o superior</strong>. Existen instaladores para Linux y MAC en fase de pruebas.
       </li>
     </ul>
     <div class="info-box">
@@ -351,13 +360,13 @@
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        Ejecutá el instalador <strong>RNI Monitor Setup X.X.X.exe</strong>.
+        Ejecutá el instalador <strong>rni-monitor-X.X.X-setup.exe</strong>.
       </div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        Seguí el asistente: <em>Siguiente &rarr; Siguiente &rarr; Instalar &rarr; Finalizar</em>.
+        <em>Solamente aceptá los permisos de administrador, el instalador se encarga de todo</em>.
         No requiere configuración adicional. Los drivers USB-serie de los dispositivos
         (NBM-550 y GPS) vienen empaquetados y se instalan automáticamente junto con la aplicación.
       </div>
@@ -367,6 +376,15 @@
       <div class="step-body">
         Iniciá la aplicación desde el acceso directo <strong>RNI Monitor</strong> en el
         escritorio o desde el menú Inicio.
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        Para realizar pruebas sin hardware, usá el acceso directo
+        <strong>RNI Monitor (DEMO)</strong> que inicia la app con
+        dispositivos simulados. También se encuentra en el escritorio y en el
+        menú Inicio.
       </div>
     </div>
     <p>
@@ -381,7 +399,7 @@
 
     <h3>4.1 Conexión física</h3>
     <ol>
-      <li>Conectá el <strong>GPS</strong> a un puerto USB libre de la notebook.</li>
+      <li>Conectá el <strong>GPS</strong> a un puerto USB libre.</li>
       <li>Conectá el <strong>NBM-550</strong> mediante su cable propietario a otro puerto USB.</li>
       <li>Encendé el NBM-550.</li>
     </ol>
@@ -410,8 +428,7 @@
 
     <h3>4.3 Conexión</h3>
     <p>
-      Una vez detectados, cada dispositivo muestra su puerto COM asignado.
-      Presioná <strong>"Conectar"</strong> en cada uno. El LED de estado indica:
+      Una vez detectados, cada dispositivo muestra su puerto COM asignado y la app los conecta automáticamente. El LED de estado indica:
     </p>
     <div class="table-wrap">
       <table>
@@ -470,7 +487,7 @@
         </tbody>
       </table>
     </div>
-    <p>También podés ingresar un <strong>nombre opcional</strong> para la sesión.</p>
+    <p>También podés ingresar un <strong>nombre opcional</strong> para la sesión. Si no lo hacés, la medición tomará el nombre <em>Localidad_fecha_hora</em></p>.
 
     <h3>Inicio</h3>
     <div class="step">
@@ -528,6 +545,10 @@
         "Seguir mi posición", el mapa se centra automáticamente en la ubicación actual del GPS.
       </li>
     </ul>
+    <p>
+      Podés maximizar el mapa con el botón
+      <strong>⊞</strong>
+    </p>
 
     <h3>Tabla de puntos</h3>
     <p>
@@ -822,11 +843,12 @@
   <section id="anexo">
     <h2>12. Anexo: modos especiales</h2>
 
-    <h3>Modo simulación</h3>
+    <h3>Modo simulación (DEMO)</h3>
     <p>
-      Agregando <code>--simulation</code> al final del destino del acceso directo
-      (ej: <code>"C:\Program Files\ENACOM\RNI Monitor\RNI Monitor.exe" --simulation</code>)
-      los dispositivos físicos se reemplazan por simuladores:
+      El instalador crea un acceso directo <strong>RNI Monitor (DEMO)</strong>
+      en el escritorio y en el menú Inicio que ejecuta la aplicación con
+      <code>--simulation</code>. Los dispositivos físicos se reemplazan por
+      simuladores:
     </p>
     <ul>
       <li>GPS simulado: emite posiciones alrededor del Obelisco (CABA) cada 3 segundos.</li>
@@ -836,6 +858,11 @@
       Este modo es útil para <strong>capacitación</strong> y <strong>pruebas</strong>
       sin necesidad de hardware.
     </p>
+    <div class="info-box">
+      <strong>Nota:</strong> También se puede activar el modo simulación creando un
+      acceso directo manual con el flag <code>--simulation</code> al final del destino,
+      o seteando la variable de entorno <code>NIR_SIMULATION=true</code>.
+    </div>
   </section>
 
   <p class="back-top"><a href="#">&uarr; Volver al inicio</a></p>
@@ -853,7 +880,7 @@
     Contacto: <a href="mailto:mpacheco@enacom.gob.ar" style="color:#BCE4F4;">mpacheco@enacom.gob.ar</a>
   </p>
   <p style="margin-top:0.3rem;font-size:0.75rem;">
-    Versión 0.9.1 &mdash; Junio 2026
+    Versión 0.10.0 &mdash; Junio 2026
   </p>
 </footer>
 
