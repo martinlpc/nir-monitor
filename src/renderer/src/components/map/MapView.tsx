@@ -4,6 +4,7 @@ import L, { type LatLngExpression } from 'leaflet'
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, useMap } from 'react-leaflet'
 import type { MapState } from '../../hooks/useGeoData'
 import type { LoadedSession } from '../../hooks/useMultipleSessions'
+import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
 import { useGpsPosition } from '../../hooks/useGpsPosition'
 import { getIntensityColor } from '../../utils/intensityPalette'
 import type { TileProvider } from '../../../../shared/tileProviders'
@@ -13,6 +14,19 @@ import PanControl from './PanControl'
 import MaximizeControl from './MaximizeControl'
 import NbmStatusBadge from './NbmStatusBadge'
 import PreloadBoundsOverlay from './PreloadBoundsOverlay'
+
+function getPointPopupContent(point: GeoTimestamp): string {
+  const unit = point.emf?.unit ?? 'V/m'
+  const parts: string[] = [
+    `Valor final: ${(point.correctedMeasurement ?? 0).toFixed(2)} ${unit}`,
+    `Medido: ${(point.emf?.rawMeasurement ?? 0).toFixed(2)} ${unit}`,
+    `Lat: ${(point.position?.lat ?? 0).toFixed(6)}`,
+    `Lon: ${(point.position?.lon ?? 0).toFixed(6)}`,
+    `Alt: ${(point.position?.alt ?? 0).toFixed(1)} m`,
+    new Date(point.timestamp).toLocaleTimeString()
+  ]
+  return parts.join('<br/>')
+}
 
 const DEFAULT_CENTER: LatLngExpression = [-34.6037, -58.3816]
 const DEFAULT_ZOOM = 13
@@ -29,6 +43,8 @@ interface MapViewProps {
   tileProvider?: TileProvider
   onMapReady?: (map: L.Map) => void
   preloadBounds?: { north: number; south: number; east: number; west: number } | null
+  focusedPointId?: string | null
+  onPointClick?: (point: GeoTimestamp) => void
 }
 
 function ZoomLevelIndicator(): null {
@@ -74,6 +90,28 @@ function MapInstanceCapture({ onMap }: { onMap: (map: L.Map) => void }): null {
   return null
 }
 
+function FocusPointHandler({
+  focusedPointId,
+  allPoints
+}: {
+  focusedPointId?: string | null
+  allPoints: GeoTimestamp[]
+}): null {
+  const map = useMap()
+
+  useEffect(() => {
+    if (focusedPointId == null) return
+    const point = allPoints.find((p) => p.id === focusedPointId)
+    if (!point?.position) return
+
+    const { lat, lon } = point.position
+    map.flyTo([lat, lon], map.getZoom())
+    map.openPopup(getPointPopupContent(point), [lat, lon])
+  }, [focusedPointId, allPoints, map])
+
+  return null
+}
+
 export default function MapView({
   geoData,
   isSessionActive = false,
@@ -85,7 +123,9 @@ export default function MapView({
   focusSessionBounds = null,
   tileProvider = getProvider('osm')!,
   onMapReady,
-  preloadBounds = null
+  preloadBounds = null,
+  focusedPointId = null,
+  onPointClick
 }: MapViewProps): React.JSX.Element {
   const { position: livePosition, lastKnownPosition } = useGpsPosition()
 
@@ -173,6 +213,7 @@ export default function MapView({
           )}
           <NbmStatusBadge />
           <PreloadBoundsOverlay bounds={preloadBounds} />
+          <FocusPointHandler focusedPointId={focusedPointId} allPoints={geoData.allPoints} />
           {activeSegments.map((seg) => (
             <Polyline key={seg.key} positions={seg.positions} color={seg.color} weight={4} />
           ))}
@@ -199,6 +240,9 @@ export default function MapView({
                   fillColor: pointColor,
                   fillOpacity: 0.8,
                   weight: 2
+                }}
+                eventHandlers={{
+                  click: () => onPointClick?.(point)
                 }}
               >
                 <Popup>

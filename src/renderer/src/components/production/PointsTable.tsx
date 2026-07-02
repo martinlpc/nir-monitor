@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
 import { formatTimestamp } from '../../utils/formatters'
 import {
@@ -46,6 +46,8 @@ interface PointsTableProps {
   probeSerial?: string | null
   tableMaximized?: boolean
   onToggleMaximizeTable?: () => void
+  onPointClick?: (point: GeoTimestamp) => void
+  focusedPointId?: string | null
 }
 
 export default function PointsTable({
@@ -58,7 +60,9 @@ export default function PointsTable({
   probeModel,
   probeSerial,
   tableMaximized,
-  onToggleMaximizeTable
+  onToggleMaximizeTable,
+  onPointClick,
+  focusedPointId
 }: PointsTableProps): React.JSX.Element {
   const [fontSize, setFontSize] = useState(getStoredFontSize)
 
@@ -81,6 +85,26 @@ export default function PointsTable({
   useEffect(() => {
     storeFontSize(fontSize)
   }, [fontSize])
+
+  const selectedRowRef = useRef<HTMLTableRowElement | null>(null)
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      const row = selectedRowRef.current
+      if (!row) return
+      const wrapper = row.closest<HTMLElement>('.table-wrapper')
+      if (!wrapper) return
+      const headerHeight = wrapper.querySelector('thead')?.getBoundingClientRect().height ?? 0
+      const wrapperRect = wrapper.getBoundingClientRect()
+      const rowRect = row.getBoundingClientRect()
+      const relativeTop = rowRect.top - wrapperRect.top
+      if (relativeTop < headerHeight || relativeTop + rowRect.height > wrapperRect.height) {
+        wrapper.scrollTo({
+          top: wrapper.scrollTop + relativeTop - headerHeight - 8,
+          behavior: 'smooth'
+        })
+      }
+    })
+  }, [focusedPointId])
 
   const increaseFont = (): void => setFontSize((s) => Math.min(s + 1, MAX_FONT_SIZE))
   const decreaseFont = (): void => setFontSize((s) => Math.max(s - 1, MIN_FONT_SIZE))
@@ -200,7 +224,13 @@ export default function PointsTable({
           </thead>
           <tbody>
             {displayPoints.map((point, idx) => (
-              <tr key={point.id}>
+              <tr
+                key={point.id}
+                ref={point.id === focusedPointId ? selectedRowRef : null}
+                className={point.id === focusedPointId ? 'row-selected' : ''}
+                onClick={() => onPointClick?.(point)}
+                style={{ cursor: 'pointer' }}
+              >
                 <td className="cell-number">{point.sequenceNumber || idx + 1}</td>
                 <td className="cell-timestamp">{formatTimestamp(point.timestamp)}</td>
                 <td className="cell-coord">{(point.position?.lat ?? 0).toFixed(6)}</td>

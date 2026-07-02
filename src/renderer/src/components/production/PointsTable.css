@@ -183,6 +183,7 @@
 
 .points-table thead {
   background: var(--nir-table-header-bg);
+  backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -299,6 +300,12 @@
 
 .points-table tbody tr:hover {
   background-color: var(--nir-border-blue);
+}
+
+.points-table tbody tr.row-selected {
+  background-color: var(--nir-table-row-alt);
+  outline: 2px solid var(--nir-blue);
+  outline-offset: -2px;
 }
 
 .points-table tbody tr.row-placeholder {

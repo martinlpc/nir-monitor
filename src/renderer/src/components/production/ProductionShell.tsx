@@ -18,6 +18,7 @@ import SessionsPanel from './SessionsPanel'
 import SettingsPanel from './SettingsPanel'
 import AllSessionsDrawer from './AllSessionsDrawer'
 import { useToast } from './ToastProvider'
+import type { GeoTimestamp } from '../../../../shared/GeoTimestamp'
 import './production.css'
 
 export default function ProductionShell(): React.JSX.Element {
@@ -47,6 +48,7 @@ export default function ProductionShell(): React.JSX.Element {
     east: number
     west: number
   } | null>(null)
+  const [focusedPointId, setFocusedPointId] = useState<string | null>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
 
   /* ── Portrait / hybrid mode ── */
@@ -82,6 +84,11 @@ export default function ProductionShell(): React.JSX.Element {
     }
     setPreloadBounds(result)
     return result
+  }, [])
+
+  const handlePointClick = useCallback((point: GeoTimestamp) => {
+    setFocusedPointId(point.id)
+    setFollowPosition(false)
   }, [])
 
   const handleTabClick = useCallback(
@@ -294,6 +301,8 @@ export default function ProductionShell(): React.JSX.Element {
                 tileProvider={provider}
                 onMapReady={handleMapReady}
                 preloadBounds={preloadBounds}
+                focusedPointId={focusedPointId}
+                onPointClick={handlePointClick}
               />
             </div>
             {!mapMaximized && (
@@ -308,6 +317,8 @@ export default function ProductionShell(): React.JSX.Element {
                 probeSerial={session.summary?.instrument?.probe?.serial || null}
                 tableMaximized={tableMaximized}
                 onToggleMaximizeTable={() => setTableMaximized((prev) => !prev)}
+                onPointClick={handlePointClick}
+                focusedPointId={focusedPointId}
               />
             )}
           </div>
