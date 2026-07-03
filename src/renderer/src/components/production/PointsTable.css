@@ -421,10 +421,13 @@
     font-size: 12px;
   }
 
+  .table-toolbar {
+    gap: 2px;
+  }
+
   .table-toolbar .btn-font-size,
-  .table-toolbar .font-size-label,
   .table-toolbar .btn-maximize {
-    display: none;
+    width: 24px;
   }
 
   .table-toolbar .btn-collapse {
