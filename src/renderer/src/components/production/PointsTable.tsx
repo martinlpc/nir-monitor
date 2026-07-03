@@ -141,38 +141,40 @@ export default function PointsTable({
             )}
           </h3>
           <div className="table-toolbar">
-            <button
-              className="btn-font-size"
-              onClick={decreaseFont}
-              disabled={fontSize <= MIN_FONT_SIZE}
-              title="Reducir tamaño de fuente"
-              aria-label="Reducir tamaño de fuente"
-            >
-              A−
-            </button>
-            <span className="font-size-label">{fontSize}px</span>
-            <button
-              className="btn-font-size"
-              onClick={increaseFont}
-              disabled={fontSize >= MAX_FONT_SIZE}
-              title="Aumentar tamaño de fuente"
-              aria-label="Aumentar tamaño de fuente"
-            >
-              A+
-            </button>
-            {onToggleMaximizeTable && (
+            <div className="table-toolbar__group">
               <button
-                className="btn-maximize"
-                onClick={onToggleMaximizeTable}
-                title={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
-                aria-label={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
+                className="table-toolbar__btn"
+                onClick={decreaseFont}
+                disabled={fontSize <= MIN_FONT_SIZE}
+                title="Reducir tamaño de fuente"
+                aria-label="Reducir tamaño de fuente"
               >
-                {tableMaximized ? '⊡' : '⊞'}
+                A−
               </button>
-            )}
+              <span className="table-toolbar__value">{fontSize}px</span>
+              <button
+                className="table-toolbar__btn"
+                onClick={increaseFont}
+                disabled={fontSize >= MAX_FONT_SIZE}
+                title="Aumentar tamaño de fuente"
+                aria-label="Aumentar tamaño de fuente"
+              >
+                A+
+              </button>
+              {onToggleMaximizeTable && (
+                <button
+                  className="table-toolbar__btn"
+                  onClick={onToggleMaximizeTable}
+                  title={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
+                  aria-label={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
+                >
+                  {tableMaximized ? '⊡' : '⊞'}
+                </button>
+              )}
+            </div>
             {isPortrait && (
               <button
-                className="btn-collapse"
+                className="table-toolbar__btn table-toolbar__btn--collapse"
                 onClick={() => setTableCollapsed((prev) => !prev)}
                 title={tableCollapsed ? 'Expandir tabla' : 'Colapsar tabla'}
                 aria-label={tableCollapsed ? 'Expandir tabla' : 'Colapsar tabla'}

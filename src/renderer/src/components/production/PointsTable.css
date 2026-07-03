@@ -61,63 +61,106 @@
   flex-shrink: 0;
 }
 
-.btn-font-size {
-  display: inline-flex;
+.table-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--nir-border-blue);
+  background: rgba(23, 34, 75, 0.7);
+}
+
+.table-toolbar__btn {
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--nir-border-blue);
-  border-radius: 4px;
-  background: var(--nir-input-bg);
+  min-width: 28px;
+  height: 28px;
+  padding: 0 4px;
+  border: none;
+  background: transparent;
   color: var(--nir-text);
-  font-size: 11px;
+  font-size: 0.85rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms ease;
   line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.15s;
 }
 
-.btn-font-size:hover:not(:disabled) {
-  background: var(--nir-border-blue);
-  border-color: var(--nir-border-blue-hover);
+.table-toolbar__btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.btn-font-size:disabled {
+.table-toolbar__btn:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.table-toolbar__btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
 }
 
-.font-size-label {
-  font-size: 10px;
-  color: var(--nir-text-muted);
-  min-width: 22px;
-  text-align: center;
-  font-family: 'Monaco', 'Courier New', monospace;
-}
-
-.btn-maximize {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 24px;
-  padding: 0;
+.table-toolbar__btn--collapse {
   border: 1px solid var(--nir-border-blue);
   border-radius: 4px;
-  background: var(--nir-input-bg);
-  color: var(--nir-text);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 150ms ease;
-  line-height: 1;
+  background: rgba(23, 34, 75, 0.7);
   margin-left: 4px;
 }
 
-.btn-maximize:hover {
-  background: var(--nir-border-blue);
-  border-color: var(--nir-border-blue-hover);
+.table-toolbar__btn--collapse:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.table-toolbar__btn--collapse:active {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.table-toolbar__value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 0 4px;
+  height: 28px;
+  font-size: 0.72rem;
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: var(--nir-text);
+  border-left: 1px solid var(--nir-border-blue);
+  border-right: 1px solid var(--nir-border-blue);
+  line-height: 28px;
+}
+
+[data-theme='soft'] .table-toolbar__group {
+  background: #ffffff;
+  border-color: rgba(60, 60, 67, 0.18);
+}
+
+[data-theme='soft'] .table-toolbar__btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='soft'] .table-toolbar__btn:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='soft'] .table-toolbar__btn--collapse {
+  border-color: rgba(60, 60, 67, 0.18);
+  background: #ffffff;
+}
+
+[data-theme='soft'] .table-toolbar__btn--collapse:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme='soft'] .table-toolbar__btn--collapse:active {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='soft'] .table-toolbar__value {
+  border-color: rgba(60, 60, 67, 0.18);
 }
 
 .points-table-container h3 {
@@ -375,31 +418,6 @@
   }
 }
 
-/* === Collapse / Accordion toggle === */
-
-.btn-collapse {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--nir-border-blue);
-  border-radius: 4px;
-  background: var(--nir-input-bg);
-  color: var(--nir-text);
-  font-size: 11px;
-  cursor: pointer;
-  transition: all 150ms ease;
-  line-height: 1;
-  margin-left: 4px;
-}
-
-.btn-collapse:hover {
-  background: var(--nir-border-blue);
-  border-color: var(--nir-border-blue-hover);
-}
-
 .table-wrapper.table-collapsed {
   display: none;
 }
@@ -425,13 +443,15 @@
     gap: 2px;
   }
 
-  .table-toolbar .btn-font-size,
-  .table-toolbar .btn-maximize {
-    width: 24px;
+  .table-toolbar__btn {
+    min-width: 36px;
+    height: 36px;
   }
 
-  .table-toolbar .btn-collapse {
-    display: inline-flex;
+  .table-toolbar__value {
+    min-width: 32px;
+    height: 36px;
+    line-height: 36px;
   }
 
   .session-info .session-devices {
