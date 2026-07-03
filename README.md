@@ -1,6 +1,6 @@
 # RNI Monitor
 
-![Version](https://img.shields.io/badge/version-0.11.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)
 
 **Mapeador de Radiaciones No Ionizantes** — Aplicación de escritorio para relevar y mapear mediciones de campo electromagnético basada en la **Recomendación ITU-T K.113**.
 
@@ -101,19 +101,19 @@ electron-builder --win     # Empaqueta NSIS
 
 ## Scripts Clave
 
-| Comando               | Propósito                             |
-| --------------------- | ------------------------------------- |
-| `npm run dev`         | Dev con hot reload                    |
-| `npm run build`       | Typecheck + build production          |
-| `npm test`            | Vitest (node env, timeout 15s)        |
-| `npm run lint`        | ESLint                                |
-| `npm run format`      | Prettier --write                      |
-| `npm run typecheck`   | tsc node + web                        |
-| `npm run seed:mock`   | Seeds SQLite con datos mock (Neuquén) |
-| `npm run generate:nsh-key` | Genera build/key.nsh desde .env     |
-| `npm run build:win`   | Build NSIS installer (incluye generate:nsh-key) |
-| `npm run build:mac`   | Build DMG                             |
-| `npm run build:linux` | Build AppImage/snap/deb               |
+| Comando                    | Propósito                                       |
+| -------------------------- | ----------------------------------------------- |
+| `npm run dev`              | Dev con hot reload                              |
+| `npm run build`            | Typecheck + build production                    |
+| `npm test`                 | Vitest (node env, timeout 15s)                  |
+| `npm run lint`             | ESLint                                          |
+| `npm run format`           | Prettier --write                                |
+| `npm run typecheck`        | tsc node + web                                  |
+| `npm run seed:mock`        | Seeds SQLite con datos mock (Neuquén)           |
+| `npm run generate:nsh-key` | Genera build/key.nsh desde .env                 |
+| `npm run build:win`        | Build NSIS installer (incluye generate:nsh-key) |
+| `npm run build:mac`        | Build DMG                                       |
+| `npm run build:linux`      | Build AppImage/snap/deb                         |
 
 ---
 
@@ -372,11 +372,11 @@ Leaflet map con:
 
 ## Export Formats
 
-| Formato                | Descripción                                                                                                          |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **GeoJSON** (RFC 7946) | FeatureCollection con Point [lon, lat, alt]. Incluye metadata de sesión, instrumento, stats. Cifrado (.geojson.enc). |
-| **CSV**                | Quoted comma-separated. Cabecera en español.                                                                         |
-| **XLSX**               | 3 archivos via exceljs usando plantillas ENACOM: reporte (16 cols), reporte_p (% MEP), averif (solo MEP ≥ 50%).      |
+| Formato                | Descripción                                                                                                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **GeoJSON** (RFC 7946) | FeatureCollection con Point [lon, lat, alt]. Incluye metadata de sesión, instrumento, stats. Cifrado (.geojson.enc).                                                     |
+| **CSV**                | Quoted comma-separated. Cabecera en español.                                                                                                                             |
+| **XLSX**               | 3 archivos via exceljs usando plantillas ENACOM: reporte (16 cols), reporte_p (% MEP), averif (solo MEP ≥ 50%).                                                          |
 | **KMZ**                | KML comprimido para Google Earth. Color-coded por % MEP (paleta ITU-T K.113). Puntos + segmentos + timestamps. Embebe paleta de colores e icono de la app como overlays. |
 
 ## Database Encryption
