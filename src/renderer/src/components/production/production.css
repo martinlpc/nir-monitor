@@ -1072,6 +1072,18 @@
 
   .side-panel.panel-open .panel-content {
     display: flex;
+    animation: panelFadeSlide 0.25s ease-out;
+  }
+
+  @keyframes panelFadeSlide {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
   /* ── Tabs natural width ── */
