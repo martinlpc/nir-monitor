@@ -168,7 +168,22 @@ export default function PointsTable({
                   title={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
                   aria-label={tableMaximized ? 'Restaurar vista' : 'Maximizar tabla'}
                 >
-                  {tableMaximized ? '⊡' : '⊞'}
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    {tableMaximized ? (
+                      <path d="M5 2V5H2M11 2V5H14M5 14V11H2M11 14V11H14" />
+                    ) : (
+                      <path d="M2 5V2H5M14 5V2H11M2 11V14H5M14 11V14H11" />
+                    )}
+                  </svg>
                 </button>
               )}
             </div>

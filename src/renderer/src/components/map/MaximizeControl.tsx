@@ -26,7 +26,9 @@ export default function MaximizeControl({ maximized, onToggle }: MaximizeControl
         btn.title = maximized ? 'Restaurar vista' : 'Maximizar mapa'
         btn.setAttribute('aria-label', btn.title)
         btn.setAttribute('role', 'button')
-        btn.innerHTML = maximized ? '⊡' : '⊞'
+        btn.innerHTML = maximized
+          ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2V5H2M11 2V5H14M5 14V11H2M11 14V11H14"/></svg>'
+          : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5V2H5M14 5V2H11M2 11V14H5M14 11V14H11"/></svg>'
 
         L.DomEvent.disableClickPropagation(div)
         L.DomEvent.on(btn, 'click', (e) => {
@@ -56,7 +58,9 @@ export default function MaximizeControl({ maximized, onToggle }: MaximizeControl
   useEffect(() => {
     const btn = btnRef.current
     if (!btn) return
-    btn.innerHTML = maximized ? '⊡' : '⊞'
+    btn.innerHTML = maximized
+      ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2V5H2M11 2V5H14M5 14V11H2M11 14V11H14"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5V2H5M14 5V2H11M2 11V14H5M14 11V14H11"/></svg>'
     btn.title = maximized ? 'Restaurar vista' : 'Maximizar mapa'
     btn.setAttribute('aria-label', btn.title)
   }, [maximized])
