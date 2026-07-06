@@ -126,8 +126,10 @@ export function setupSessionWiring(
       if (data.deviceId === 'nbm550' && data.status === 'connected') {
         // Cancelar watchdog si estaba activo
         if (sessionStallTimer) {
+          console.log('[ServiceFactory] Session stall watchdog cancelled — NBM-550 reconnected')
           clearStallTimer()
           if (sessionService.getState() === 'running') {
+            console.log('[ServiceFactory] Alert sent to renderer: "NBM-550 reconectado..."')
             sessionService.emit('alert', {
               message: 'NBM-550 reconectado — la sesión continúa normalmente'
             })
@@ -145,6 +147,12 @@ export function setupSessionWiring(
         !data.intentional
       ) {
         if (sessionService.getState() === 'running' && !sessionStallTimer) {
+          console.warn(
+            '[ServiceFactory] Session stall watchdog started — NBM-550 disconnected while session running, 30s timeout'
+          )
+          console.warn(
+            '[ServiceFactory] Alert sent to renderer: "NBM-550 desconectado — sesión se detendrá en 30s"'
+          )
           sessionService.emit('alert', {
             message:
               'NBM-550 desconectado — la sesión se detendrá automáticamente en 30s si no se reconecta'
@@ -176,6 +184,9 @@ export function setupSessionWiring(
 
   // Limpiar watchdog si la sesión se detiene manualmente
   sessionService.on('stopped', () => {
+    if (sessionStallTimer) {
+      console.log('[ServiceFactory] Session stall watchdog cancelled — session stopped manually')
+    }
     clearStallTimer()
   })
 }

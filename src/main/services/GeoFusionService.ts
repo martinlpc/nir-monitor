@@ -118,6 +118,7 @@ export class GeoFusionService extends EventEmitter {
 
     // En modo test, tomar cada punto sin umbral de distancia
     if (this.config.testMode) {
+      console.log('[GeoFusionService] evaluateDistanceTrigger: test mode — capturing')
       this.capture().catch((err) => {
         console.error('[GeoFusionService] capture error (non-fatal):', err)
       })
@@ -125,6 +126,7 @@ export class GeoFusionService extends EventEmitter {
     }
 
     if (!this.lastSavedPosition) {
+      console.log('[GeoFusionService] evaluateDistanceTrigger: first position — capturing')
       this.capture().catch((err) => {
         console.error('[GeoFusionService] capture error (non-fatal):', err)
       })
@@ -133,6 +135,9 @@ export class GeoFusionService extends EventEmitter {
 
     const dist = haversineMeters(this.lastSavedPosition, currentPosition)
     if (dist >= this.config.minDistanceMeters) {
+      console.log(
+        `[GeoFusionService] evaluateDistanceTrigger: distance ${dist.toFixed(1)}m >= ${this.config.minDistanceMeters}m — capturing`
+      )
       this.capture().catch((err) => {
         console.error('[GeoFusionService] capture error (non-fatal):', err)
       })
