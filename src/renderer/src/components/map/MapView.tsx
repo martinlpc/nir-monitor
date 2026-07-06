@@ -18,8 +18,7 @@ import PreloadBoundsOverlay from './PreloadBoundsOverlay'
 function getPointPopupContent(point: GeoTimestamp): string {
   const unit = point.emf?.unit ?? 'V/m'
   const parts: string[] = [
-    `Valor final: ${(point.correctedMeasurement ?? 0).toFixed(2)} ${unit}`,
-    `Medido: ${(point.emf?.rawMeasurement ?? 0).toFixed(2)} ${unit}`,
+    `Valor medido: ${(point.correctedMeasurement ?? 0).toFixed(2)} ${unit}`,
     `Lat: ${(point.position?.lat ?? 0).toFixed(6)}`,
     `Lon: ${(point.position?.lon ?? 0).toFixed(6)}`,
     `Alt: ${(point.position?.alt ?? 0).toFixed(1)} m`,
@@ -246,10 +245,8 @@ export default function MapView({
                 }}
               >
                 <Popup>
-                  Valor final: {(point.correctedMeasurement ?? 0).toFixed(2)}{' '}
+                  Valor medido: {(point.correctedMeasurement ?? 0).toFixed(2)}{' '}
                   {point.emf?.unit ?? 'V/m'}
-                  <br />
-                  Medido: {(point.emf?.rawMeasurement ?? 0).toFixed(2)} {point.emf?.unit ?? 'V/m'}
                   <br />
                   Lat: {(point.position?.lat ?? 0).toFixed(6)}
                   <br />
