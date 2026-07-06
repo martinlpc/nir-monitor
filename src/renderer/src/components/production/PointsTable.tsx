@@ -74,7 +74,7 @@ export default function PointsTable({
 
   useEffect(() => {
     const mq = window.matchMedia('(orientation: portrait)')
-    const handler = (e: MediaQueryListEvent) => {
+    const handler = (e: MediaQueryListEvent): void => {
       setIsPortrait(e.matches)
       setTableCollapsed(e.matches)
     }

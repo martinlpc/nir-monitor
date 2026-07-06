@@ -395,7 +395,7 @@ export default function SettingsPanel({
                   } else {
                     alert(`Error al exportar logs: ${result.error}`)
                   }
-                } catch (err) {
+                } catch {
                   alert('Error al exportar logs.')
                 }
               }}

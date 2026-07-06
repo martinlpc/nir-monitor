@@ -73,7 +73,6 @@ export function registerSessionServiceHandlers(
   ipcMain.handle(IPC_HANDLERS.SESSION_STOP, async () => {
     try {
       const summary = await sessionService.stop()
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (summary?.localidad && summary?.id) {
         const repository = sessionService.getRepository()
         if (repository) {
@@ -142,7 +141,7 @@ export function registerSessionServiceHandlers(
     try {
       const session = await repository.getSession(sessionId)
       return { success: true, session }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Error al obtener la sesión.' }
     }
   })
@@ -159,7 +158,7 @@ export function registerSessionServiceHandlers(
     try {
       await repository.deleteSession(sessionId)
       return { success: true }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Error al eliminar la sesión.' }
     }
   })
@@ -180,7 +179,7 @@ export function registerSessionServiceHandlers(
 
       const geojson = await repository.exportAsGeoJSON(sessionId)
       return { success: true, data: geojson, truncated: truncated || undefined }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Error al exportar la sesión como GeoJSON.' }
     }
   })
@@ -201,7 +200,7 @@ export function registerSessionServiceHandlers(
 
       const csv = await repository.exportAsCSV(sessionId)
       return { success: true, data: csv, truncated: truncated || undefined }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Error al exportar la sesión como CSV.' }
     }
   })
@@ -241,7 +240,7 @@ export function registerSessionServiceHandlers(
         try {
           const filePaths = await repository.exportAsXLSX(sessionId, folderPath, label)
           return { success: true, filePaths, truncated: truncated || undefined }
-        } catch (err) {
+        } catch {
           return { success: false, error: 'Error al exportar la sesión como XLSX.' }
         }
       }
@@ -283,7 +282,7 @@ export function registerSessionServiceHandlers(
         }
 
         return { success: true, filePaths: [finalPath], truncated: truncated || undefined }
-      } catch (err) {
+      } catch {
         return { success: false, error: 'Error al exportar la sesión.' }
       }
     }
@@ -396,7 +395,7 @@ export function registerSessionServiceHandlers(
       await repository.finalizeSession(sessionId, metadata)
 
       return { success: true, sessionId }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Error al importar el archivo GeoJSON.' }
     }
   })
@@ -413,7 +412,7 @@ export function registerSessionServiceHandlers(
     try {
       const stats = await repository.getSessionStats(sessionId)
       return { success: true, stats }
-    } catch (err) {
+    } catch {
       return { success: false, error: 'Error al obtener las estadísticas.' }
     }
   })
@@ -432,7 +431,7 @@ export function registerSessionServiceHandlers(
       try {
         const points = await repository.getPointsInBounds(sessionId, north, south, east, west)
         return { success: true, points }
-      } catch (err) {
+      } catch {
         return { success: false, error: 'Error al buscar puntos en la región.' }
       }
     }

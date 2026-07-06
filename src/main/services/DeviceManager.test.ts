@@ -109,8 +109,8 @@ class FakeNBMDriver extends EventEmitter {
   readMeasurement = vi.fn()
   readBattery = vi.fn()
   resetMaxHold = vi.fn()
-  getProbeInfo = () => null
-  getMeterSerial = () => null
+  getProbeInfo = (): null => null
+  getMeterSerial = (): null => null
 
   constructor(port: string) {
     super()
@@ -131,8 +131,8 @@ class FakeGPSDriver extends EventEmitter {
   meta = { id: 'gps', port: '', name: 'Fake GPS', type: 'gps', baudRate: 4800 }
   status: string = 'disconnected'
   disconnect = vi.fn(async () => {})
-  getLastPosition = () => null
-  isPositionValid = () => false
+  getLastPosition = (): null => null
+  isPositionValid = (): boolean => false
 
   constructor(port: string) {
     super()

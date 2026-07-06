@@ -21,6 +21,7 @@ export interface INBMDriver {
     calibrationDate: string | null
   } | null
   getMeterSerial(): string | null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (...args: any[]) => void): void
   removeAllListeners(event?: string): void
 }
@@ -33,6 +34,7 @@ export interface IGPSDriver {
   isConnected(): boolean
   getLastPosition(): GeoPosition | null
   isPositionValid(): boolean
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (...args: any[]) => void): void
   removeAllListeners(event?: string): void
 }

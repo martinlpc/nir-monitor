@@ -59,7 +59,7 @@ export default function ProductionShell(): React.JSX.Element {
 
   useEffect(() => {
     const mq = window.matchMedia('(orientation: portrait)')
-    const handler = (e: MediaQueryListEvent) => {
+    const handler = (e: MediaQueryListEvent): void => {
       setIsPortrait(e.matches)
       if (!e.matches) setPanelOpen(false)
     }
