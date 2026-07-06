@@ -60,6 +60,28 @@ fix(export): encode KMZ icons in base64 to avoid broken paths
 chore: bump electron from 42.0.0 to 42.1.0
 ```
 
+## Release workflow
+
+Secuencia estandarizada para preparar una release:
+
+```
+1. Actualizar versión en package.json (+ package-lock.json si existe)
+2. npm run changelog              # lee la nueva version de package.json
+3. git add CHANGELOG.md package.json package-lock.json
+4. git commit -m "chore: bump version to X.Y.Z"
+5. git tag vX.Y.Z
+6. npm run build:win|mac|linux    # build + empaquetado (incluye CHANGELOG.md)
+```
+
+**El changelog se regenera DESPUÉS del bump** para que la sección más nueva
+quede con la versión correcta. `conventional-changelog` lee la versión de
+`package.json`.
+
+**Manual de uso:** si los cambios afectan flujo de conexión, parámetros de captura,
+comportamiento de sesión, formatos de exportación, configuración de mapa o modo
+simulación, actualizar `docs/manual.html` en el mismo commit. La versión en la
+portada y footer del manual debe coincidir con `package.json`.
+
 ## Version bump
 
 Before committing, evaluate whether the changes warrant a version bump:

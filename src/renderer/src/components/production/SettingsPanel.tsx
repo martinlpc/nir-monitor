@@ -62,6 +62,78 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function renderMarkdown(md: string): string {
+  const escape = (s: string): string =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  const lines = md.split('\n')
+  const html: string[] = []
+  let inCodeBlock = false
+
+  for (const raw of lines) {
+    if (raw.startsWith('```')) {
+      if (inCodeBlock) {
+        html.push('</code></pre>')
+        inCodeBlock = false
+      } else {
+        html.push('<pre><code>')
+        inCodeBlock = true
+      }
+      continue
+    }
+
+    if (inCodeBlock) {
+      html.push(escape(raw) + '\n')
+      continue
+    }
+
+    const trimmed = raw.trim()
+    if (!trimmed) {
+      html.push('</p><p>')
+      continue
+    }
+
+    const h3 = trimmed.match(/^### (.+)/)
+    if (h3) {
+      html.push(`<h4>${escape(h3[1])}</h4>`)
+      continue
+    }
+
+    const h2 = trimmed.match(/^## (.+)/)
+    if (h2) {
+      html.push(`<h3>${escape(h2[1])}</h3>`)
+      continue
+    }
+
+    const h1 = trimmed.match(/^# (.+)/)
+    if (h1) {
+      html.push(`<h2>${escape(h1[1])}</h2>`)
+      continue
+    }
+
+    const li = trimmed.match(/^- (.+)/)
+    if (li) {
+      const linked = li[1].replace(
+        /\[([^\]]+)\]\(([^)]+)\)/g,
+        '<a href="$2" target="_blank" rel="noopener">$1</a>'
+      )
+      html.push(`<li>${linked}</li>`)
+      continue
+    }
+
+    let line = escape(trimmed)
+    line = line.replace(/`([^`]+)`/g, '<code>$1</code>')
+    line = line.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      '<a href="$2" target="_blank" rel="noopener">$1</a>'
+    )
+    html.push(line)
+  }
+
+  if (inCodeBlock) html.push('</code></pre>')
+  return html.join('')
+}
+
 export default function SettingsPanel({
   theme,
   onThemeChange,
@@ -83,6 +155,9 @@ export default function SettingsPanel({
   const [probeInfo, setProbeInfo] = useState<ProbeInfo | null>(null)
   const [activeCorrection, setActiveCorrection] = useState<ActiveCorrectionFactor | null>(null)
   const [appVersion, setAppVersion] = useState<string | null>(null)
+  const [changelogContent, setChangelogContent] = useState<string | null>(null)
+  const [showChangelog, setShowChangelog] = useState(false)
+  const [changelogError, setChangelogError] = useState<string | null>(null)
 
   const [preloadMinZoom, setPreloadMinZoom] = useState(10)
   const [preloadMaxZoom, setPreloadMaxZoom] = useState(18)
@@ -146,6 +221,20 @@ export default function SettingsPanel({
       minZoom: preloadMinZoom,
       maxZoom: preloadMaxZoom
     })
+  }
+
+  const handleOpenChangelog = async (): Promise<void> => {
+    if (changelogContent) {
+      setShowChangelog(true)
+      return
+    }
+    try {
+      const { content } = await window.api.app.getChangelog()
+      setChangelogContent(content)
+      setShowChangelog(true)
+    } catch {
+      setChangelogError('No se pudo cargar el historial de cambios.')
+    }
   }
 
   const isPreloading =
@@ -403,7 +492,55 @@ export default function SettingsPanel({
               Exportar logs
             </button>
           </div>
+          <div className="settings-option">
+            <button className="settings-btn" onClick={handleOpenChangelog}>
+              Ver novedades
+            </button>
+          </div>
         </section>
+      )}
+
+      {showChangelog && changelogContent && (
+        <div className="changelog-overlay" onClick={() => setShowChangelog(false)}>
+          <div className="changelog-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="changelog-modal__header">
+              <h2>Historial de cambios</h2>
+              <button
+                className="changelog-modal__close"
+                onClick={() => setShowChangelog(false)}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div
+              className="changelog-modal__body"
+              dangerouslySetInnerHTML={{
+                __html: renderMarkdown(changelogContent)
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {changelogError && (
+        <div className="changelog-overlay" onClick={() => setChangelogError(null)}>
+          <div className="changelog-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="changelog-modal__header">
+              <h2>Error</h2>
+              <button
+                className="changelog-modal__close"
+                onClick={() => setChangelogError(null)}
+                aria-label="Cerrar"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="changelog-modal__body changelog-modal__body--error">
+              {changelogError}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

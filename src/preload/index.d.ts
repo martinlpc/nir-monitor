@@ -193,6 +193,7 @@ declare global {
       }
       app: {
         getVersion: () => Promise<{ version: string }>
+        getChangelog: () => Promise<{ content: string }>
       }
       logs: {
         getPath: () => Promise<{ success: boolean; path: string }>

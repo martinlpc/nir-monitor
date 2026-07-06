@@ -1,4 +1,6 @@
 import { ipcMain, app } from 'electron'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 import { IPC_HANDLERS } from './channels'
 import { toUserError } from '../../shared/errors/toUserError'
 import { loadBuiltInProbeData, getBuiltInVersion } from '../uncertainty/loadBuiltInData'
@@ -15,6 +17,18 @@ export function registerSettingsHandlers(deviceManager: DeviceManager): void {
   ipcMain.handle(IPC_HANDLERS.GET_APP_VERSION, async () => {
     try {
       return { version: app.getVersion() }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
+  })
+
+  ipcMain.handle(IPC_HANDLERS.GET_CHANGELOG, async () => {
+    try {
+      const changelogPath = app.isPackaged
+        ? join(process.resourcesPath, 'CHANGELOG.md')
+        : join(app.getAppPath(), 'CHANGELOG.md')
+      const content = readFileSync(changelogPath, 'utf-8')
+      return { content }
     } catch (err) {
       sanitizeReThrow(err)
     }

@@ -30,7 +30,8 @@
     "generate:nsh-key": "node scripts/generateNshKey.mjs",
     "build:win": "npm run generate:nsh-key && npm run build && electron-builder --win",
     "build:mac": "electron-vite build && electron-builder --mac",
-    "build:linux": "electron-vite build && electron-builder --linux"
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "changelog": "node scripts/changelog.mjs"
   },
   "dependencies": {
     "@electron-toolkit/preload": "3.0.2",
@@ -62,6 +63,8 @@
     "@types/uuid": "10.0.0",
     "@vitejs/plugin-react": "5.1.1",
     "@vitest/coverage-v8": "4.1.2",
+    "conventional-changelog": "^8.0.1",
+    "conventional-changelog-angular": "^9.2.1",
     "electron": "42.2.0",
     "electron-builder": "26.0.12",
     "electron-vite": "5.0.0",

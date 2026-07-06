@@ -336,7 +336,9 @@ const api = {
   },
 
   app: {
-    getVersion: (): Promise<{ version: string }> => ipcRenderer.invoke(IPC_HANDLERS.GET_APP_VERSION)
+    getVersion: (): Promise<{ version: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.GET_APP_VERSION),
+    getChangelog: (): Promise<{ content: string }> => ipcRenderer.invoke(IPC_HANDLERS.GET_CHANGELOG)
   },
 
   logs: {
