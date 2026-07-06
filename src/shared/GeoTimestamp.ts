@@ -20,4 +20,5 @@ export interface GeoTimestamp {
   position: GeoPosition
   emf: EMFSample
   correctedMeasurement: number // rawMeasurement × correctionFactor de la sesión
+  gpsGap?: boolean // true si este punto se capturó después de una pérdida de señal GPS
 }

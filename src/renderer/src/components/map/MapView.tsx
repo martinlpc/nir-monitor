@@ -130,18 +130,29 @@ export default function MapView({
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
 
+  const GAP_COLOR = '#555555'
+
   const activeSegments = useMemo(() => {
     const pts = geoData.allPoints.filter((p) => p.position !== null && p.position !== undefined)
     const segments: { key: string; positions: LatLngExpression[]; color: string }[] = []
     for (let i = 0; i < pts.length - 1; i++) {
-      segments.push({
-        key: `seg-${pts[i].id}`,
-        positions: [
-          [pts[i].position.lat, pts[i].position.lon],
-          [pts[i + 1].position.lat, pts[i + 1].position.lon]
-        ],
-        color: getIntensityColor(pts[i].correctedMeasurement)
-      })
+      const mid: LatLngExpression = [
+        (pts[i].position.lat + pts[i + 1].position.lat) / 2,
+        (pts[i].position.lon + pts[i + 1].position.lon) / 2
+      ]
+      const isGap = pts[i + 1].gpsGap === true
+      segments.push(
+        {
+          key: `seg-${pts[i].id}-a`,
+          positions: [[pts[i].position.lat, pts[i].position.lon], mid],
+          color: isGap ? GAP_COLOR : getIntensityColor(pts[i].correctedMeasurement)
+        },
+        {
+          key: `seg-${pts[i].id}-b`,
+          positions: [mid, [pts[i + 1].position.lat, pts[i + 1].position.lon]],
+          color: isGap ? GAP_COLOR : getIntensityColor(pts[i + 1].correctedMeasurement)
+        }
+      )
     }
     return segments
   }, [geoData.allPoints])
@@ -153,14 +164,23 @@ export default function MapView({
         const pts = session.points.filter((p) => p.position !== null && p.position !== undefined)
         const segments: { key: string; positions: LatLngExpression[]; color: string }[] = []
         for (let i = 0; i < pts.length - 1; i++) {
-          segments.push({
-            key: `${session.id}-seg-${i}`,
-            positions: [
-              [pts[i].position.lat, pts[i].position.lon],
-              [pts[i + 1].position.lat, pts[i + 1].position.lon]
-            ],
-            color: getIntensityColor(pts[i].correctedMeasurement)
-          })
+          const mid: LatLngExpression = [
+            (pts[i].position.lat + pts[i + 1].position.lat) / 2,
+            (pts[i].position.lon + pts[i + 1].position.lon) / 2
+          ]
+          const isGap = pts[i + 1].gpsGap === true
+          segments.push(
+            {
+              key: `${session.id}-seg-${i}-a`,
+              positions: [[pts[i].position.lat, pts[i].position.lon], mid],
+              color: isGap ? GAP_COLOR : getIntensityColor(pts[i].correctedMeasurement)
+            },
+            {
+              key: `${session.id}-seg-${i}-b`,
+              positions: [mid, [pts[i + 1].position.lat, pts[i + 1].position.lon]],
+              color: isGap ? GAP_COLOR : getIntensityColor(pts[i + 1].correctedMeasurement)
+            }
+          )
         }
         return { sessionId: session.id, segments }
       })

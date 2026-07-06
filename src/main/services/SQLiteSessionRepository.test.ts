@@ -82,7 +82,8 @@ async function createSchema(db: SqlJsDatabase): Promise<void> {
       alt REAL,
       rawMeasurement REAL NOT NULL,
       correctedMeasurement REAL NOT NULL,
-      unit TEXT NOT NULL
+      unit TEXT NOT NULL,
+      gps_gap INTEGER NOT NULL DEFAULT 0
     );
     CREATE TABLE IF NOT EXISTS session_stats (
       sessionId TEXT PRIMARY KEY,

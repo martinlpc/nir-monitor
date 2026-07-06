@@ -98,7 +98,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         rawMeasurement: rowMap.rawMeasurement as number,
         unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
       },
-      correctedMeasurement: rowMap.correctedMeasurement as number
+      correctedMeasurement: rowMap.correctedMeasurement as number,
+      gpsGap: (rowMap.gps_gap as number) === 1 || undefined
     }
   }
 
@@ -216,9 +217,15 @@ export class SQLiteSessionRepository implements ISessionRepository {
           alt REAL,
           rawMeasurement REAL NOT NULL,
           correctedMeasurement REAL NOT NULL,
-          unit TEXT NOT NULL
+          unit TEXT NOT NULL,
+          gps_gap INTEGER NOT NULL DEFAULT 0
         )
       `)
+      try {
+        this.db.run('ALTER TABLE geo_points ADD COLUMN gps_gap INTEGER NOT NULL DEFAULT 0')
+      } catch {
+        /* column may already exist */
+      }
 
       this.db.run(`
         CREATE TABLE IF NOT EXISTS session_stats (
@@ -299,8 +306,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         for (const point of points) {
           db.run(
             `INSERT INTO geo_points 
-             (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit, gps_gap)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
               point.id,
               point.sessionId,
@@ -311,7 +318,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
               point.position.alt,
               point.emf.rawMeasurement,
               point.correctedMeasurement,
-              point.emf.unit
+              point.emf.unit,
+              point.gpsGap ? 1 : 0
             ]
           )
         }
@@ -413,8 +421,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       db.run(
         `INSERT INTO geo_points
-         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit, gps_gap)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           point.id,
           sessionId,
@@ -425,7 +433,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           point.position.alt,
           point.emf.rawMeasurement,
           point.correctedMeasurement,
-          point.emf.unit
+          point.emf.unit,
+          point.gpsGap ? 1 : 0
         ]
       )
 
@@ -681,7 +690,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         datetime: new Date(point.timestamp).toISOString(),
         rawMeasurement: point.emf.rawMeasurement,
         correctedMeasurement: point.correctedMeasurement,
-        unit: point.emf.unit
+        unit: point.emf.unit,
+        gpsGap: point.gpsGap ?? false
       }
     }))
 
@@ -1100,13 +1110,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       return OVER_100_HEX
     }
 
-    // Recolectar colores únicos de puntos y segmentos
-    const pointColors = points.map((p) => pointToHex(p.correctedMeasurement))
-    const segColors: string[] = []
-    for (let i = 0; i < points.length - 1; i++) {
-      segColors.push(pointToHex(points[i].correctedMeasurement))
-    }
-    const allUniqueHex = [...new Set([...pointColors, ...segColors])]
+    // Recolectar colores únicos de puntos
+    const allUniqueHex = [...new Set(points.map((p) => pointToHex(p.correctedMeasurement)))]
 
     const iconStyles = allUniqueHex
       .map((hex, i) => {
@@ -1137,16 +1142,6 @@ export class SQLiteSessionRepository implements ISessionRepository {
         <styleUrl>#icon_${i}_hl</styleUrl>
       </Pair>
     </StyleMap>`
-      })
-      .join('')
-
-    const segStyles = allUniqueHex
-      .map((hex, i) => {
-        const kmlColor = hexToKmlColor(hex)
-        return `
-    <Style id="seg_${i}">
-      <LineStyle><color>${kmlColor}</color><width>3</width></LineStyle>
-    </Style>`
       })
       .join('')
 
@@ -1194,26 +1189,6 @@ RNI Monitor v${appVersion}</description>
       })
       .join('')
 
-    // Segmentos coloreados entre pares consecutivos (como en el mapa de la app)
-    const segmentPlacemarks =
-      points.length < 2
-        ? ''
-        : points
-            .slice(0, -1)
-            .map((p, i) => {
-              const next = points[i + 1]
-              const hex = pointToHex(p.correctedMeasurement)
-              return `
-    <Placemark>
-      <styleUrl>#${hexToStyleId(hex, 'seg')}</styleUrl>
-      <LineString>
-        <tessellate>1</tessellate>
-        <coordinates>${p.position.lon},${p.position.lat},${p.position.alt ?? 0} ${next.position.lon},${next.position.lat},${next.position.alt ?? 0}</coordinates>
-      </LineString>
-    </Placemark>`
-            })
-            .join('')
-
     const startDate = new Date(metadata.startedAt).toLocaleString('es-AR')
     const dateOnly = new Date(metadata.startedAt).toLocaleDateString('es-AR')
     const endDate = metadata.stoppedAt
@@ -1240,11 +1215,6 @@ RNI Monitor v${appVersion}</description>
   <name>${escXml(layerName)}</name>
   <description>Sesión: ${escXml(metadata.label)}\nInicio: ${startDate}\nFin: ${endDate}\nPuntos: ${metadata.sampleCount}${instrumentDesc}\nRNI Monitor v${appVersion}</description>
   ${iconStyles}
-  ${segStyles}
-  <Folder>
-    <name>Recorrido</name>
-    ${segmentPlacemarks}
-  </Folder>
   <Folder>
     <name>Puntos de medición</name>
     ${pointPlacemarks}
@@ -1332,8 +1302,8 @@ RNI Monitor v${appVersion}</description>
   }
 
   private buildPaletteBMP(): Buffer {
-    const W = 220
-    const H = 340
+    const W = 145
+    const H = 290
     const bpp = 24
     const rowSize = ((W * bpp + 31) >> 3) & ~3
     const pixelOff = 54
@@ -1386,7 +1356,7 @@ RNI Monitor v${appVersion}</description>
       '<': ['00010', '00100', '01000', '10000', '01000', '00100', '00010'],
       '=': ['00000', '00000', '11111', '00000', '11111', '00000', '00000'],
       '>': ['01000', '00100', '00010', '00001', '00010', '00100', '01000'],
-      '%': ['00000', '10001', '01010', '00100', '01010', '10001', '00000'],
+      '%': ['00000', '00001', '01010', '00100', '01010', '10000', '00000'],
       '-': ['00000', '00000', '00000', '11111', '00000', '00000', '00000'],
       '.': ['00000', '00000', '00000', '00000', '00000', '00000', '11000'],
       '0': ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
@@ -1447,8 +1417,8 @@ RNI Monitor v${appVersion}</description>
     fillRect(0, 0, W, H, 0x2d, 0x2d, 0x2d)
 
     // Title & subtitle
-    drawText(12, 10, 'REFERENCIA DE COLORES', 0xff, 0xff, 0xff)
-    drawText(12, 24, '% MEP - ITU-T K.113', 0xaa, 0xaa, 0xaa)
+    drawText(8, 10, 'REFERENCIA DE COLORES', 0xff, 0xff, 0xff)
+    drawText(8, 24, '% MEP - ITU-T K.113', 0xaa, 0xaa, 0xaa)
 
     // Palette rows
     const levels: { r: number; g: number; b: number; label: string }[] = [
@@ -1466,12 +1436,12 @@ RNI Monitor v${appVersion}</description>
 
     const swatchSize = 20
     const rowGap = 4
-    const labelX = 12 + swatchSize + 6
-    const startY = 42
+    const labelX = 8 + swatchSize + 4
+    const startY = 40
 
     levels.forEach((l, i) => {
       const sy = startY + i * (swatchSize + rowGap)
-      fillRect(12, sy, swatchSize, swatchSize, l.r, l.g, l.b)
+      fillRect(8, sy, swatchSize, swatchSize, l.r, l.g, l.b)
       drawText(labelX, sy + 6, l.label, 0xe0, 0xe0, 0xe0)
     })
 

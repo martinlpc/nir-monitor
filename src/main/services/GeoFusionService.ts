@@ -26,6 +26,7 @@ export class GeoFusionService extends EventEmitter {
   private capturing: boolean = false
   private correctionFactor: number = 1
   private sequenceNumber: number = 0 // incrementa cada captura en una sesión
+  private gpsWasLost: boolean = false // true si hubo pérdida de GPS desde la última captura
 
   constructor(config: GeoFusionConfig = DEFAULT_FUSION_CONFIG) {
     super()
@@ -53,6 +54,7 @@ export class GeoFusionService extends EventEmitter {
     this.lastSavedPosition = null
     this.capturing = false
     this.sequenceNumber = 0 // reset para nueva sesión
+    this.gpsWasLost = false
 
     console.log(`[GeoFusionService] start() called with sessionId: ${sessionId}`)
     console.log(
@@ -96,6 +98,9 @@ export class GeoFusionService extends EventEmitter {
   // Llamado por SessionService en cada trama GPS
   // Solo evalúa el trigger — la posición se lee desde el driver en capture()
   onGPSPosition(valid: boolean): void {
+    if (!valid) {
+      this.gpsWasLost = true
+    }
     if (this.config.triggerMode === 'distance') {
       this.evaluateDistanceTrigger(valid)
     }
@@ -227,6 +232,9 @@ export class GeoFusionService extends EventEmitter {
       this.sequenceNumber++
       const correctedMeasurement = sample.rss * this.correctionFactor
 
+      const gpsGap = this.gpsWasLost || undefined
+      this.gpsWasLost = false
+
       const geoTimestamp: GeoTimestamp = {
         id: uuidv4(),
         sessionId: this.sessionId,
@@ -238,7 +246,8 @@ export class GeoFusionService extends EventEmitter {
           rawMeasurement: sample.rss,
           unit: sample.unit as EMFSample['unit']
         },
-        correctedMeasurement
+        correctedMeasurement,
+        gpsGap
       }
 
       console.log(
