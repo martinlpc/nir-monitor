@@ -35,8 +35,7 @@ export default function NbmStatusBadge(): null {
         const dotColor = mode === 'standby' ? '#3b82f6' : '#4ade80'
         dot.style.background = dotColor
       } else {
-        dot.style.background =
-          status === 'connecting' ? '#facc15' : '#6b7280'
+        dot.style.background = status === 'connecting' ? '#facc15' : '#6b7280'
       }
 
       if (raw === 'connected' && battery !== null) {

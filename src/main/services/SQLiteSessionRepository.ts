@@ -36,7 +36,11 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private readonly FLUSH_INTERVAL_MS: number
   private readonly isTestMode: boolean
 
-  constructor(options?: { testDb?: SqlJsDatabase; flushEveryNPoints?: number; flushIntervalMs?: number }) {
+  constructor(options?: {
+    testDb?: SqlJsDatabase
+    flushEveryNPoints?: number
+    flushIntervalMs?: number
+  }) {
     this.FLUSH_EVERY_N_POINTS = options?.flushEveryNPoints ?? 5
     this.FLUSH_INTERVAL_MS = options?.flushIntervalMs ?? 5_000
 
@@ -77,10 +81,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
   /**
    * Mapear una fila de geo_points a GeoTimestamp
    */
-  private rowToGeoTimestamp(
-    row: unknown[],
-    columns: string[]
-  ): GeoTimestamp {
+  private rowToGeoTimestamp(row: unknown[], columns: string[]): GeoTimestamp {
     const rowMap = Object.fromEntries(columns.map((col, idx) => [col, row[idx]]))
     return {
       id: rowMap.id as string,
@@ -394,14 +395,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     await this.initialize()
     const db = this.ensureDb()
 
-    const row = db.exec(
-      `SELECT sampleCount FROM sessions WHERE id = ?`,
-      [sessionId]
-    )
+    const row = db.exec(`SELECT sampleCount FROM sessions WHERE id = ?`, [sessionId])
     const sampleCount: number =
-      row.length > 0 && row[0].values.length > 0
-        ? (row[0].values[0][0] as number)
-        : 0
+      row.length > 0 && row[0].values.length > 0 ? (row[0].values[0][0] as number) : 0
 
     if (sampleCount >= SQLiteSessionRepository.MAX_EXPORT_POINTS) {
       console.warn(
@@ -651,9 +647,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) =>
-        this.rowToGeoTimestamp(row, result[0].columns)
-      )
+      return result[0].values.map((row) => this.rowToGeoTimestamp(row, result[0].columns))
     } catch (err) {
       console.error(`[SQLiteSessionRepository] Error loading points:`, err)
       return []
@@ -665,7 +659,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const points = await this.getSessionPoints(sessionId, limit)
     if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
       points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
-      console.warn(`[SQLiteSessionRepository] GeoJSON export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+      console.warn(
+        `[SQLiteSessionRepository] GeoJSON export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`
+      )
     }
     const session = await this.getSession(sessionId)
     const stats = await this.getSessionStats(sessionId)
@@ -739,7 +735,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const points = await this.getSessionPoints(sessionId, limit)
     if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
       points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
-      console.warn(`[SQLiteSessionRepository] CSV export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+      console.warn(
+        `[SQLiteSessionRepository] CSV export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`
+      )
     }
 
     const headers = [
@@ -776,7 +774,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const { metadata, points } = session
     if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
       points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
-      console.warn(`[SQLiteSessionRepository] XLSX export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+      console.warn(
+        `[SQLiteSessionRepository] XLSX export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`
+      )
     }
     const safeLabel = label.replace(/[<>:"/\\|?*]/g, '_')
 
@@ -1037,7 +1037,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
     const { metadata, points } = session
     if (points.length > SQLiteSessionRepository.MAX_EXPORT_POINTS) {
       points.length = SQLiteSessionRepository.MAX_EXPORT_POINTS
-      console.warn(`[SQLiteSessionRepository] KMZ export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`)
+      console.warn(
+        `[SQLiteSessionRepository] KMZ export truncated to ${SQLiteSessionRepository.MAX_EXPORT_POINTS} points`
+      )
     }
 
     // Generar KML
@@ -1322,9 +1324,7 @@ RNI Monitor v${appVersion}</description>
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) =>
-        this.rowToGeoTimestamp(row, result[0].columns)
-      )
+      return result[0].values.map((row) => this.rowToGeoTimestamp(row, result[0].columns))
     } catch (err) {
       console.error('[SQLiteSessionRepository] Error querying bounds:', err)
       return []
@@ -1367,10 +1367,17 @@ RNI Monitor v${appVersion}</description>
       buf[off + 2] = r
     }
 
-    const fillRect = (x: number, y: number, w: number, h: number, r: number, g: number, b: number): void => {
+    const fillRect = (
+      x: number,
+      y: number,
+      w: number,
+      h: number,
+      r: number,
+      g: number,
+      b: number
+    ): void => {
       for (let row = 0; row < h; row++)
-        for (let col = 0; col < w; col++)
-          pixel(x + col, y + row, r, g, b)
+        for (let col = 0; col < w; col++) pixel(x + col, y + row, r, g, b)
     }
 
     // 5x7 bitmap font — each char: 7 rows of 5 bits, row by row
@@ -1392,30 +1399,41 @@ RNI Monitor v${appVersion}</description>
       '7': ['11111', '00001', '00010', '00100', '01000', '01000', '01000'],
       '8': ['01110', '10001', '10001', '01110', '10001', '10001', '01110'],
       '9': ['01110', '10001', '10001', '01111', '00001', '00001', '01110'],
-      'A': ['00100', '01010', '10001', '10001', '11111', '10001', '10001'],
-      'B': ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
-      'C': ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
-      'D': ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
-      'E': ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
-      'F': ['11111', '10000', '10000', '11110', '10000', '10000', '10000'],
-      'I': ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
-      'K': ['10001', '10010', '10100', '11000', '10100', '10010', '10001'],
-      'L': ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
-      'M': ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
-      'N': ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
-      'O': ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
-      'P': ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
-      'R': ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
-      'S': ['01110', '10001', '10000', '01110', '00001', '10001', '01110'],
-      'T': ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
-      'U': ['10001', '10001', '10001', '10001', '10001', '10001', '01110']
+      A: ['00100', '01010', '10001', '10001', '11111', '10001', '10001'],
+      B: ['11110', '10001', '10001', '11110', '10001', '10001', '11110'],
+      C: ['01110', '10001', '10000', '10000', '10000', '10001', '01110'],
+      D: ['11110', '10001', '10001', '10001', '10001', '10001', '11110'],
+      E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+      F: ['11111', '10000', '10000', '11110', '10000', '10000', '10000'],
+      I: ['11111', '00100', '00100', '00100', '00100', '00100', '11111'],
+      K: ['10001', '10010', '10100', '11000', '10100', '10010', '10001'],
+      L: ['10000', '10000', '10000', '10000', '10000', '10000', '11111'],
+      M: ['10001', '11011', '10101', '10101', '10001', '10001', '10001'],
+      N: ['10001', '11001', '10101', '10011', '10001', '10001', '10001'],
+      O: ['01110', '10001', '10001', '10001', '10001', '10001', '01110'],
+      P: ['11110', '10001', '10001', '11110', '10000', '10000', '10000'],
+      R: ['11110', '10001', '10001', '11110', '10100', '10010', '10001'],
+      S: ['01110', '10001', '10000', '01110', '00001', '10001', '01110'],
+      T: ['11111', '00100', '00100', '00100', '00100', '00100', '00100'],
+      U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110']
     }
 
-    const drawText = (x: number, y: number, text: string, r: number, g: number, b: number, spacing = 1): void => {
+    const drawText = (
+      x: number,
+      y: number,
+      text: string,
+      r: number,
+      g: number,
+      b: number,
+      spacing = 1
+    ): void => {
       let cx = x
       for (const ch of text) {
         const rows = FONT_ROWS[ch]
-        if (!rows) { cx += 6; continue }
+        if (!rows) {
+          cx += 6
+          continue
+        }
         for (let col = 0; col < 5; col++) {
           for (let row = 0; row < 7; row++) {
             if (rows[row][col] === '1') pixel(cx + col, y + row, r, g, b)

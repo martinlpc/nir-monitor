@@ -92,7 +92,10 @@ export function registerSessionServiceHandlers(
             fs.writeFileSync(filepath, encrypted)
             console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
           } catch (innerErr) {
-            console.warn('[SessionServiceHandler] Failed to save encrypted GeoJSON to desktop:', innerErr)
+            console.warn(
+              '[SessionServiceHandler] Failed to save encrypted GeoJSON to desktop:',
+              innerErr
+            )
           }
         }
       }

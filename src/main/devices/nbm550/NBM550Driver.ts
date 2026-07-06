@@ -96,7 +96,9 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDri
         await this.sendCommand('REMOTE ON')
       } catch (err) {
         if (err instanceof AppError && err.code === 'NBM_401') {
-          console.warn('[NBM550Driver] Quick probe: REMOTE ON refused (already in remote mode), continuing...')
+          console.warn(
+            '[NBM550Driver] Quick probe: REMOTE ON refused (already in remote mode), continuing...'
+          )
         } else {
           throw err
         }

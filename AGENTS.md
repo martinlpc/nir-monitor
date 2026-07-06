@@ -20,15 +20,17 @@ Desktop EMF mapper basado en ITU-T K.113. Electron 42 + React 19 + Leaflet + SQL
 
 ## Git Remotes
 
-| Remote   | URL                                                   | Uso                          |
-| -------- | ----------------------------------------------------- | ---------------------------- |
-| `origin` | `https://github.com/martinlpc/nir-monitor.git`        | GitHub — desarrollo diario   |
+| Remote   | URL                                                         | Uso                        |
+| -------- | ----------------------------------------------------------- | -------------------------- |
+| `origin` | `https://github.com/martinlpc/nir-monitor.git`              | GitHub — desarrollo diario |
 | `gitlab` | `https://gitlab-desa.enacom.gob.ar/esartor/rni-monitor.git` | GitLab — branch `main`     |
 
 Flujo: se trabaja normalmente sobre `origin` (GitHub, cualquier rama). Cuando se necesita publicar en GitLab, se pushea manualmente a `gitlab main`:
+
 ```
 git push gitlab HEAD:main
 ```
+
 Los remotos son independientes. No hay sincronización automática entre ellos.
 
 ## Scripts clave

@@ -174,7 +174,10 @@ describe('SerialPortScanner', () => {
       createNBM: () =>
         ({
           quickProbe: vi.fn(
-            () => new Promise<void>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+            () =>
+              new Promise<void>((_, reject) =>
+                setTimeout(() => reject(new Error('timeout')), 10000)
+              )
           ),
           disconnect: vi.fn(async () => {}),
           removeAllListeners: vi.fn(),

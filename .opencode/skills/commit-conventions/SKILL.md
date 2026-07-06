@@ -72,6 +72,7 @@ Before committing, evaluate whether the changes warrant a version bump:
 **Always consult the user before bumping the version.** Ask which version they want, do not decide on your own.
 
 Update `package.json` → `version` field, then commit it as:
+
 ```
 chore: bump version to X.Y.Z
 ```

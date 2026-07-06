@@ -61,7 +61,9 @@ describe('toUserError', () => {
       userAction: 'Verifique el cable de la sonda'
     })
     const result = toUserError(appErr)
-    expect(result.message).toBe('Error de comunicación con la sonda. Verifique el cable de la sonda')
+    expect(result.message).toBe(
+      'Error de comunicación con la sonda. Verifique el cable de la sonda'
+    )
   })
 
   it('handles AppError without userAction', () => {

@@ -450,18 +450,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
       db.run(
         `INSERT INTO geo_points (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          uuidv4(),
-          meta.id,
-          seq,
-          now,
-          NEUQUEN.lat,
-          NEUQUEN.lon,
-          NEUQUEN.alt,
-          5.0,
-          5.4,
-          'V/m'
-        ]
+        [uuidv4(), meta.id, seq, now, NEUQUEN.lat, NEUQUEN.lon, NEUQUEN.alt, 5.0, 5.4, 'V/m']
       )
     }
     db.run(`UPDATE sessions SET sampleCount = ? WHERE id = ?`, [manyPoints, meta.id])
@@ -487,18 +476,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
       db.run(
         `INSERT INTO geo_points (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          uuidv4(),
-          meta.id,
-          seq,
-          now,
-          NEUQUEN.lat,
-          NEUQUEN.lon,
-          NEUQUEN.alt,
-          5.0,
-          5.4,
-          'V/m'
-        ]
+        [uuidv4(), meta.id, seq, now, NEUQUEN.lat, NEUQUEN.lon, NEUQUEN.alt, 5.0, 5.4, 'V/m']
       )
     }
     db.run(`UPDATE sessions SET sampleCount = ? WHERE id = ?`, [manyPoints, meta.id])
@@ -517,10 +495,11 @@ describe('SQLiteSessionRepository (in-memory)', () => {
       await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
     }
 
-    const extraPoint = makePoint({ sessionId: meta.id, sequenceNumber: SQLiteSessionRepository.MAX_EXPORT_POINTS + 1 })
-    await expect(repo.addPoint(meta.id, extraPoint)).rejects.toThrow(
-      /Límite de/
-    )
+    const extraPoint = makePoint({
+      sessionId: meta.id,
+      sequenceNumber: SQLiteSessionRepository.MAX_EXPORT_POINTS + 1
+    })
+    await expect(repo.addPoint(meta.id, extraPoint)).rejects.toThrow(/Límite de/)
 
     const points = await repo.getSessionPoints(meta.id)
     expect(points).toHaveLength(SQLiteSessionRepository.MAX_EXPORT_POINTS)

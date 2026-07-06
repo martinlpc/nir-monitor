@@ -22,12 +22,7 @@ function pvt(manager: DeviceManager): DeviceManagerPrivate {
 type OpenCallback = (err?: Error | null) => void
 type WriteCallback = (err?: Error | null) => void
 
-const {
-  serialPortListMock,
-  serialPortInstances,
-  FakeSerialPort,
-  mockScanner
-} = vi.hoisted(() => {
+const { serialPortListMock, serialPortInstances, FakeSerialPort, mockScanner } = vi.hoisted(() => {
   const serialPortListMock = vi.fn()
   const serialPortInstances: Array<{
     config: Record<string, unknown>

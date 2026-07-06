@@ -15,7 +15,11 @@ export interface INBMDriver {
   } | null>
   readBattery(): Promise<number | null>
   resetMaxHold(): Promise<void>
-  getProbeInfo(): { model: string | null; serial: string | null; calibrationDate: string | null } | null
+  getProbeInfo(): {
+    model: string | null
+    serial: string | null
+    calibrationDate: string | null
+  } | null
   getMeterSerial(): string | null
   on(event: string, listener: (...args: any[]) => void): void
   removeAllListeners(event?: string): void

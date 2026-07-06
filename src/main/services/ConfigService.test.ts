@@ -176,7 +176,11 @@ describe('ConfigService', () => {
       expect(first).toEqual({})
 
       // Modificar archivo por fuera
-      fs.writeFileSync(path.join(tmpDir, 'app-config.json'), JSON.stringify({ triggerMode: 'time' }), 'utf-8')
+      fs.writeFileSync(
+        path.join(tmpDir, 'app-config.json'),
+        JSON.stringify({ triggerMode: 'time' }),
+        'utf-8'
+      )
 
       // El cache debería devolver el viejo valor
       const second = cfg.loadAppConfig()

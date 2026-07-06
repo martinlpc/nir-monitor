@@ -283,7 +283,8 @@ export class SessionService extends EventEmitter {
         console.error('[SessionService] Failed to init session in repository:', err)
         throw new AppError({
           code: 'SESSION_INIT_FAILED',
-          message: 'No se pudo inicializar la sesión en la base de datos. Verifique el espacio en disco.',
+          message:
+            'No se pudo inicializar la sesión en la base de datos. Verifique el espacio en disco.',
           severity: 'error',
           category: 'session',
           userAction: 'Verifique el espacio en disco y los permisos de escritura',

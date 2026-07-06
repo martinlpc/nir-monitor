@@ -63,10 +63,10 @@ updaterCacheDirName: rni-monitor-updater
 
 El proyecto tiene dos remotos independientes:
 
-| Remote   | URL                                                           | Ramas activas |
-| -------- | ------------------------------------------------------------- | ------------- |
-| `origin` | `https://github.com/martinlpc/nir-monitor.git`                | Todas         |
-| `gitlab` | `https://gitlab-desa.enacom.gob.ar/esartor/rni-monitor.git`       | `main`        |
+| Remote   | URL                                                         | Ramas activas |
+| -------- | ----------------------------------------------------------- | ------------- |
+| `origin` | `https://github.com/martinlpc/nir-monitor.git`              | Todas         |
+| `gitlab` | `https://gitlab-desa.enacom.gob.ar/esartor/rni-monitor.git` | `main`        |
 
 - El desarrollo diario se hace sobre `origin` (GitHub).
 - Cuando se necesita publicar en GitLab, se pushea manualmente con `git push gitlab HEAD:main`.

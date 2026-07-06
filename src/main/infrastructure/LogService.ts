@@ -13,7 +13,7 @@ function getLogPath(): string {
 function writeLog(level: string, args: unknown[]): void {
   const ts = new Date().toISOString()
   const message = args
-    .map((a) => (typeof a === 'string' ? a : JSON.stringify(a, null, 0) ?? String(a)))
+    .map((a) => (typeof a === 'string' ? a : (JSON.stringify(a, null, 0) ?? String(a))))
     .join(' ')
   const line = `[${ts}] [${level}] ${message}\n`
   const logPath = getLogPath()

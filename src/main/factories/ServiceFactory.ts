@@ -41,8 +41,12 @@ export function createServices(): Services {
   console.log(`[ServiceFactory] simulationMode: ${config.simulationMode}`)
 
   // 1. Crear dependencias base
-  const scanner: ISerialPortScanner = config.simulationMode ? createSimulatedScanner() : new SerialPortScanner()
-  const driverFactory: DriverFactory = config.simulationMode ? new SimulatedDriverFactory() : new RealDriverFactory()
+  const scanner: ISerialPortScanner = config.simulationMode
+    ? createSimulatedScanner()
+    : new SerialPortScanner()
+  const driverFactory: DriverFactory = config.simulationMode
+    ? new SimulatedDriverFactory()
+    : new RealDriverFactory()
   const geoFusion = new GeoFusionService()
   const flushCfg = config.flushConfig
   const sessionRepository = new SQLiteSessionRepository({
