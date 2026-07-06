@@ -89,6 +89,10 @@ function createWindow(): BrowserWindow {
   return window
 }
 
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('[MAIN] Unhandled Rejection:', reason)
+})
+
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.electron')
 
@@ -185,6 +189,11 @@ app.on('before-quit', (event) => {
       await svc.deviceManager.disconnectAll()
     }
 
-    shutdown().finally(() => app.exit())
+    shutdown()
+      .finally(() => app.exit())
+      .catch((err) => {
+        console.error('[Main] Shutdown error:', err)
+        app.exit()
+      })
   }
 })

@@ -1,6 +1,6 @@
 # RNI Monitor
 
-![Version](https://img.shields.io/badge/version-0.12.0-blue.svg)
+![Version](https://img.shields.io/badge/version-0.13.0-blue.svg)
 
 **Mapeador de Radiaciones No Ionizantes** — Aplicación de escritorio para relevar y mapear mediciones de campo electromagnético basada en la **Recomendación ITU-T K.113**.
 

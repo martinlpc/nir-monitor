@@ -77,9 +77,12 @@ export class GeoFusionService extends EventEmitter {
         await this.tryCapture()
       } catch (err) {
         console.error('[GeoFusionService] Error in tryCapture:', err)
-        // Continuar sin importar el error
       }
-      this.scheduleNextCapture()
+      try {
+        this.scheduleNextCapture()
+      } catch (err) {
+        console.error('[GeoFusionService] Error scheduling next capture:', err)
+      }
     }, this.config.intervalMs)
   }
 
@@ -115,18 +118,24 @@ export class GeoFusionService extends EventEmitter {
 
     // En modo test, tomar cada punto sin umbral de distancia
     if (this.config.testMode) {
-      this.capture()
+      this.capture().catch((err) => {
+        console.error('[GeoFusionService] capture error (non-fatal):', err)
+      })
       return
     }
 
     if (!this.lastSavedPosition) {
-      this.capture()
+      this.capture().catch((err) => {
+        console.error('[GeoFusionService] capture error (non-fatal):', err)
+      })
       return
     }
 
     const dist = haversineMeters(this.lastSavedPosition, currentPosition)
     if (dist >= this.config.minDistanceMeters) {
-      this.capture()
+      this.capture().catch((err) => {
+        console.error('[GeoFusionService] capture error (non-fatal):', err)
+      })
     }
   }
 
