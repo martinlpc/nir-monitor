@@ -8,8 +8,8 @@ interface DeviceManagerPrivate {
   nbm: unknown
   gps: unknown
   portConfig: PortConfigData
-  nbmReconnect: { stop: ReturnType<typeof vi.fn> }
-  gpsReconnect: { stop: ReturnType<typeof vi.fn> }
+  nbmReconnect: { stop: ReturnType<typeof vi.fn>; reset: ReturnType<typeof vi.fn> }
+  gpsReconnect: { stop: ReturnType<typeof vi.fn>; reset: ReturnType<typeof vi.fn> }
   nbmPolling: { stop: ReturnType<typeof vi.fn> }
   initNBM: (...args: string[]) => Promise<unknown>
   setPortManual: (device: 'nbm550' | 'gps', port: string) => Promise<void>
@@ -328,12 +328,12 @@ describe('DeviceManager', () => {
     const manager = new DeviceManager(mockScanner, fakeFactory)
     const nbm = createFakeDevice('COM4')
     pvt(manager).nbm = nbm
-    pvt(manager).nbmReconnect = { stop: vi.fn() }
+    pvt(manager).nbmReconnect = { stop: vi.fn(), reset: vi.fn() }
     pvt(manager).nbmPolling = { stop: vi.fn() }
 
     await manager.disconnectDevice('nbm550')
 
-    expect(pvt(manager).nbmReconnect.stop).toHaveBeenCalled()
+    expect(pvt(manager).nbmReconnect.reset).toHaveBeenCalled()
     expect(pvt(manager).nbmPolling.stop).toHaveBeenCalled()
     expect(nbm.disconnect).toHaveBeenCalledTimes(1)
     expect(pvt(manager).nbm).toBeNull()
@@ -343,11 +343,11 @@ describe('DeviceManager', () => {
     const manager = new DeviceManager(mockScanner, fakeFactory)
     const gps = createFakeDevice('COM5')
     pvt(manager).gps = gps
-    pvt(manager).gpsReconnect = { stop: vi.fn() }
+    pvt(manager).gpsReconnect = { stop: vi.fn(), reset: vi.fn() }
 
     await manager.disconnectDevice('gps')
 
-    expect(pvt(manager).gpsReconnect.stop).toHaveBeenCalled()
+    expect(pvt(manager).gpsReconnect.reset).toHaveBeenCalled()
     expect(gps.disconnect).toHaveBeenCalledTimes(1)
     expect(pvt(manager).gps).toBeNull()
   })
