@@ -60,34 +60,12 @@ fix(export): encode KMZ icons in base64 to avoid broken paths
 chore: bump electron from 42.0.0 to 42.1.0
 ```
 
-## Release workflow
-
-Secuencia estandarizada para preparar una release:
-
-```
-1. Actualizar versión en package.json (+ package-lock.json si existe)
-2. npm run changelog              # lee la nueva version de package.json
-3. git add CHANGELOG.md package.json package-lock.json
-4. git commit -m "chore: bump version to X.Y.Z"
-5. git tag vX.Y.Z
-6. npm run build:win|mac|linux    # build + empaquetado (incluye CHANGELOG.md)
-```
-
-**El changelog se regenera DESPUÉS del bump** para que la sección más nueva
-quede con la versión correcta. `conventional-changelog` lee la versión de
-`package.json`.
-
-**Manual de uso:** si los cambios afectan flujo de conexión, parámetros de captura,
-comportamiento de sesión, formatos de exportación, configuración de mapa o modo
-simulación, actualizar `docs/manual.html` en el mismo commit. La versión en la
-portada y footer del manual debe coincidir con `package.json`.
-
 ## Version bump
 
 Before committing, evaluate whether the changes warrant a version bump:
 
-- **feat** or new functionality → minor bump (`0.3.0` → `0.4.0`)
-- **fix** (bug fix only) → patch bump (`0.3.0` → `0.3.1`)
+- **feat** → minor bump (`0.3.0` → `0.4.0`)
+- **fix** → patch bump (`0.3.0` → `0.3.1`)
 - **Breaking change** → major bump (`1.0.0` → `2.0.0`)
 - **chore / refactor / docs / style / test / ci** → no bump needed
 
@@ -98,6 +76,58 @@ Update `package.json` → `version` field, then commit it as:
 ```
 chore: bump version to X.Y.Z
 ```
+
+## Release workflow
+
+### Flujo completo (GitLab + GitHub mirror)
+
+El desarrollo se organiza con GitLab como repositorio primario (código + issues)
+y GitHub como mirror profesional.
+
+1. Se toma una issue de GitLab (crear o asignar)
+2. `git pull gitlab main` — asegurar local actualizado
+3. `git checkout -b <tipo>/<descripcion>` — crear rama desde `gitlab/main`
+   - Ej: `fix/1-disable-load-during-session`, `feat/locations-indec-json`
+4. Hacer los cambios con commits convencionales (ver tipos arriba)
+5. Evaluar si corresponde version bump (ver reglas en sección anterior)
+6. **Siempre consultar al usuario antes de bumpear.** No decidir por cuenta propia.
+7. Si aplica bump (se hace en este orden):
+   ```
+   a. Actualizar campo "version" en package.json
+   b. npm run changelog              # regenera CHANGELOG.md con la nueva versión
+   c. git add CHANGELOG.md package.json package-lock.json
+   d. git commit -m "chore: bump version to X.Y.Z"
+   ```
+8. Si los cambios afectan flujo de conexión, parámetros de captura, comportamiento
+   de sesión, formatos de exportación, configuración de mapa o modo simulación,
+   actualizar `docs/manual.html` en el mismo commit. La versión en portada y footer
+   del manual debe coincidir con `package.json`.
+9. `git push gitlab <nombre-de-rama>`
+10. Crear MR en GitLab:
+    - **Título:** el mensaje del cambio funcional, no el bump
+      - Ej: `fix(#1): prevent loading a saved session during active measurement`
+    - **Descripción:** incluir versión nueva si aplica
+      ```
+      ## Description
+      <explicación del cambio>
+
+      ## Changelog
+      - vX.Y.Z (<tipo>)
+      - closes #<issue>
+      ```
+    - **Label:** según el tipo de cambio
+      - `type::bug` (fix), `type::feature` (feat), `type::refactor` (refactor),
+        `type::chore` (chore / docs / style / ci)
+    - Marcar "Delete source branch when merge request is accepted"
+11. Mergear a `gitlab/main`
+12. Post-merge (en local):
+    ```
+    git checkout main && git pull gitlab main
+    git tag vX.Y.Z
+    git push gitlab --tags
+    git push origin main --tags
+    git push origin --delete <nombre-de-rama>   # limpiar branch en GitHub
+    ```
 
 ## Anti-patterns
 
