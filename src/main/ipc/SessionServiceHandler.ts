@@ -330,13 +330,21 @@ export function registerSessionServiceHandlers(
       const instrument = geojson.properties?.instrument || null
       const correctionFactor = geojson.properties?.correctionFactor ?? null
       const now = Date.now()
-      const sessionId = uuidv4()
+
+      const originalId = props.id || uuidv4()
+
+      const existing = await repository.getSession(originalId)
+      if (existing) {
+        return { success: false, duplicate: true, error: 'La sesión ya existe en la base de datos' }
+      }
+
+      const sessionId = originalId
 
       const metadata: SessionSummary = {
         id: sessionId,
         label: props.label || props.localidad || 'Importada',
         startedAt: props.startedAt ? new Date(props.startedAt).getTime() : now,
-        stoppedAt: now,
+        stoppedAt: props.stoppedAt ? new Date(props.stoppedAt).getTime() : now,
         sampleCount: geojson.features.length,
         instrument: instrument
           ? {

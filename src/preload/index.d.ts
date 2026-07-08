@@ -86,6 +86,7 @@ declare global {
           success: boolean
           sessionId?: string
           canceled?: boolean
+          duplicate?: boolean
           error?: string
         }>
         getStats: (sessionId: string) => Promise<{

@@ -30,12 +30,16 @@ export default function SessionsPanel({
     sessionId: string,
     format: 'geojson' | 'xlsx' | 'kmz'
   ) => Promise<{ canceled?: boolean }>
-  onImportSession?: () => Promise<{ sessionId?: string; canceled?: boolean }>
+  onImportSession?: () => Promise<{
+    sessionId?: string
+    canceled?: boolean
+    duplicate?: boolean
+  }>
   onGetSession: (sessionId: string) => Promise<PersistedSession>
 }): React.JSX.Element {
   const [loadStatus, setLoadStatus] = useState<{
     message: string
-    type: 'success' | 'error'
+    type: 'success' | 'error' | 'warning'
   } | null>(null)
 
   // Limpiar mensaje de estado después de 3 segundos
@@ -133,8 +137,16 @@ export default function SessionsPanel({
       const result = await onImportSession()
       if (result.canceled) return
 
+      if (result.duplicate) {
+        setLoadStatus({
+          message: '⚠ La sesión ya existe en la base de datos',
+          type: 'warning'
+        })
+        return
+      }
+
       setLoadStatus({
-        message: `✓ GeoJSON importado correctamente`,
+        message: '✓ GeoJSON importado correctamente',
         type: 'success'
       })
     } catch (err) {
@@ -203,11 +215,26 @@ export default function SessionsPanel({
           style={{
             padding: '8px 12px',
             background:
-              loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            border: `1px solid ${loadStatus.type === 'success' ? 'rgba(114, 186, 255, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+              loadStatus.type === 'success'
+                ? 'rgba(114, 186, 255, 0.1)'
+                : loadStatus.type === 'warning'
+                  ? 'rgba(251, 191, 36, 0.1)'
+                  : 'rgba(239, 68, 68, 0.1)',
+            border: `1px solid ${
+              loadStatus.type === 'success'
+                ? 'rgba(114, 186, 255, 0.3)'
+                : loadStatus.type === 'warning'
+                  ? 'rgba(251, 191, 36, 0.3)'
+                  : 'rgba(239, 68, 68, 0.3)'
+            }`,
             borderRadius: '4px',
             fontSize: '12px',
-            color: loadStatus.type === 'success' ? '#72baff' : '#fca5a5',
+            color:
+              loadStatus.type === 'success'
+                ? '#72baff'
+                : loadStatus.type === 'warning'
+                  ? '#fbbf24'
+                  : '#fca5a5',
             marginBottom: '8px'
           }}
         >
