@@ -74,7 +74,7 @@ Before committing, evaluate whether the changes warrant a version bump:
 Update `package.json` → `version` field, then commit it as:
 
 ```
-chore: bump version to X.Y.Z
+chore: bump to X.Y.Z and update changelog/manual/readme
 ```
 
 ## Release workflow
@@ -84,59 +84,79 @@ chore: bump version to X.Y.Z
 El desarrollo se organiza con GitLab como repositorio primario (código + issues)
 y GitHub como mirror profesional.
 
-1. Si la rama surge de una issue de GitLab, referenciarla en el nombre y MR.
-   Si no (cambios ad-hoc como este), simplemente se omite la referencia.
-   - Con issue: `fix/1-disable-load-during-session`
-   - Sin issue: `chore/release-workflow`
-2. `git pull gitlab main` — asegurar local actualizado
-3. `git checkout -b <tipo>/<descripcion>` — crear rama desde `gitlab/main`
-   - Ej: `fix/1-disable-load-during-session`, `feat/locations-indec-json`
-4. Hacer los cambios con commits convencionales (ver tipos arriba)
-5. Evaluar si corresponde version bump (ver reglas en sección anterior)
-6. **Siempre consultar al usuario antes de bumpear.** No decidir por cuenta propia.
-7. Si aplica bump (se hace en este orden):
-   ```
-   a. Actualizar campo "version" en package.json
-   b. npm run changelog              # regenera CHANGELOG.md con la nueva versión
-   c. git add CHANGELOG.md package.json package-lock.json
-   d. git commit -m "chore: bump version to X.Y.Z"
-   ```
-8. Actualizar `docs/manual.html`:
-   - **Portada y footer:** actualizar versión SIEMPRE que haya bump (debe coincidir
-     con `package.json`)
+#### 1. Rama
+
+```
+git checkout -b <tipo>/<descripcion>
+```
+
+- Con issue de GitLab: `fix/1-disable-load-during-session`
+- Sin issue: `feat/locations-indec-json`, `chore/release-workflow`
+
+#### 2. Commits
+
+Convencionales en inglés, imperativo. **Siempre consultar al usuario antes de
+committear**, especialmente si el cambio requiere testeo previo.
+
+#### 3. MR summary
+
+Una vez finalizado el issue o tarea, y solo cuando el usuario lo indique,
+generar un sumario con el contenido para rellenar el MR en la web:
+
+```
+## Description
+<explicación del cambio>
+
+## Changelog
+- vX.Y.Z (<tipo>)
+- closes #<issue>
+```
+
+El usuario crea y mergea el MR manualmente en GitLab.
+
+#### 4. Post-merge
+
+Cuando el usuario indique que ya mergeó:
+
+```
+git checkout main && git pull gitlab main
+```
+
+Luego **sugerir** si corresponde o no version bump, explicando el porqué.
+Esperar confirmación del usuario.
+
+#### 5. Bump — propuesta
+
+Si el usuario confirma el bump, mostrar el detalle de los cambios que se van a
+hacer (archivos, líneas, versiones) y esperar confirmación final.
+
+#### 6. Bump — ejecución
+
+Confirmado el bump, ejecutar en orden:
+
+1. Actualizar `"version"` en `package.json`
+2. Actualizar badge en `README.md`
+3. Actualizar `docs/manual.html`:
+   - **Portada y footer:** versión SIEMPRE (debe coincidir con `package.json`)
    - **Contenido:** solo si los cambios afectan flujo de conexión, parámetros de
      captura, comportamiento de sesión, formatos de exportación, configuración de
      mapa o modo simulación
-9. `git push gitlab <nombre-de-rama>`
-10. Crear MR en GitLab:
-    - **Título:** el mensaje del cambio funcional, no el bump
-      - Ej: `fix(#1): prevent loading a saved session during active measurement`
-    - **Descripción:** incluir versión nueva si aplica
-      ```
-      ## Description
-      <explicación del cambio>
+4. `npm run changelog` — regenera CHANGELOG.md
+5. Commit: `chore: bump to X.Y.Z and update changelog/manual/readme`
 
-      ## Changelog
-      - vX.Y.Z (<tipo>)
-      - closes #<issue>
-      ```
-    - **Label:** según el tipo de cambio
-      - `type::bug` (fix), `type::feature` (feat), `type::refactor` (refactor),
-        `type::chore` (chore / docs / style / ci)
-    - Marcar "Delete source branch when merge request is accepted"
-11. Mergear a `gitlab/main`
-12. Post-merge (en local):
-    ```
-    git checkout main && git pull gitlab main
-    git tag vX.Y.Z
-    git push gitlab --tags
-    git push origin main --tags
-    git push origin --delete <nombre-de-rama>   # limpiar branch en GitHub
-    ```
-13. Build installer (si hubo bump):
-    ```
-    npm run build:win   # default. Usar build:mac / build:linux solo si se especifica
-    ```
+#### 7. Tags
+
+```
+git tag vX.Y.Z
+git push gitlab vX.Y.Z
+```
+
+#### 8. Mirror a GitHub
+
+```
+git push origin main
+git push origin vX.Y.Z
+```
 
 ## Anti-patterns
 

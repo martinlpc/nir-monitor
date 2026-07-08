@@ -35,21 +35,21 @@ Los remotos son independientes. No hay sincronización automática entre ellos.
 
 ## Scripts clave
 
-| Comando                 | Proposito                             |
-| ----------------------- | ------------------------------------- |
-| `npm run dev`           | Dev con hot reload                    |
-| `npm run build`         | Typecheck + build production          |
-| `npm test`              | Vitest run (node env, 15s timeout)    |
-| `npm run test:watch`    | Vitest watch mode                     |
-| `npm run test:coverage` | Vitest con reporte V8                 |
-| `npm run lint`          | ESLint                                |
-| `npm run format`        | Prettier --write                      |
-| `npm run typecheck`     | tsc node + web                        |
-| `npm run seed:mock`     | Seeds SQLite con datos mock (Neuquen) |
+| Comando                 | Proposito                                        |
+| ----------------------- | ------------------------------------------------ |
+| `npm run dev`           | Dev con hot reload                               |
+| `npm run build`         | Typecheck + build production                     |
+| `npm test`              | Vitest run (node env, 15s timeout)               |
+| `npm run test:watch`    | Vitest watch mode                                |
+| `npm run test:coverage` | Vitest con reporte V8                            |
+| `npm run lint`          | ESLint                                           |
+| `npm run format`        | Prettier --write                                 |
+| `npm run typecheck`     | tsc node + web                                   |
+| `npm run seed:mock`     | Seeds SQLite con datos mock (Neuquen)            |
 | `npm run changelog`     | Regenera CHANGELOG.md desde Conventional Commits |
-| `npm run build:win`     | Build NSIS installer                  |
-| `npm run build:mac`     | Build DMG                             |
-| `npm run build:linux`   | Build AppImage/snap/deb               |
+| `npm run build:win`     | Build NSIS installer                             |
+| `npm run build:mac`     | Build DMG                                        |
+| `npm run build:linux`   | Build AppImage/snap/deb                          |
 
 ## Arquitectura (3-capas)
 

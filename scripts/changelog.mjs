@@ -3,19 +3,28 @@ import { ConventionalChangelog } from 'conventional-changelog'
 
 const SECTION_TRANSLATIONS = {
   'Bug Fixes': 'Correcciones',
-  'Features': 'Novedades',
+  Features: 'Novedades',
   'Performance Improvements': 'Mejoras de rendimiento',
-  'Documentation': 'Documentación',
+  Documentation: 'Documentación',
   'Code Refactoring': 'Refactorización',
-  'Tests': 'Pruebas',
+  Tests: 'Pruebas',
   'Miscellaneous Chores': 'Tareas varias',
-  'Reverts': 'Reversiones',
-  'Style': 'Estilo',
-  'Build': 'Compilación',
-  'Continuous Integration': 'Integración continua',
+  Reverts: 'Reversiones',
+  Style: 'Estilo',
+  Build: 'Compilación',
+  'Continuous Integration': 'Integración continua'
 }
 
-const FILTER_KEYWORDS = ['mock', '.test.', 'coverage', 'eslint', 'prettier', 'tsconfig', 'vitest ', 'casing in git']
+const FILTER_KEYWORDS = [
+  'mock',
+  '.test.',
+  'coverage',
+  'eslint',
+  'prettier',
+  'tsconfig',
+  'vitest ',
+  'casing in git'
+]
 
 function processChangelog(raw) {
   const lines = raw.split('\n')
