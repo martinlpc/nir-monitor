@@ -1,6 +1,6 @@
 {
   "name": "rni-monitor",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "description": "Non-Ionizing Radiations mapper, based on ITU-K.113",
   "main": "./out/main/index.js",
   "author": {

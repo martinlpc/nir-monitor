@@ -1,7 +1,8 @@
-## 0.14.1 — 2026-07-08
+## 0.14.2 — 2026-07-08
 
 ### Correcciones
 
+- prevent duplicate session import and fix duration parsing
 - prevent loading a saved session during active measurement
 
 ### Novedades
