@@ -84,7 +84,10 @@ chore: bump version to X.Y.Z
 El desarrollo se organiza con GitLab como repositorio primario (código + issues)
 y GitHub como mirror profesional.
 
-1. Se toma una issue de GitLab (crear o asignar)
+1. Si la rama surge de una issue de GitLab, referenciarla en el nombre y MR.
+   Si no (cambios ad-hoc como este), simplemente se omite la referencia.
+   - Con issue: `fix/1-disable-load-during-session`
+   - Sin issue: `chore/release-workflow`
 2. `git pull gitlab main` — asegurar local actualizado
 3. `git checkout -b <tipo>/<descripcion>` — crear rama desde `gitlab/main`
    - Ej: `fix/1-disable-load-during-session`, `feat/locations-indec-json`
@@ -129,6 +132,10 @@ y GitHub como mirror profesional.
     git push gitlab --tags
     git push origin main --tags
     git push origin --delete <nombre-de-rama>   # limpiar branch en GitHub
+    ```
+13. Build installer (si hubo bump):
+    ```
+    npm run build:win   # default. Usar build:mac / build:linux solo si se especifica
     ```
 
 ## Anti-patterns
