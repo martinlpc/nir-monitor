@@ -127,7 +127,7 @@ export default function MapView({
   focusedPointId = null,
   onPointClick
 }: MapViewProps): React.JSX.Element {
-  const { position: livePosition, lastKnownPosition, heading } = useGpsPosition()
+  const { position: livePosition, lastKnownPosition, heading, speed } = useGpsPosition()
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
 
@@ -280,7 +280,7 @@ export default function MapView({
               </CircleMarker>
             )
           })}
-          {livePosition ? <HeadingMarker position={livePosition} heading={heading} /> : null}
+          {livePosition ? <HeadingMarker position={livePosition} heading={heading} speed={speed} /> : null}
           {lastKnownPosition && !livePosition ? (
             <CircleMarker
               center={[lastKnownPosition.lat, lastKnownPosition.lon]}

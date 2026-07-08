@@ -3,16 +3,19 @@ import { Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import type { GpsPosition } from '../../hooks/GpsPositionProvider'
 
+const SPEED_THRESHOLD_KMH = 1
+
 interface HeadingMarkerProps {
   position: GpsPosition
   heading?: number
+  speed?: number
 }
 
-function HeadingMarker({ position, heading }: HeadingMarkerProps) {
+function HeadingMarker({ position, heading, speed }: HeadingMarkerProps) {
   const icon = useMemo(() => {
-    const hasHeading = heading != null && heading >= 0
+    const showArrow = heading != null && heading >= 0 && speed != null && speed > SPEED_THRESHOLD_KMH
 
-    const svg = hasHeading
+    const svg = showArrow
       ? `<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
            <g style="transform-origin:20px 20px;transform:rotate(${heading}deg);transition:transform .3s ease">
              <polygon points="20,5 10,30 20,23 30,30" fill="#ff3b30"/>
@@ -25,10 +28,10 @@ function HeadingMarker({ position, heading }: HeadingMarkerProps) {
     return L.divIcon({
       className: 'gps-heading',
       html: svg,
-      iconSize: hasHeading ? [40, 40] : [26, 26],
-      iconAnchor: hasHeading ? [20, 20] : [13, 13]
+      iconSize: showArrow ? [40, 40] : [26, 26],
+      iconAnchor: showArrow ? [20, 20] : [13, 13]
     })
-  }, [heading])
+  }, [heading, speed])
 
   return (
     <Marker position={[position.lat, position.lon]} icon={icon}>
@@ -42,6 +45,12 @@ function HeadingMarker({ position, heading }: HeadingMarkerProps) {
           <>
             <br />
             Rumbo: {heading.toFixed(0)}&deg;
+          </>
+        )}
+        {speed != null && (
+          <>
+            <br />
+            Vel: {speed.toFixed(1)} km/h
           </>
         )}
       </Popup>
