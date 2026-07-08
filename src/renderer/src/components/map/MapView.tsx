@@ -11,6 +11,7 @@ import type { TileProvider } from '../../../../shared/tileProviders'
 import { getProvider } from '../../../../shared/tileProviders'
 import SyncMapView from './SyncMapView'
 import PanControl from './PanControl'
+import HeadingMarker from './HeadingMarker'
 import MaximizeControl from './MaximizeControl'
 import NbmStatusBadge from './NbmStatusBadge'
 import PreloadBoundsOverlay from './PreloadBoundsOverlay'
@@ -126,7 +127,7 @@ export default function MapView({
   focusedPointId = null,
   onPointClick
 }: MapViewProps): React.JSX.Element {
-  const { position: livePosition, lastKnownPosition } = useGpsPosition()
+  const { position: livePosition, lastKnownPosition, heading } = useGpsPosition()
 
   const lastPoint = geoData.allPoints.at(-1) ?? null
 
@@ -279,26 +280,7 @@ export default function MapView({
               </CircleMarker>
             )
           })}
-          {livePosition ? (
-            <CircleMarker
-              center={[livePosition.lat, livePosition.lon]}
-              radius={10}
-              pathOptions={{
-                color: '#72baff',
-                fillColor: '#d9f0ff',
-                fillOpacity: 0.95,
-                weight: 3
-              }}
-            >
-              <Popup>
-                Posición GPS actual
-                <br />
-                {livePosition.lat.toFixed(6)}, {livePosition.lon.toFixed(6)}
-                <br />
-                alt {livePosition.alt.toFixed(1)} m
-              </Popup>
-            </CircleMarker>
-          ) : null}
+          {livePosition ? <HeadingMarker position={livePosition} heading={heading} /> : null}
           {lastKnownPosition && !livePosition ? (
             <CircleMarker
               center={[lastKnownPosition.lat, lastKnownPosition.lon]}

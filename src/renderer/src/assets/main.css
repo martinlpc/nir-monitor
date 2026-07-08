@@ -568,6 +568,40 @@ select {
   background: rgba(0, 0, 0, 0.2);
 }
 
+.gps-heading {
+  background: none !important;
+  border: none !important;
+}
+
+.gps-heading__body {
+  position: relative;
+  width: 28px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gps-heading__arrow {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  margin-left: -7px;
+  width: 14px;
+  height: 18px;
+  transition: transform 0.3s ease;
+  z-index: 2;
+}
+
+.gps-heading__dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #d9f0ff 0%, #72baff 100%);
+  border: 3px solid #4a9eff;
+  z-index: 1;
+}
+
 @media (max-width: 980px) {
   .grid,
   .device-grid {
