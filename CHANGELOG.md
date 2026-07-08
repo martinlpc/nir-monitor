@@ -1,13 +1,17 @@
-## 0.14.2 — 2026-07-08
+# 0.15.0 — 2026-07-08
 
 ### Correcciones
 
+- embed circle+arrow in single SVG rotated around center
 - prevent duplicate session import and fix duration parsing
 - prevent loading a saved session during active measurement
 
 ### Novedades
 
 - add changelog system with generation script and in-app display
+- add heading field to GPS position pipeline
+- add heading indicator arrow on GPS marker
+- show heading arrow only when GPS speed > 1 km/h
 
 # 0.14.0 — 2026-07-06
 
