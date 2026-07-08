@@ -123,7 +123,9 @@ de campo. Debe mantenerse actualizado ante cualquier cambio en:
 - Configuración y caché de mapa
 - Modo simulación
 
-Al realizar cambios relevantes en el código que afecten alguno de estos puntos,
-actualizar el manual en el mismo commit o PR. La versión de la aplicación
-indicada en el manual (portada y footer) debe coincidir con la versión del
-`package.json`.
+**Portada y footer:** actualizar versión SIEMPRE que haya bump (debe coincidir
+con `package.json`).
+
+**Contenido:** actualizar solo cuando los cambios afecten flujo de conexión,
+parámetros de captura, comportamiento al iniciar/detener sesión, formatos de
+exportación, configuración de mapa o modo simulación.

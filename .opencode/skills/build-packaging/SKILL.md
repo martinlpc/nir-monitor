@@ -100,6 +100,12 @@ npm run changelog
   -> disponible en la app via "Ver novedades"
 ```
 
+## Release workflow
+
+El flujo completo de bump, changelog, MR, tag y sincronización entre GitLab y
+GitHub está documentado en `.opencode/skills/commit-conventions/SKILL.md`
+(sección "Release workflow").
+
 ## Notas importantes
 
 - `npmRebuild: false` — no rebuild nativas (serialport ya viene prebuild)
