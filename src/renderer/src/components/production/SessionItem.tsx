@@ -7,13 +7,15 @@ interface SessionItemProps {
   onLoad: (sessionId: string) => void
   onDelete: (sessionId: string) => void
   onExport: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => void
+  loadingDisabled?: boolean
 }
 
 export default function SessionItem({
   session,
   onLoad,
   onDelete,
-  onExport
+  onExport,
+  loadingDisabled
 }: SessionItemProps): React.JSX.Element {
   const [showActions, setShowActions] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -97,7 +99,12 @@ export default function SessionItem({
 
       {showActions && (
         <div className="session-actions">
-          <button className="btn-primary" onClick={() => onLoad(session.id)} title="Cargar sesión">
+          <button
+            className="btn-primary"
+            onClick={() => onLoad(session.id)}
+            disabled={loadingDisabled}
+            title={loadingDisabled ? 'No disponible durante medición activa' : 'Cargar sesión'}
+          >
             Cargar
           </button>
           <button

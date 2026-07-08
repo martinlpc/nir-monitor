@@ -74,6 +74,11 @@ export function useSession(): {
   const [points, setPoints] = useState<GeoTimestamp[]>([])
   const unsubscribeRef = useRef<(() => void)[]>([])
   const [pointCount, setPointCount] = useState(0)
+  const statusRef = useRef(session.status)
+
+  useEffect(() => {
+    statusRef.current = session.status
+  }, [session.status])
 
   // Iniciar sesión
   const start = useCallback(
@@ -237,6 +242,10 @@ export function useSession(): {
       points: GeoTimestamp[]
       summary: SessionSummary
     }) => {
+      if (statusRef.current === 'running') {
+        console.warn('[useSession] Cannot load session while a measurement session is active')
+        return
+      }
       console.log('[useSession] Loading saved session:', loadedData.sessionId)
       const effectiveCorrectionFactor =
         loadedData.summary.correctionFactor ?? deriveCorrectionFactorFromPoints(loadedData.points)

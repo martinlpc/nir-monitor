@@ -46,6 +46,14 @@ export default function SessionsPanel({
   }, [loadStatus])
 
   const handleLoad = (sessionId: string): void => {
+    if (session.isRunning) {
+      setLoadStatus({
+        message: 'No se puede cargar una sesión durante una medición activa',
+        type: 'error'
+      })
+      return
+    }
+
     setLoadStatus(null)
 
     onGetSession(sessionId)
@@ -223,6 +231,7 @@ export default function SessionsPanel({
               onLoad={handleLoad}
               onDelete={handleDelete}
               onExport={handleExport}
+              loadingDisabled={session.isRunning}
             />
           ))}
         </div>
