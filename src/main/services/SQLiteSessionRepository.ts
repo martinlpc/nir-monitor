@@ -702,12 +702,16 @@ export class SQLiteSessionRepository implements ISessionRepository {
       properties: {
         session: {
           id: session?.metadata.id ?? sessionId,
+          label: session?.metadata.label ?? null,
           provincia: session?.metadata.provincia ?? null,
           localidad: session?.metadata.localidad ?? null,
           apellido1: session?.metadata.apellido1 ?? null,
           apellido2: session?.metadata.apellido2 ?? null,
           startedAt: session?.metadata.startedAt
             ? new Date(session.metadata.startedAt).toISOString()
+            : null,
+          stoppedAt: session?.metadata.stoppedAt
+            ? new Date(session.metadata.stoppedAt).toISOString()
             : null,
           sampleCount: session?.metadata.sampleCount ?? points.length
         },

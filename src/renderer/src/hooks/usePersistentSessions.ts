@@ -149,11 +149,15 @@ export function usePersistentSessions(): {
   const importGeoJSON = useCallback(async (): Promise<{
     sessionId?: string
     canceled?: boolean
+    duplicate?: boolean
   }> => {
     try {
       const result = await window.api.session.importGeoJSON()
       if (result.canceled) {
         return { canceled: true }
+      }
+      if (result.duplicate) {
+        return { duplicate: true }
       }
       if (result.success && result.sessionId) {
         await loadSessions()

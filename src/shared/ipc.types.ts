@@ -36,7 +36,13 @@ export interface IPCHandlers {
   'export:geojson': { request: { sessionId: string }; response: string } // filepath
   'session:import-geojson': {
     request: void
-    response: { success: boolean; sessionId?: string; error?: string }
+    response: {
+      success: boolean
+      sessionId?: string
+      canceled?: boolean
+      duplicate?: boolean
+      error?: string
+    }
   }
 }
 
