@@ -98,10 +98,12 @@ y GitHub como mirror profesional.
    c. git add CHANGELOG.md package.json package-lock.json
    d. git commit -m "chore: bump version to X.Y.Z"
    ```
-8. Si los cambios afectan flujo de conexión, parámetros de captura, comportamiento
-   de sesión, formatos de exportación, configuración de mapa o modo simulación,
-   actualizar `docs/manual.html` en el mismo commit. La versión en portada y footer
-   del manual debe coincidir con `package.json`.
+8. Actualizar `docs/manual.html`:
+   - **Portada y footer:** actualizar versión SIEMPRE que haya bump (debe coincidir
+     con `package.json`)
+   - **Contenido:** solo si los cambios afectan flujo de conexión, parámetros de
+     captura, comportamiento de sesión, formatos de exportación, configuración de
+     mapa o modo simulación
 9. `git push gitlab <nombre-de-rama>`
 10. Crear MR en GitLab:
     - **Título:** el mensaje del cambio funcional, no el bump
