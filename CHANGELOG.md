@@ -1,3 +1,13 @@
+## 0.14.1 — 2026-07-08
+
+### Correcciones
+
+- prevent loading a saved session during active measurement
+
+### Novedades
+
+- add changelog system with generation script and in-app display
+
 # 0.14.0 — 2026-07-06
 
 ### Correcciones
