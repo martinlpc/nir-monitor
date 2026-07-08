@@ -13,6 +13,7 @@ interface AllSessionsDrawerProps {
   onLoadSession?: (sessionId: string) => void
   onExport?: (sessionId: string, format: 'geojson' | 'xlsx' | 'kmz') => void
   onDelete?: (sessionId: string) => void
+  isSessionRunning?: boolean
 }
 
 export default function AllSessionsDrawer({
@@ -24,7 +25,8 @@ export default function AllSessionsDrawer({
   onToggleSession,
   onLoadSession,
   onExport,
-  onDelete
+  onDelete,
+  isSessionRunning
 }: AllSessionsDrawerProps): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'name'>('date-desc')
@@ -160,7 +162,7 @@ export default function AllSessionsDrawer({
                             🗑
                           </button>
                         ))}
-                      {onLoadSession && (
+                      {onLoadSession && !isSessionRunning && (
                         <button
                           className="action-btn action-btn-load"
                           onClick={() => onLoadSession(session.id)}

@@ -334,6 +334,7 @@ export default function ProductionShell(): React.JSX.Element {
           sessions={persistedSessions.sessions}
           isLoading={persistedSessions.isLoading}
           loadedSessionIds={new Set(multipleSessions.loadedSessions.map((s) => s.id))}
+          isSessionRunning={session.isRunning}
           onToggleSession={(sessionId, checked) => {
             if (checked) {
               persistedSessions

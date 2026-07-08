@@ -302,6 +302,16 @@
   transform: scale(0.98);
 }
 
+.sessions-panel .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sessions-panel .btn-primary:disabled:hover {
+  background: var(--nir-border-blue);
+  box-shadow: none;
+}
+
 .sessions-panel .btn-secondary {
   background: var(--nir-input-bg);
   color: var(--nir-blue);
