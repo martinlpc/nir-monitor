@@ -151,11 +151,15 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver
               clearTimeout(this.fixLossTimeoutRef)
             }
 
+            const hasRmc = this.state.nmeaTimestamp != null
+
             this.state.position = {
               lat: gga.latitude,
               lon: gga.longitude,
               alt: gga.altitudeMeters,
               hdop: gga.horizontalDilution,
+              heading: hasRmc ? this.state.heading : undefined,
+              speed: hasRmc && this.state.speed > 0 ? this.state.speed : undefined,
               nmeaUtcMs: this.state.nmeaTimestamp ?? undefined
             }
             this.state.satelliteCount = gga.satellitesInView

@@ -568,6 +568,11 @@ select {
   background: rgba(0, 0, 0, 0.2);
 }
 
+.gps-heading {
+  background: none !important;
+  border: none !important;
+}
+
 @media (max-width: 980px) {
   .grid,
   .device-grid {

@@ -4,14 +4,23 @@ export interface GpsPosition {
   lat: number
   lon: number
   alt: number
+  heading?: number
+  speed?: number
 }
 
 export interface GpsPositionState {
   position: GpsPosition | null
   lastKnownPosition: GpsPosition | null
+  heading?: number
+  speed?: number
 }
 
-const INITIAL: GpsPositionState = { position: null, lastKnownPosition: null }
+const INITIAL: GpsPositionState = {
+  position: null,
+  lastKnownPosition: null,
+  heading: undefined,
+  speed: undefined
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const GpsPositionContext = createContext<GpsPositionState>(INITIAL)
@@ -30,8 +39,16 @@ export function GpsPositionProvider({ children }: { children: ReactNode }): Reac
     const unsubPosition = window.api.gps.onPosition((data) => {
       if (data.valid && data.coords) {
         setState({
-          position: { lat: data.coords.lat, lon: data.coords.lon, alt: data.coords.alt ?? 0 },
-          lastKnownPosition: null
+          position: {
+            lat: data.coords.lat,
+            lon: data.coords.lon,
+            alt: data.coords.alt ?? 0,
+            heading: data.coords.heading,
+            speed: data.coords.speed
+          },
+          lastKnownPosition: null,
+          heading: data.coords.heading,
+          speed: data.coords.speed
         })
       } else {
         clearLive()
