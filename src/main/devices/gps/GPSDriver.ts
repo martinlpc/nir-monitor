@@ -156,6 +156,7 @@ export class GPSDriver extends EventEmitter implements IDeviceDriver, IGPSDriver
               lon: gga.longitude,
               alt: gga.altitudeMeters,
               hdop: gga.horizontalDilution,
+              heading: this.state.heading || undefined,
               nmeaUtcMs: this.state.nmeaTimestamp ?? undefined
             }
             this.state.satelliteCount = gga.satellitesInView

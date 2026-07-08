@@ -89,6 +89,7 @@ export class SimulatedGPSDriver extends EventEmitter implements IDeviceDriver, I
       lat: this.CENTER_LAT + deltaLat,
       lon: this.CENTER_LON + deltaLon,
       alt: 25 + Math.random() * 5,
+      heading: headingDeg,
       nmeaUtcMs: now
     }
 
