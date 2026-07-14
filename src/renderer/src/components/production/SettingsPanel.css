@@ -511,3 +511,47 @@
 [data-theme='soft'] .changelog-modal__body pre code {
   background: rgba(0, 0, 0, 0.03);
 }
+
+/* Toggle switch */
+.settings-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.settings-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.settings-toggle__slider {
+  position: absolute;
+  inset: 0;
+  background-color: var(--nir-border-blue);
+  border-radius: 20px;
+  transition: 0.2s;
+}
+
+.settings-toggle__slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: var(--nir-text-muted);
+  border-radius: 50%;
+  transition: 0.2s;
+}
+
+.settings-toggle input:checked + .settings-toggle__slider {
+  background-color: var(--nir-blue);
+}
+
+.settings-toggle input:checked + .settings-toggle__slider::before {
+  transform: translateX(16px);
+  background-color: #ffffff;
+}

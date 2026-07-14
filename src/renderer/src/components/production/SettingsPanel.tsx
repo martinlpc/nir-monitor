@@ -158,6 +158,7 @@ export default function SettingsPanel({
   const [changelogContent, setChangelogContent] = useState<string | null>(null)
   const [showChangelog, setShowChangelog] = useState(false)
   const [changelogError, setChangelogError] = useState<string | null>(null)
+  const [soundsEnabled, setSoundsEnabled] = useState(true)
 
   const [preloadMinZoom, setPreloadMinZoom] = useState(10)
   const [preloadMaxZoom, setPreloadMaxZoom] = useState(18)
@@ -182,6 +183,9 @@ export default function SettingsPanel({
     })
     window.api.app.getVersion().then(({ version }) => {
       setAppVersion(version)
+    })
+    window.api.settings.getSoundsEnabled().then((res) => {
+      if (res.success) setSoundsEnabled(res.enabled)
     })
   }, [])
 
@@ -235,6 +239,12 @@ export default function SettingsPanel({
     } catch {
       setChangelogError('No se pudo cargar el historial de cambios.')
     }
+  }
+
+  const handleSoundsToggle = async (): Promise<void> => {
+    const newValue = !soundsEnabled
+    setSoundsEnabled(newValue)
+    await window.api.settings.setSoundsEnabled(newValue)
   }
 
   const isPreloading =
@@ -465,6 +475,20 @@ export default function SettingsPanel({
             </div>
           </div>
         )}
+      </section>
+
+      <section className="settings-section">
+        <h3 className="settings-section__title">Notificaciones</h3>
+        <div className="settings-option">
+          <span className="settings-option__label">Sonidos de alerta</span>
+          <label className="settings-toggle">
+            <input type="checkbox" checked={soundsEnabled} onChange={handleSoundsToggle} />
+            <span className="settings-toggle__slider"></span>
+          </label>
+        </div>
+        <p className="settings-section__desc">
+          Reproducir sonidos al desconectar un equipo o perder señal GPS.
+        </p>
       </section>
 
       {appVersion && (
