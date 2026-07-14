@@ -4,6 +4,7 @@ import { ipcMain, BrowserWindow } from 'electron'
 import { IPC_EVENTS, IPC_HANDLERS } from './channels'
 import { emitAlert } from './handlers'
 import { toUserError } from '../../shared/errors/toUserError'
+import { checkCalibrationStatus } from '../notifications/calibrationCheck'
 import type { DeviceManager } from '../services/DeviceManager'
 
 function sanitizeReThrow(err: unknown): never {
@@ -77,6 +78,8 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
   let lastGpsFixState = false
   const hasBeenConnected = new Set<string>()
   const reconnecting = new Set<string>()
+  const alertedProbeSerials = new Set<string>()
+  const alertedMeterSerials = new Set<string>()
 
   const sendIfReady = (event: string, data: unknown): void => {
     if (!window.webContents.isDestroyed()) {
@@ -88,12 +91,7 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
   deviceManager.on('gps:position', (data) => sendIfReady(IPC_EVENTS.GPS_POSITION, data))
   deviceManager.on('gps:fix-lost', () => {
     sendIfReady(IPC_EVENTS.GPS_FIX_LOST, null)
-    emitAlert(
-      window,
-      'Se perdió la señal GPS',
-      'warning',
-      'Despeje la vista al cielo o acérquese a una ventana'
-    )
+    emitAlert(window, 'Se perdió la señal GPS', 'warning')
   })
   deviceManager.on('nbm:sample', (data) => sendIfReady(IPC_EVENTS.NBM_SAMPLE, data))
   deviceManager.on('nbm:battery', (battery) => sendIfReady(IPC_EVENTS.NBM_BATTERY, battery))
@@ -116,6 +114,55 @@ export function bindDeviceManagerEvents(window: BrowserWindow, deviceManager: De
         emitAlert(window, isFirstConnection ? 'GPS conectado' : 'GPS reconectado', 'info')
       } else if (data.deviceId === 'nbm550') {
         emitAlert(window, isFirstConnection ? 'NBM-550 conectado' : 'NBM-550 reconectado', 'info')
+
+        // Verificar calibración de sonda e instrumento
+        const nbm = deviceManager.getNBM()
+        if (nbm) {
+          const probeInfo = nbm.getProbeInfo()
+          const deviceInfo = nbm.getDeviceInfo()
+
+          if (probeInfo?.calibrationDate && probeInfo.serial && !alertedProbeSerials.has(probeInfo.serial)) {
+            const probeCal = checkCalibrationStatus(probeInfo.calibrationDate)
+            if (probeCal.status === 'expired') {
+              alertedProbeSerials.add(probeInfo.serial)
+              emitAlert(
+                window,
+                `Sonda: calibración vencida — ${probeInfo.model ?? 'desconocida'}`,
+                'error',
+                'Consulte con su superior antes de comenzar la sesión de mediciones'
+              )
+            } else if (probeCal.status === 'expiring') {
+              alertedProbeSerials.add(probeInfo.serial)
+              emitAlert(
+                window,
+                `Sonda: calibración próxima a vencer — ${probeInfo.model ?? 'desconocida'}`,
+                'warning',
+                probeCal.message
+              )
+            }
+          }
+
+          if (deviceInfo?.calDate && deviceInfo.serialNumber && !alertedMeterSerials.has(deviceInfo.serialNumber)) {
+            const meterCal = checkCalibrationStatus(deviceInfo.calDate)
+            if (meterCal.status === 'expired') {
+              alertedMeterSerials.add(deviceInfo.serialNumber)
+              emitAlert(
+                window,
+                'Instrumento: calibración vencida',
+                'error',
+                'Consulte con su superior antes de comenzar la sesión de mediciones'
+              )
+            } else if (meterCal.status === 'expiring') {
+              alertedMeterSerials.add(deviceInfo.serialNumber)
+              emitAlert(
+                window,
+                'Instrumento: calibración próxima a vencer',
+                'warning',
+                meterCal.message
+              )
+            }
+          }
+        }
       }
       return
     }
