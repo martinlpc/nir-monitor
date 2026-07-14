@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Toast, { ToastData, ToastType } from './Toast'
+import { soundManager } from '../../audio/SoundManager'
 
 interface ToastContextProps {
   notify: (toast: Omit<ToastData, 'id'>) => void
@@ -13,6 +14,15 @@ let toastId = 0
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastData[]>([])
   const timers = useRef<Record<string, NodeJS.Timeout>>({})
+
+  // Load sounds setting on mount
+  useEffect(() => {
+    window.api?.settings?.getSoundsEnabled?.().then((res) => {
+      if (res.success) {
+        soundManager.setEnabled(res.enabled)
+      }
+    })
+  }, [])
 
   const dismiss = useCallback((id: string) => {
     setToasts((ts) => ts.filter((t) => t.id !== id))
@@ -42,6 +52,14 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         type: payload.type as ToastType,
         userAction: payload.userAction
       })
+
+      // Trigger sounds for specific alerts
+      const msg = payload.message.toLowerCase()
+      if (msg.includes('desconectado') && !msg.includes('reconectado')) {
+        soundManager.play('device-disconnect')
+      } else if (msg.includes('perdió la señal gps')) {
+        soundManager.play('gps-fix-lost')
+      }
     }
     const unsubscribe = window.api?.on?.('alert', handler)
     return () => unsubscribe?.()
