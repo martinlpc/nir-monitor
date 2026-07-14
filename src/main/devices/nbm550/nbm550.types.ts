@@ -13,6 +13,19 @@ export interface NBM550ProbeInfo {
   calibrationDate: string | null // ISO 8601 o formato crudo del dispositivo
 }
 
+export interface NBM550DeviceInfo {
+  productName: string | null
+  productionId: string | null
+  serialNumber: string | null
+  deviceId: string | null
+  deviceType: string | null
+  firmwareVersion: string | null
+  calDate: string | null // fecha de calibración del instrumento (meter)
+  calDueDate: string | null // fecha de vencimiento de calibración
+  noOfOptions: string | null
+  optionsName: string | null
+}
+
 export interface NBM550Config {
   port: string // 'COM3'
   baudRate: number // 460800

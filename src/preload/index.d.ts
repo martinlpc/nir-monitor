@@ -129,6 +129,22 @@ declare global {
           }
           error?: string
         }>
+        getDeviceInfo: () => Promise<{
+          success: boolean
+          deviceInfo?: {
+            productName: string | null
+            productionId: string | null
+            serialNumber: string | null
+            deviceId: string | null
+            deviceType: string | null
+            firmwareVersion: string | null
+            calDate: string | null
+            calDueDate: string | null
+            noOfOptions: string | null
+            optionsName: string | null
+          }
+          error?: string
+        }>
         getActiveUncertainty: () => Promise<{
           success: boolean
           factor: number | null
@@ -152,6 +168,8 @@ declare global {
             factor: number
           }>
         }>
+        getSoundsEnabled: () => Promise<{ success: boolean; enabled: boolean }>
+        setSoundsEnabled: (enabled: boolean) => Promise<{ success: boolean }>
       }
       tileCache: {
         getStats: () => Promise<{

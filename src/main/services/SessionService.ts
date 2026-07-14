@@ -235,13 +235,14 @@ export class SessionService extends EventEmitter {
     // Inicializar sesión en el repositorio antes de empezar a capturar
     if (this.repository) {
       const probeInfo = this.nbm.getProbeInfo()
+      const deviceInfo = this.nbm.getDeviceInfo()
 
       this.instrument = {
         meter: {
           brand: 'Narda',
           model: 'NBM-550',
-          serial: this.nbm.getMeterSerial() ?? null,
-          lastCalibrationDate: null
+          serial: deviceInfo?.serialNumber ?? this.nbm.getMeterSerial() ?? null,
+          lastCalibrationDate: deviceInfo?.calDate ?? null
         },
         probe: {
           brand: 'Narda',

@@ -20,6 +20,18 @@ export interface INBMDriver {
     serial: string | null
     calibrationDate: string | null
   } | null
+  getDeviceInfo(): {
+    productName: string | null
+    productionId: string | null
+    serialNumber: string | null
+    deviceId: string | null
+    deviceType: string | null
+    firmwareVersion: string | null
+    calDate: string | null
+    calDueDate: string | null
+    noOfOptions: string | null
+    optionsName: string | null
+  } | null
   getMeterSerial(): string | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   on(event: string, listener: (...args: any[]) => void): void

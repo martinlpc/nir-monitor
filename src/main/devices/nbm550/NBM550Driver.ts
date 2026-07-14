@@ -1,7 +1,7 @@
 import { SerialPort } from 'serialport'
 import { EventEmitter } from 'events'
 import { NBM550Parser } from './NBM550Parser'
-import type { NBM550Config, NBM550Sample, NBM550ProbeInfo } from './nbm550.types'
+import type { NBM550Config, NBM550Sample, NBM550ProbeInfo, NBM550DeviceInfo } from './nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
 import type { INBMDriver } from '../../../shared/driver-interfaces'
 import { AppError } from '../../../shared/errors/AppError'
@@ -22,6 +22,7 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDri
   private pendingTimeout: NodeJS.Timeout | null = null
   private currentBattery: number = 100
   private probeInfo: NBM550ProbeInfo | null = null
+  private deviceInfo: NBM550DeviceInfo | null = null
   private consecutiveTimeouts: number = 0
 
   // Cadena de promesas que serializa todos los comandos
@@ -183,6 +184,18 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDri
         this.probeInfo = null
       }
 
+      // Leer info del instrumento (meter)
+      try {
+        console.log(`[NBM550Driver] Querying DEVICE_INFO?...`)
+        const deviceRaw = await this.query('DEVICE_INFO?')
+        console.log(`[NBM550Driver] DEVICE_INFO? response:`, deviceRaw)
+        this.deviceInfo = this.parser.parseDeviceInfo(deviceRaw)
+        console.log(`[NBM550Driver] Device info:`, this.deviceInfo)
+      } catch (err) {
+        console.warn(`[NBM550Driver] Could not read device info:`, err)
+        this.deviceInfo = null
+      }
+
       console.log(`[NBM550Driver] Connection successful, setting status to connected`)
       this.setStatus('connected')
     } catch (err) {
@@ -287,8 +300,12 @@ export class NBM550Driver extends EventEmitter implements IDeviceDriver, INBMDri
     return this.probeInfo
   }
 
+  getDeviceInfo(): NBM550DeviceInfo | null {
+    return this.deviceInfo
+  }
+
   getMeterSerial(): string | null {
-    return null
+    return this.deviceInfo?.serialNumber ?? null
   }
 
   // ── Serial I/O ───────────────────────────────────────────

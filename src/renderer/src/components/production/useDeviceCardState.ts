@@ -15,6 +15,8 @@ type NBMInfo = {
   probeModel?: string | null
   probeSerial?: string | null
   calibrationDate?: string | null
+  meterCalDate?: string | null
+  meterCalDueDate?: string | null
   mode?: 'active' | 'standby'
 }
 
@@ -43,6 +45,15 @@ export function useNbmCardInfo(enabled: boolean, status: DeviceStatus): NBMInfo 
           probeModel: res.probeInfo!.model,
           probeSerial: res.probeInfo!.serial,
           calibrationDate: res.probeInfo!.calibrationDate
+        }))
+      }
+    })
+    window.api.settings.getDeviceInfo().then((res) => {
+      if (res.success && res.deviceInfo) {
+        setLiveData((prev) => ({
+          ...prev,
+          meterCalDate: res.deviceInfo!.calDate,
+          meterCalDueDate: res.deviceInfo!.calDueDate
         }))
       }
     })

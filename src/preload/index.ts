@@ -256,6 +256,23 @@ const api = {
       error?: string
     }> => ipcRenderer.invoke(IPC_HANDLERS.GET_PROBE_INFO),
 
+    getDeviceInfo: (): Promise<{
+      success: boolean
+      deviceInfo?: {
+        productName: string | null
+        productionId: string | null
+        serialNumber: string | null
+        deviceId: string | null
+        deviceType: string | null
+        firmwareVersion: string | null
+        calDate: string | null
+        calDueDate: string | null
+        noOfOptions: string | null
+        optionsName: string | null
+      }
+      error?: string
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_DEVICE_INFO),
+
     getActiveUncertainty: (): Promise<{
       success: boolean
       factor: number | null
@@ -279,7 +296,13 @@ const api = {
         uncertainty: number
         factor: number
       }>
-    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA)
+    }> => ipcRenderer.invoke(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA),
+
+    getSoundsEnabled: (): Promise<{ success: boolean; enabled: boolean }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.GET_SOUNDS_ENABLED),
+
+    setSoundsEnabled: (enabled: boolean): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SET_SOUNDS_ENABLED, enabled)
   },
 
   tileCache: {
