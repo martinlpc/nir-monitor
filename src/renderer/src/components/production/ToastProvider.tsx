@@ -59,6 +59,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         soundManager.play('device-disconnect')
       } else if (msg.includes('perdió la señal gps')) {
         soundManager.play('gps-fix-lost')
+      } else if (msg.includes('gps con fix')) {
+        soundManager.play('gps-fix-recovered')
+      } else if (msg.includes('reconectado')) {
+        soundManager.play('device-reconnected')
       }
     }
     const unsubscribe = window.api?.on?.('alert', handler)

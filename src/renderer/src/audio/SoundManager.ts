@@ -1,4 +1,8 @@
-type SoundId = 'device-disconnect' | 'gps-fix-lost'
+type SoundId =
+  | 'device-disconnect'
+  | 'device-reconnected'
+  | 'gps-fix-lost'
+  | 'gps-fix-recovered'
 
 class SoundManager {
   private enabled = true
@@ -23,17 +27,31 @@ class SoundManager {
       switch (soundId) {
         case 'device-disconnect':
           this.playTone(ctx, [
-            { freq: 400, start: 0, duration: 0.15 },
-            { freq: 300, start: 0.15, duration: 0.15 },
-            { freq: 200, start: 0.3, duration: 0.2 }
+            { freq: 400, start: 0, duration: 0.33 },
+            { freq: 300, start: 0.33, duration: 0.33 },
+            { freq: 200, start: 0.66, duration: 0.34 }
+          ])
+          break
+        case 'device-reconnected':
+          this.playTone(ctx, [
+            { freq: 200, start: 0, duration: 0.33 },
+            { freq: 300, start: 0.33, duration: 0.33 },
+            { freq: 400, start: 0.66, duration: 0.34 }
           ])
           break
         case 'gps-fix-lost':
           this.playTone(ctx, [
-            { freq: 800, start: 0, duration: 0.1 },
-            { freq: 400, start: 0.1, duration: 0.15 },
-            { freq: 800, start: 0.3, duration: 0.1 },
-            { freq: 400, start: 0.4, duration: 0.15 }
+            { freq: 800, start: 0, duration: 0.25 },
+            { freq: 400, start: 0.25, duration: 0.25 },
+            { freq: 800, start: 0.5, duration: 0.25 },
+            { freq: 400, start: 0.75, duration: 0.25 }
+          ])
+          break
+        case 'gps-fix-recovered':
+          this.playTone(ctx, [
+            { freq: 400, start: 0, duration: 0.33 },
+            { freq: 600, start: 0.33, duration: 0.33 },
+            { freq: 800, start: 0.66, duration: 0.34 }
           ])
           break
       }
