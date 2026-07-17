@@ -1,3 +1,13 @@
+# 0.16.0 — 2026-07-17
+
+### Novedades
+
+- add alert sounds for device disconnect and GPS fix loss
+- add calibration expiration check with 24-month validity
+- add configurable alert sounds toggle in settings
+- extend alert sounds to 1s and add GPS fix recovered and device reconnected
+- read meter calibration from DEVICE_INFO?
+
 # 0.15.0 — 2026-07-08
 
 ### Correcciones
