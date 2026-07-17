@@ -5,6 +5,7 @@ import { IPC_HANDLERS } from './channels'
 import { toUserError } from '../../shared/errors/toUserError'
 import { loadBuiltInProbeData, getBuiltInVersion } from '../uncertainty/loadBuiltInData'
 import { normalizeProbeName } from '../uncertainty/correctionFactor'
+import { ConfigService } from '../services/ConfigService'
 import type { DeviceManager } from '../services/DeviceManager'
 
 function sanitizeReThrow(err: unknown): never {
@@ -57,6 +58,19 @@ export function registerSettingsHandlers(deviceManager: DeviceManager): void {
     }
   })
 
+  ipcMain.handle(IPC_HANDLERS.GET_DEVICE_INFO, async () => {
+    try {
+      const nbm = deviceManager.getNBM()
+      if (!nbm || !nbm.isConnected()) {
+        return { success: false, error: 'NBM-550 no conectado' }
+      }
+      const deviceInfo = nbm.getDeviceInfo()
+      return { success: true, deviceInfo }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
+  })
+
   ipcMain.handle(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY, async () => {
     try {
       const nbm = deviceManager.getNBM()
@@ -83,6 +97,26 @@ export function registerSettingsHandlers(deviceManager: DeviceManager): void {
         matchedRecord: matched ?? null,
         probeModel
       }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
+  })
+
+  ipcMain.handle(IPC_HANDLERS.GET_SOUNDS_ENABLED, async () => {
+    try {
+      const config = new ConfigService()
+      const appConfig = config.loadAppConfig()
+      return { success: true, enabled: appConfig.soundsEnabled ?? true }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
+  })
+
+  ipcMain.handle(IPC_HANDLERS.SET_SOUNDS_ENABLED, async (_, enabled: boolean) => {
+    try {
+      const config = new ConfigService()
+      config.updateAppConfig({ soundsEnabled: enabled })
+      return { success: true }
     } catch (err) {
       sanitizeReThrow(err)
     }

@@ -1,4 +1,4 @@
-import type { NBM550Sample, NBM550ProbeInfo, NBMUnit } from './nbm550.types'
+import type { NBM550Sample, NBM550ProbeInfo, NBM550DeviceInfo, NBMUnit } from './nbm550.types'
 import type { AppErrorInfo } from '../../../shared/errors/error.types'
 import { getNBMErrorInfo } from '../../../shared/errors/nbmErrorCodes'
 
@@ -115,6 +115,26 @@ export class NBM550Parser {
       model: this.stripQuotes(parts[0]),
       serial: this.stripQuotes(parts[2]),
       calibrationDate: this.stripQuotes(parts[3])
+    }
+  }
+
+  // Parsea respuesta de DEVICE_INFO?;
+  // Formato esperado: product_name,production_id,serial_number,device_id,device_type,
+  //                    firmware_version,cal_date,cal_due_date,no_of_options,options_name;
+  parseDeviceInfo(raw: string): NBM550DeviceInfo {
+    const clean = this.cleanResponse(raw)
+    const parts = clean.split(',').map((p) => p.trim())
+    return {
+      productName: this.stripQuotes(parts[0]),
+      productionId: this.stripQuotes(parts[1]),
+      serialNumber: this.stripQuotes(parts[2]),
+      deviceId: this.stripQuotes(parts[3]),
+      deviceType: this.stripQuotes(parts[4]),
+      firmwareVersion: this.stripQuotes(parts[5]),
+      calDate: this.stripQuotes(parts[6]),
+      calDueDate: this.stripQuotes(parts[7]),
+      noOfOptions: this.stripQuotes(parts[8]),
+      optionsName: this.stripQuotes(parts[9])
     }
   }
 }

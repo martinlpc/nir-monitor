@@ -39,6 +39,7 @@ export const IPC_HANDLERS = {
   EXPORT_KML: 'export:kml',
   PORTS_LIST: 'ports:list',
   GET_PROBE_INFO: 'settings:get-probe-info',
+  GET_DEVICE_INFO: 'settings:get-device-info',
   GET_ACTIVE_UNCERTAINTY: 'settings:get-active-uncertainty',
   GET_BUILT_IN_PROBE_DATA: 'settings:get-built-in-probe-data',
   TILE_CACHE_STATS: 'tile:cache-stats',
@@ -50,6 +51,8 @@ export const IPC_HANDLERS = {
   DRIVERS_INSTALL: 'drivers:install',
   GET_APP_VERSION: 'app:get-version',
   GET_CHANGELOG: 'app:changelog',
+  GET_SOUNDS_ENABLED: 'settings:get-sounds-enabled',
+  SET_SOUNDS_ENABLED: 'settings:set-sounds-enabled',
   LOGS_GET_PATH: 'logs:get-path',
   LOGS_EXPORT: 'logs:export'
 } as const

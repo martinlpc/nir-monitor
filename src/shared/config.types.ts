@@ -47,4 +47,5 @@ export interface UserAppConfig {
   triggerMode?: 'distance' | 'time'
   intervalMs?: number
   minDistanceMeters?: number
+  soundsEnabled?: boolean
 }

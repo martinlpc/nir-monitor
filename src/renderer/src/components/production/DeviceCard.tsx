@@ -154,6 +154,12 @@ export default function DeviceCard({
                 </span>
               </div>
             )}
+            {nbmInfo.meterCalDate && (
+              <div className="info-row">
+                <span className="info-label">Cal. instrumento:</span>
+                <span className="info-value">{nbmInfo.meterCalDate}</span>
+              </div>
+            )}
             <div className="info-row">
               <span className="info-label">Puerto:</span>
               <span className={`info-value ${!hasPort ? 'no-port' : ''}`}>{device.port}</span>

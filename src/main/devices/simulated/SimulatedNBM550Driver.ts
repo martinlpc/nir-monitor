@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events'
-import type { NBM550Sample, NBM550ProbeInfo } from '../nbm550/nbm550.types'
+import type { NBM550Sample, NBM550ProbeInfo, NBM550DeviceInfo } from '../nbm550/nbm550.types'
 import type { IDeviceDriver, DeviceStatus, DeviceMeta } from '../../../shared/device.types'
 import type { INBMDriver } from '../../../shared/driver-interfaces'
 
@@ -13,6 +13,19 @@ export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver
     model: 'EF-0391',
     serial: 'SIM-0001',
     calibrationDate: '2024-06-01'
+  }
+
+  private deviceInfo: NBM550DeviceInfo = {
+    productName: 'NBM-550',
+    productionId: 'SIM-PROD-001',
+    serialNumber: 'SIM-METER-001',
+    deviceId: '001',
+    deviceType: 'EMF Meter',
+    firmwareVersion: '2.1.0',
+    calDate: '2025-01-15',
+    calDueDate: '2027-01-15',
+    noOfOptions: '0',
+    optionsName: null
   }
 
   constructor(config: { port: string }) {
@@ -66,11 +79,15 @@ export class SimulatedNBM550Driver extends EventEmitter implements IDeviceDriver
   }
 
   getMeterSerial(): string | null {
-    return this.probeInfo.serial
+    return this.deviceInfo.serialNumber
   }
 
   getProbeInfo(): NBM550ProbeInfo | null {
     return this.probeInfo
+  }
+
+  getDeviceInfo(): NBM550DeviceInfo | null {
+    return this.deviceInfo
   }
 
   private setStatus(status: DeviceStatus): void {
