@@ -2,6 +2,7 @@ import { protocol } from 'electron'
 import { Buffer } from 'buffer'
 import { getProvider, buildOriginUrl } from '../../shared/tileProviders'
 import type { TileCacheService } from './TileCacheService'
+import { tileFetch } from './tileFetch'
 
 const SCHEME = 'tile-cache'
 // tile-cache://providerId/z/x/y.png
@@ -49,7 +50,7 @@ export function registerTileProtocol(cacheService: TileCacheService): void {
 
       // 2. Fetch from origin
       const originUrl = buildOriginUrl(provider, z, x, y)
-      const response = await fetch(originUrl)
+      const response = await tileFetch(originUrl)
       if (!response.ok) {
         return new Response(`Origin fetch failed: ${response.status}`, {
           status: response.status

@@ -5,6 +5,7 @@ import { EventEmitter } from 'events'
 import type { TileProvider } from '../../shared/tileProviders'
 import { getProvider, buildOriginUrl } from '../../shared/tileProviders'
 import { getTileRange, estimateTileCount } from './tileMath'
+import { tileFetch } from './tileFetch'
 
 const CACHE_ROOT = 'tile-cache'
 const PRELOAD_CONCURRENCY = 8
@@ -71,7 +72,7 @@ export class TileCacheService extends EventEmitter {
     if (cached) return cached
 
     const url = buildOriginUrl(provider, z, x, y)
-    const response = await fetch(url)
+    const response = await tileFetch(url)
     if (!response.ok) {
       throw new Error(`Tile fetch failed: ${url} (${response.status})`)
     }
