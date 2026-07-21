@@ -1,3 +1,9 @@
+## 0.16.1 — 2026-07-21
+
+### Correcciones
+
+- add User-Agent header to tile fetch requests
+
 # 0.16.0 — 2026-07-17
 
 ### Novedades
