@@ -98,6 +98,14 @@ git checkout -b <tipo>/<descripcion>
 Convencionales en inglés, imperativo. **Siempre consultar al usuario antes de
 committear**, especialmente si el cambio requiere testeo previo.
 
+#### 2.5. Push
+
+```
+git push gitlab <tipo>/<descripcion>
+```
+
+La rama se pusha a **gitlab** (repo primario), no a origin (mirror).
+
 #### 3. MR summary
 
 Una vez finalizado el issue o tarea, y solo cuando el usuario lo indique,
