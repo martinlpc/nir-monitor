@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { GeoTimestamp, GeoPosition, EMFSample } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import { ConfigService } from './ConfigService'
+import { haversineMeters } from '../../shared/geo-utils'
 
 export type TriggerMode = 'distance' | 'time'
 
@@ -259,21 +260,4 @@ export class GeoFusionService extends EventEmitter {
       this.capturing = false
     }
   }
-}
-
-// ── Haversine ─────────────────────────────────────────────────
-
-function haversineMeters(a: GeoPosition, b: GeoPosition): number {
-  const R = 6_371_000
-  const toRad = (deg: number): number => (deg * Math.PI) / 180
-
-  const dLat = toRad(b.lat - a.lat)
-  const dLon = toRad(b.lon - a.lon)
-
-  const sinLat = Math.sin(dLat / 2)
-  const sinLon = Math.sin(dLon / 2)
-
-  const h = sinLat * sinLat + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * sinLon * sinLon
-
-  return 2 * R * Math.asin(Math.sqrt(h))
 }
