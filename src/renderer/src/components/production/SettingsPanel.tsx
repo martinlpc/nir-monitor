@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { TileProvider } from '../../../../shared/tileProviders'
-import type { TileCacheStats, PreloadProgress } from '../../hooks/useTileCache'
+import type { CacheStats, PreloadProgress } from '../../../../shared/tile.types'
 import './SettingsPanel.css'
 
 interface SettingsPanelProps {
@@ -9,7 +9,7 @@ interface SettingsPanelProps {
   tileProviders: TileProvider[]
   selectedProvider: TileProvider
   onProviderChange: (id: string) => void
-  cacheStats: TileCacheStats | null
+  cacheStats: CacheStats | null
   onClearCache: () => Promise<boolean>
   onImportTiles: (providerId: string) => Promise<{ imported: number; skipped: number } | null>
   onPreloadTiles: (options: {

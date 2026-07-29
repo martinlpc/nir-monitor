@@ -6,22 +6,10 @@ import type { TileProvider } from '../../shared/tileProviders'
 import { getProvider, buildOriginUrl } from '../../shared/tileProviders'
 import { getTileRange, estimateTileCount } from './tileMath'
 import { tileFetch } from './tileFetch'
+import { CacheStats, PreloadProgress } from '../../shared/tile.types'
 
 const CACHE_ROOT = 'tile-cache'
 const PRELOAD_CONCURRENCY = 8
-
-export interface CacheStats {
-  sizeBytes: number
-  tileCount: number
-}
-
-export interface PreloadProgress {
-  current: number
-  total: number
-  zoom: number
-  phase: 'counting' | 'downloading' | 'done' | 'cancelled' | 'error'
-  error?: string
-}
 
 export class TileCacheService extends EventEmitter {
   private basePath: string

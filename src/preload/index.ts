@@ -5,7 +5,7 @@ import type { DeviceStatus } from '../shared/device.types'
 import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
 import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
-import type { CacheStats, PreloadProgress } from '../main/tile-cache/TileCacheService'
+import type { CacheStats, PreloadProgress } from '../shared/tile.types'
 import type { DriverCheckResult, DriverType } from '../shared/driver.types'
 import type { AppErrorInfo } from '../shared/errors/error.types'
 
