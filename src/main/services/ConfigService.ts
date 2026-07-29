@@ -12,63 +12,19 @@ import type {
   GeoFusionConfigOptions,
   UserAppConfig
 } from '../../shared/config.types'
+import {
+  DEFAULT_NBM_DRIVER,
+  DEFAULT_GPS_DRIVER,
+  DEFAULT_NBM_POLLING,
+  DEFAULT_NBM_TIMEOUTS,
+  DEFAULT_SERIAL_PROBE,
+  DEFAULT_NBM_RECONNECT,
+  DEFAULT_GPS_RECONNECT,
+  DEFAULT_FLUSH,
+  DEFAULT_GEO_FUSION
+} from '../../shared/config.constants'
 
 export class ConfigService {
-  // ── Baud rates (single source of truth) ────────────────
-  static readonly NBM_BAUD_RATE = 460800
-  static readonly GPS_BAUD_RATE = 4800
-
-  // ── Defaults ───────────────────────────────────────────
-
-  static readonly DEFAULT_NBM_DRIVER: NbmDriverConfig = {
-    baudRate: ConfigService.NBM_BAUD_RATE,
-    pollIntervalMs: 200,
-    unit: 'V/m'
-  }
-
-  static readonly DEFAULT_GPS_DRIVER: GpsDriverConfig = {
-    baudRate: ConfigService.GPS_BAUD_RATE
-  }
-
-  static readonly DEFAULT_NBM_POLLING: NbmPollingConfig = {
-    activePollIntervalMs: 200,
-    standbyBatteryIntervalMs: 30_000,
-    maxConsecutiveReadFailures: 8
-  }
-
-  static readonly DEFAULT_NBM_TIMEOUTS: NbmDriverTimeouts = {
-    responseTimeoutMs: 6000,
-    initDelayMs: 2000,
-    maxConsecutiveTimeouts: 4
-  }
-
-  static readonly DEFAULT_SERIAL_PROBE: SerialProbeConfig = {
-    nbmTimeoutMs: 6000,
-    nmeaListenMs: 12000
-  }
-
-  static readonly DEFAULT_NBM_RECONNECT: ReconnectConfig = {
-    intervalMs: 3000,
-    timeoutMs: 30000
-  }
-
-  static readonly DEFAULT_GPS_RECONNECT: ReconnectConfig = {
-    intervalMs: 3000,
-    timeoutMs: 30000
-  }
-
-  static readonly DEFAULT_FLUSH: FlushConfig = {
-    everyNPoints: 5,
-    intervalMs: 5_000
-  }
-
-  static readonly DEFAULT_GEO_FUSION: GeoFusionConfigOptions = {
-    triggerMode: 'distance',
-    minDistanceMeters: 20,
-    intervalMs: 5000,
-    testMode: false
-  }
-
   // ── Instance state ─────────────────────────────────────
 
   readonly simulationMode: boolean
@@ -154,42 +110,42 @@ export class ConfigService {
   // ── Config accessors ───────────────────────────────────
 
   get nbmPollIntervalMs(): number {
-    return this.simulationMode ? 5000 : ConfigService.DEFAULT_NBM_POLLING.activePollIntervalMs
+    return this.simulationMode ? 5000 : DEFAULT_NBM_POLLING.activePollIntervalMs
   }
 
   get nbmDriverConfig(): NbmDriverConfig {
-    return { ...ConfigService.DEFAULT_NBM_DRIVER }
+    return { ...DEFAULT_NBM_DRIVER }
   }
 
   get gpsDriverConfig(): GpsDriverConfig {
-    return { ...ConfigService.DEFAULT_GPS_DRIVER }
+    return { ...DEFAULT_GPS_DRIVER }
   }
 
   get nbmPollingConfig(): NbmPollingConfig {
-    return { ...ConfigService.DEFAULT_NBM_POLLING }
+    return { ...DEFAULT_NBM_POLLING }
   }
 
   get nbmTimeouts(): NbmDriverTimeouts {
-    return { ...ConfigService.DEFAULT_NBM_TIMEOUTS }
+    return { ...DEFAULT_NBM_TIMEOUTS }
   }
 
   get serialProbeConfig(): SerialProbeConfig {
-    return { ...ConfigService.DEFAULT_SERIAL_PROBE }
+    return { ...DEFAULT_SERIAL_PROBE }
   }
 
   get nbmReconnectConfig(): ReconnectConfig {
-    return { ...ConfigService.DEFAULT_NBM_RECONNECT }
+    return { ...DEFAULT_NBM_RECONNECT }
   }
 
   get gpsReconnectConfig(): ReconnectConfig {
-    return { ...ConfigService.DEFAULT_GPS_RECONNECT }
+    return { ...DEFAULT_GPS_RECONNECT }
   }
 
   get flushConfig(): FlushConfig {
-    return { ...ConfigService.DEFAULT_FLUSH }
+    return { ...DEFAULT_FLUSH }
   }
 
   get geoFusionConfig(): GeoFusionConfigOptions {
-    return { ...ConfigService.DEFAULT_GEO_FUSION }
+    return { ...DEFAULT_GEO_FUSION }
   }
 }

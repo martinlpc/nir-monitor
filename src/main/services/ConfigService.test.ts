@@ -1,58 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { ConfigService } from './ConfigService'
+import { DEFAULT_NBM_POLLING } from '../../shared/config.constants'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 
 describe('ConfigService', () => {
-  // ── Static defaults ───────────────────────────────────
-
-  it('has correct baud rates', () => {
-    expect(ConfigService.NBM_BAUD_RATE).toBe(460800)
-    expect(ConfigService.GPS_BAUD_RATE).toBe(4800)
-  })
-
-  it('has correct default NBM polling config', () => {
-    const cfg = ConfigService.DEFAULT_NBM_POLLING
-    expect(cfg.activePollIntervalMs).toBe(200)
-    expect(cfg.standbyBatteryIntervalMs).toBe(30000)
-    expect(cfg.maxConsecutiveReadFailures).toBe(8)
-  })
-
-  it('has correct default reconnect config', () => {
-    expect(ConfigService.DEFAULT_NBM_RECONNECT.intervalMs).toBe(3000)
-    expect(ConfigService.DEFAULT_NBM_RECONNECT.timeoutMs).toBe(30000)
-    expect(ConfigService.DEFAULT_GPS_RECONNECT.intervalMs).toBe(3000)
-    expect(ConfigService.DEFAULT_GPS_RECONNECT.timeoutMs).toBe(30000)
-  })
-
-  it('has correct default geo fusion config', () => {
-    const cfg = ConfigService.DEFAULT_GEO_FUSION
-    expect(cfg.triggerMode).toBe('distance')
-    expect(cfg.minDistanceMeters).toBe(20)
-    expect(cfg.intervalMs).toBe(5000)
-    expect(cfg.testMode).toBe(false)
-  })
-
-  it('has correct default serial probe config', () => {
-    const cfg = ConfigService.DEFAULT_SERIAL_PROBE
-    expect(cfg.nbmTimeoutMs).toBe(6000)
-    expect(cfg.nmeaListenMs).toBe(12000)
-  })
-
-  it('has correct default flush config', () => {
-    const cfg = ConfigService.DEFAULT_FLUSH
-    expect(cfg.everyNPoints).toBe(5)
-    expect(cfg.intervalMs).toBe(5000)
-  })
-
-  it('has correct default NBM driver config', () => {
-    const cfg = ConfigService.DEFAULT_NBM_DRIVER
-    expect(cfg.baudRate).toBe(460800)
-    expect(cfg.pollIntervalMs).toBe(200)
-    expect(cfg.unit).toBe('V/m')
-  })
-
   // ── simulationMode ────────────────────────────────────
 
   it('detects simulation mode from env var', () => {
@@ -120,7 +73,7 @@ describe('ConfigService', () => {
 
   it('nbmPollingConfig returns a copy', () => {
     const cfg = new ConfigService()
-    expect(cfg.nbmPollingConfig).not.toBe(ConfigService.DEFAULT_NBM_POLLING)
+    expect(cfg.nbmPollingConfig).not.toBe(DEFAULT_NBM_POLLING)
   })
 
   // ── App config with real files ────────────────────────

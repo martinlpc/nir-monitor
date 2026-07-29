@@ -1,0 +1,70 @@
+import type {
+  NbmDriverConfig,
+  GpsDriverConfig,
+  NbmPollingConfig,
+  ReconnectConfig,
+  SerialProbeConfig,
+  FlushConfig,
+  GeoFusionConfigOptions,
+  NbmDriverTimeouts
+} from './config.types'
+
+// -- Baud rates (single source of truth) ----------
+export const NBM_BAUD_RATE = 460800
+export const GPS_BAUD_RATE = 4800
+
+// -- Driver configs -------------------------------
+export const DEFAULT_NBM_DRIVER: NbmDriverConfig = {
+  baudRate: NBM_BAUD_RATE,
+  pollIntervalMs: 200,
+  unit: 'V/m'
+}
+
+export const DEFAULT_GPS_DRIVER: GpsDriverConfig = {
+  baudRate: GPS_BAUD_RATE
+}
+
+// -- Polling ---------------------------------------
+export const DEFAULT_NBM_POLLING: NbmPollingConfig = {
+  activePollIntervalMs: 200,
+  standbyBatteryIntervalMs: 30_000,
+  maxConsecutiveReadFailures: 8
+}
+
+// -- Timeouts ---------------------------------------
+export const DEFAULT_NBM_TIMEOUTS: NbmDriverTimeouts = {
+  responseTimeoutMs: 6000,
+  initDelayMs: 2000,
+  maxConsecutiveTimeouts: 4
+}
+
+// -- Serial probe -----------------------------------
+export const DEFAULT_SERIAL_PROBE: SerialProbeConfig = {
+  nbmTimeoutMs: 6000,
+  nmeaListenMs: 12000
+}
+
+// -- Reconnect ---------------------------------------
+export const DEFAULT_NBM_RECONNECT: ReconnectConfig = {
+  intervalMs: 3000,
+  timeoutMs: 30_000
+}
+
+export const DEFAULT_GPS_RECONNECT: ReconnectConfig = {
+  intervalMs: 3000,
+  timeoutMs: 30_000
+}
+
+// -- DB flush ---------------------------------------
+export const DEFAULT_FLUSH: FlushConfig = {
+  everyNPoints: 5,
+  intervalMs: 5000
+}
+
+// -- Geo fusion ---------------------------------------
+export const DEFAULT_GEO_FUSION: GeoFusionConfigOptions = {
+  triggerMode: 'distance',
+  minDistanceMeters: 20,
+  intervalMs: 5000,
+  testMode: false
+}

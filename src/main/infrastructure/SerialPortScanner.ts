@@ -4,10 +4,10 @@ import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 import type { ProbedDeviceInfo } from '../../shared/dto/index'
-import { ConfigService } from '../services/ConfigService'
+import { DEFAULT_SERIAL_PROBE, NBM_BAUD_RATE, GPS_BAUD_RATE } from '../../shared/config.constants'
 
-const PROBE_TIMEOUT_MS = ConfigService.DEFAULT_SERIAL_PROBE.nbmTimeoutMs
-const NMEA_LISTEN_MS = ConfigService.DEFAULT_SERIAL_PROBE.nmeaListenMs
+const PROBE_TIMEOUT_MS = DEFAULT_SERIAL_PROBE.nbmTimeoutMs
+const NMEA_LISTEN_MS = DEFAULT_SERIAL_PROBE.nmeaListenMs
 
 export interface DriverFactories {
   createNBM?: (port: string) => NBM550Driver
@@ -110,7 +110,7 @@ export class SerialPortScanner implements ISerialPortScanner {
       this.factories?.createNBM?.(port) ??
       new NBM550Driver({
         port,
-        baudRate: ConfigService.NBM_BAUD_RATE,
+        baudRate: NBM_BAUD_RATE,
         pollIntervalMs: 200,
         unit: 'V/m'
       })
@@ -152,7 +152,7 @@ export class SerialPortScanner implements ISerialPortScanner {
       this.factories?.createGPS?.(port) ??
       new GPSDriver({
         port,
-        baudRate: ConfigService.GPS_BAUD_RATE
+        baudRate: GPS_BAUD_RATE
       })
 
     try {

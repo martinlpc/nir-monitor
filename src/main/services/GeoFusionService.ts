@@ -2,7 +2,7 @@ import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
 import type { GeoTimestamp, GeoPosition, EMFSample } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
-import { ConfigService } from './ConfigService'
+import { DEFAULT_GEO_FUSION } from '../../shared/config.constants'
 import { haversineMeters } from '../../shared/geo-utils'
 
 export type TriggerMode = 'distance' | 'time'
@@ -14,7 +14,7 @@ export interface GeoFusionConfig {
   testMode?: boolean
 }
 
-export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = { ...ConfigService.DEFAULT_GEO_FUSION }
+export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = { ...DEFAULT_GEO_FUSION }
 
 export class GeoFusionService extends EventEmitter {
   private config: GeoFusionConfig
