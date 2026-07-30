@@ -8,12 +8,14 @@ import type { SessionService } from '../services/SessionService'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
 import type { ExportOrchestrator } from '../export/ExportOrchestator'
 import type { EventBus } from '../services/EventBus'
+import type { ProbeDataService } from '../uncertainty/loadBuiltInData'
 
 export function setupIPC(
   eventBus: EventBus,
   deviceManager: DeviceManager,
   sessionService: SessionService,
   exportOrchestrator: ExportOrchestrator,
+  probeDataService: ProbeDataService,
   tileCache?: TileCacheService
 ): void {
   deviceManager.removeAllListeners()
@@ -24,7 +26,7 @@ export function setupIPC(
   registerDriverHandlers()
   registerDeviceManagerHandlers(deviceManager)
   registerSessionServiceHandlers(eventBus, sessionService, exportOrchestrator)
-  registerSettingsHandlers(deviceManager)
+  registerSettingsHandlers(deviceManager, probeDataService)
 
   if (tileCache) {
     const window = eventBus.getWindow()

@@ -100,14 +100,6 @@ vi.mock('nmea-simple', () => ({
   parseNmeaSentence: (...args: unknown[]) => mockParseNmeaSentence(...args)
 }))
 
-vi.mock('../uncertainty/loadBuiltInData', () => ({
-  loadBuiltInProbeData: () => [
-    { name: 'EF-0391', fMin: 0.1, fMax: 3000, uncertainty: 0, factor: 1.37 },
-    { name: 'EF-0691', fMin: 0.1, fMax: 3000, uncertainty: 0, factor: 1.15 }
-  ],
-  getBuiltInVersion: () => 1
-}))
-
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => '/fake/userData') }
 }))

@@ -19,7 +19,7 @@ import { GeoJsonExporter } from '../export/GeoJsonExporter'
 import { XlsxExporter } from '../export/XlsxExporter'
 import type { IExporter, TemplateResolver } from '../export/IExporter'
 import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
-import { loadBuiltInProbeData } from '../uncertainty/loadBuiltInData'
+import { ProbeDataService } from '../uncertainty/loadBuiltInData'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -29,6 +29,7 @@ export interface Services {
   geoFusion: GeoFusionService
   config: ConfigService
   exportOrchestrator: ExportOrchestrator
+  probeDataService: ProbeDataService
 }
 
 function createSimulatedScanner(): ISerialPortScanner {
@@ -91,7 +92,17 @@ export function createServices(): Services {
   const deviceManager = new DeviceManager(scanner, driverFactory, config)
 
   // 3. Inyectar geoFusion y repositorio en SessionService
-  const correctionResolver = new CorrectionFactorResolver(loadBuiltInProbeData)
+  const probeDataService = new ProbeDataService(
+    (filePath: string) => {
+      if (!fs.existsSync(filePath)) return null
+      return fs.readFileSync(filePath, 'utf-8')
+    },
+    () =>
+      app.isPackaged
+        ? path.join(process.resourcesPath, 'probe-data.json')
+        : path.join(app.getAppPath(), 'resources', 'probe-data.json')
+  )
+  const correctionResolver = new CorrectionFactorResolver(() => probeDataService.load())
   const sessionService = new SessionService(geoFusion, sessionRepository, config, correctionResolver)
 
   return {
@@ -101,7 +112,8 @@ export function createServices(): Services {
     sessionRepository,
     geoFusion,
     config,
-    exportOrchestrator
+    exportOrchestrator,
+    probeDataService
   }
 }
 

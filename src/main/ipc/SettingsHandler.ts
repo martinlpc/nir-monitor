@@ -3,9 +3,9 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 import { IPC_HANDLERS } from './channels'
 import { toUserError } from '../../shared/errors/toUserError'
-import { loadBuiltInProbeData, getBuiltInVersion } from '../uncertainty/loadBuiltInData'
 import { normalizeProbeName } from '../uncertainty/correctionFactor'
 import { ConfigService } from '../services/ConfigService'
+import type { ProbeDataService } from '../uncertainty/loadBuiltInData'
 import type { DeviceManager } from '../services/DeviceManager'
 
 function sanitizeReThrow(err: unknown): never {
@@ -14,7 +14,10 @@ function sanitizeReThrow(err: unknown): never {
   throw new Error(message)
 }
 
-export function registerSettingsHandlers(deviceManager: DeviceManager): void {
+export function registerSettingsHandlers(
+  deviceManager: DeviceManager,
+  probeDataService: ProbeDataService
+): void {
   ipcMain.handle(IPC_HANDLERS.GET_APP_VERSION, async () => {
     try {
       return { version: app.getVersion() }
@@ -37,8 +40,8 @@ export function registerSettingsHandlers(deviceManager: DeviceManager): void {
 
   ipcMain.handle(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA, async () => {
     try {
-      const records = loadBuiltInProbeData()
-      const version = getBuiltInVersion()
+      const records = probeDataService.load()
+      const version = probeDataService.getVersion()
       return { success: true, version, records }
     } catch (err) {
       sanitizeReThrow(err)
@@ -81,7 +84,7 @@ export function registerSettingsHandlers(deviceManager: DeviceManager): void {
         return { success: true, factor: null, matchedRecord: null, probeModel }
       }
 
-      const records = loadBuiltInProbeData()
+      const records = probeDataService.load()
       const normalizedProbe = normalizeProbeName(probeModel)
       const matched =
         records.find((r) => normalizeProbeName(r.name) === normalizedProbe) ??

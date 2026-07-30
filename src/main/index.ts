@@ -158,6 +158,7 @@ app.whenReady().then(() => {
     services.deviceManager,
     services.sessionService,
     services.exportOrchestrator,
+    services.probeDataService,
     tileCache ?? undefined
   )
 
@@ -181,6 +182,7 @@ app.whenReady().then(() => {
         services.deviceManager,
         services.sessionService,
         services.exportOrchestrator,
+        services.probeDataService,
         tileCache ?? undefined
       )
     }

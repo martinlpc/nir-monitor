@@ -4,7 +4,9 @@ import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import { SerialPortScanner } from '../infrastructure/SerialPortScanner'
 import { findFactor } from '../uncertainty/correctionFactor'
-import { loadBuiltInProbeData } from '../uncertainty/loadBuiltInData'
+import { readFileSync, existsSync } from 'fs'
+import { join } from 'path'
+import { ProbeDataService } from '../uncertainty/loadBuiltInData'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { NBM550Config } from '../devices/nbm550/nbm550.types'
 
@@ -177,7 +179,14 @@ async function main(): Promise<void> {
     console.log(`   🔬 Sonda: ${probeModel ?? 'desconocida'}`)
 
     if (probeModel) {
-      const resolved = findFactor(loadBuiltInProbeData(), probeModel)
+      const probeService = new ProbeDataService(
+        (filePath: string) => {
+          if (!existsSync(filePath)) return null
+          return readFileSync(filePath, 'utf-8')
+        },
+        () => join(process.cwd(), 'resources', 'probe-data.json')
+      )
+      const resolved = findFactor(probeService.load(), probeModel)
       if (resolved != null) {
         opts.cf = resolved
         console.log(`   ✅ CF desde datos embebidos: ${resolved}`)
