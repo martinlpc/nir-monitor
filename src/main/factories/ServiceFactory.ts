@@ -1,3 +1,7 @@
+import { app } from 'electron'
+import * as fs from 'fs'
+import * as path from 'path'
+
 import { DeviceManager } from '../services/DeviceManager'
 import { SessionService } from '../services/SessionService'
 import { GeoFusionService } from '../services/GeoFusionService'
@@ -9,6 +13,10 @@ import { ConfigService } from '../services/ConfigService'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
 import type { DriverFactory } from '../../shared/driver-factory'
+import { KmzExporter } from '../export/KmzExporter'
+import { ExportOrchestrator } from '../export/ExportOrchestator'
+import { GeoJsonExporter } from '../export/GeoJsonExporter'
+import type { IExporter } from '../export/IExporter'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -17,6 +25,7 @@ export interface Services {
   sessionRepository: ISessionRepository
   geoFusion: GeoFusionService
   config: ConfigService
+  exportOrchestrator: ExportOrchestrator
 }
 
 function createSimulatedScanner(): ISerialPortScanner {
@@ -53,6 +62,16 @@ export function createServices(): Services {
     flushEveryNPoints: flushCfg.everyNPoints,
     flushIntervalMs: flushCfg.intervalMs
   })
+  const iconPath = path.join(app.getAppPath(), 'resources', 'icon.png')
+  const iconBuffer = fs.existsSync(iconPath) ? fs.readFileSync(iconPath) : null
+  const kmzExporter = new KmzExporter(app.getVersion(), iconBuffer)
+  const exportOrchestrator = new ExportOrchestrator(
+    sessionRepository,
+    new Map<string, IExporter<string | Buffer>>([
+      ['geojson', new GeoJsonExporter()],
+      ['kmz', kmzExporter]
+    ])
+  )
 
   // 2. Inyectar scanner y factory en DeviceManager
   const deviceManager = new DeviceManager(scanner, driverFactory, config)
@@ -66,7 +85,8 @@ export function createServices(): Services {
     sessionService,
     sessionRepository,
     geoFusion,
-    config
+    config,
+    exportOrchestrator
   }
 }
 

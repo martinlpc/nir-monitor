@@ -12,6 +12,7 @@ import type { SessionService } from '../services/SessionService'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 import { v4 as uuidv4 } from 'uuid'
+import { ExportOrchestrator } from '../export/ExportOrchestator'
 
 function validateSessionId(sessionId: string): { success: false; error: string } | null {
   if (!sessionId || !isValidSessionId(sessionId)) {
@@ -32,7 +33,8 @@ function sanitizeReThrow(err: unknown): never {
 export function registerSessionServiceHandlers(
   _window: BrowserWindow,
   _deviceManager: DeviceManager,
-  sessionService: SessionService
+  sessionService: SessionService,
+  exportOrchestrator: ExportOrchestrator
 ): void {
   // session:start - inicia captura de puntos geofusionados
   ipcMain.handle(
@@ -86,7 +88,8 @@ export function registerSessionServiceHandlers(
               .replace(/\s+/g, '-')
             const filename = `${loc}_${fecha}_${hora}.geojson.enc`
             const filepath = path.join(desktop, filename)
-            const geojson = await repository.exportAsGeoJSON(summary.id)
+            const result = await exportOrchestrator.export(summary.id, 'geojson')
+            const geojson = result.data as string
             const encrypted = encryptBuffer(Buffer.from(geojson, 'utf-8'))
             fs.writeFileSync(filepath, encrypted)
             console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
@@ -173,35 +176,10 @@ export function registerSessionServiceHandlers(
       return { success: false, error: 'Repositorio no disponible.' }
     }
     try {
-      const stats = await repository.getSessionStats(sessionId)
-      const pointCount = stats?.pointCount ?? 0
-      const truncated = pointCount > SQLiteSessionRepository.MAX_EXPORT_POINTS
-
-      const geojson = await repository.exportAsGeoJSON(sessionId)
-      return { success: true, data: geojson, truncated: truncated || undefined }
+      const result = await exportOrchestrator.export(sessionId, 'geojson')
+      return { success: true, data: result.data as string, truncated: result.truncated }
     } catch {
       return { success: false, error: 'Error al exportar la sesión como GeoJSON.' }
-    }
-  })
-
-  // session:export-csv - exporta como CSV
-  ipcMain.handle(IPC_HANDLERS.SESSION_EXPORT_CSV, async (_, sessionId: string) => {
-    const invalid = validateSessionId(sessionId)
-    if (invalid) return invalid
-
-    const repository = sessionService.getRepository()
-    if (!repository) {
-      return { success: false, error: 'Repositorio no disponible.' }
-    }
-    try {
-      const stats = await repository.getSessionStats(sessionId)
-      const pointCount = stats?.pointCount ?? 0
-      const truncated = pointCount > SQLiteSessionRepository.MAX_EXPORT_POINTS
-
-      const csv = await repository.exportAsCSV(sessionId)
-      return { success: true, data: csv, truncated: truncated || undefined }
-    } catch {
-      return { success: false, error: 'Error al exportar la sesión como CSV.' }
     }
   })
 
@@ -269,16 +247,16 @@ export function registerSessionServiceHandlers(
             finalPath = finalPath.slice(0, -'.geojson.enc'.length)
           }
           finalPath += '.geojson.enc'
-          const data = await repository.exportAsGeoJSON(sessionId)
-          const encrypted = encryptBuffer(Buffer.from(data, 'utf-8'))
+          const result = await exportOrchestrator.export(sessionId, 'geojson')
+          const encrypted = encryptBuffer(Buffer.from(result.data as string, 'utf-8'))
           fs.writeFileSync(finalPath, encrypted)
         } else if (format === 'kmz') {
           while (finalPath.endsWith('.kmz')) {
             finalPath = finalPath.slice(0, -'.kmz'.length)
           }
           finalPath += '.kmz'
-          const buffer = await repository.exportAsKMZ(sessionId)
-          fs.writeFileSync(finalPath, buffer)
+          const buffer = await exportOrchestrator.export(sessionId, 'kmz')
+          fs.writeFileSync(finalPath, buffer.data as Buffer)
         }
 
         return { success: true, filePaths: [finalPath], truncated: truncated || undefined }

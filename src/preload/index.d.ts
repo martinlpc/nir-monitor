@@ -68,9 +68,6 @@ declare global {
         exportGeoJSON: (
           sessionId: string
         ) => Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }>
-        exportCSV: (
-          sessionId: string
-        ) => Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }>
         export: (
           sessionId: string,
           format: 'geojson' | 'xlsx' | 'kmz',

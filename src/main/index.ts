@@ -149,7 +149,13 @@ app.whenReady().then(() => {
   const window = createWindow()
 
   // 4. Setup IPC with tile cache
-  setupIPC(window, services.deviceManager, services.sessionService, tileCache ?? undefined)
+  setupIPC(
+    window,
+    services.deviceManager,
+    services.sessionService,
+    services.exportOrchestrator,
+    tileCache ?? undefined
+  )
 
   void services.deviceManager
     .initialize()
@@ -164,7 +170,13 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0 && services) {
       const nextWindow = createWindow()
-      setupIPC(nextWindow, services.deviceManager, services.sessionService, tileCache ?? undefined)
+      setupIPC(
+        nextWindow,
+        services.deviceManager,
+        services.sessionService,
+        services.exportOrchestrator,
+        tileCache ?? undefined
+      )
     }
   })
 })

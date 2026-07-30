@@ -8,6 +8,7 @@ import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
 import { AlertLogger } from '../infrastructure/AlertLogger'
+import type { ExportOrchestrator } from '../export/ExportOrchestator'
 
 export function emitAlert(
   window: BrowserWindow,
@@ -26,6 +27,7 @@ export function setupIPC(
   window: BrowserWindow,
   deviceManager: DeviceManager,
   sessionService: SessionService,
+  exportOrchestrator: ExportOrchestrator,
   tileCache?: TileCacheService
 ): void {
   deviceManager.removeAllListeners()
@@ -35,7 +37,7 @@ export function setupIPC(
 
   registerDriverHandlers()
   registerDeviceManagerHandlers(window, deviceManager)
-  registerSessionServiceHandlers(window, deviceManager, sessionService)
+  registerSessionServiceHandlers(window, deviceManager, sessionService, exportOrchestrator)
   registerSettingsHandlers(deviceManager)
 
   if (tileCache) {

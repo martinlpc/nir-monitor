@@ -20,7 +20,6 @@ export function usePersistentSessions(): {
   getSession: (sessionId: string) => Promise<PersistedSession>
   deleteSession: (sessionId: string) => Promise<void>
   exportGeoJSON: (sessionId: string) => Promise<string>
-  exportCSV: (sessionId: string) => Promise<string>
   exportSession: (
     sessionId: string,
     format: 'geojson' | 'xlsx' | 'kmz',
@@ -126,21 +125,6 @@ export function usePersistentSessions(): {
       }
     } catch (err) {
       console.error('[usePersistentSessions] Error exporting GeoJSON:', err)
-      throw err
-    }
-  }, [])
-
-  // Exportar como CSV
-  const exportCSV = useCallback(async (sessionId: string): Promise<string> => {
-    try {
-      const result = await window.api.session.exportCSV(sessionId)
-      if (result.success && result.data) {
-        return result.data
-      } else {
-        throw new Error(result.error || 'Failed to export as CSV')
-      }
-    } catch (err) {
-      console.error('[usePersistentSessions] Error exporting CSV:', err)
       throw err
     }
   }, [])
@@ -262,7 +246,6 @@ export function usePersistentSessions(): {
     getSession,
     deleteSession,
     exportGeoJSON,
-    exportCSV,
     exportSession,
     importGeoJSON,
     getStats,

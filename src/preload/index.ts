@@ -154,11 +154,6 @@ const api = {
     ): Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }> =>
       ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_GEOJSON, sessionId),
 
-    exportCSV: (
-      sessionId: string
-    ): Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }> =>
-      ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_CSV, sessionId),
-
     export: (
       sessionId: string,
       format: 'geojson' | 'xlsx' | 'kmz',
