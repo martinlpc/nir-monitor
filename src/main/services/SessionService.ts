@@ -8,7 +8,7 @@ import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
-import { resolveBuiltInFactor } from '../uncertainty/correctionFactor'
+import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
 import { ConfigService } from './ConfigService'
 import { AppError } from '../../shared/errors/AppError'
 
@@ -31,14 +31,14 @@ export class SessionService extends EventEmitter {
   private config: ConfigService | null = null
   private instrument: InstrumentInfo | null = null
   private correctionFactor: number | null = null
+  private correctionResolver: CorrectionFactorResolver
   private provincia: string = ''
   private localidad: string = ''
   private apellido1: string = ''
   private apellido2: string = ''
 
   private resolveCorrectionFactor(probeModel: string | null): number | null {
-    if (!probeModel) return null
-    return resolveBuiltInFactor(probeModel)
+    return this.correctionResolver.resolve(probeModel)
   }
 
   private syncCorrectionFactorFromProbe(probeModel: string | null): void {
@@ -50,11 +50,17 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository, config?: ConfigService) {
+  constructor(
+    fusion: GeoFusionService,
+    repository?: ISessionRepository,
+    config?: ConfigService,
+    correctionResolver?: CorrectionFactorResolver
+  ) {
     super()
     this.fusion = fusion
     this.repository = repository || null
     this.config = config ?? null
+    this.correctionResolver = correctionResolver ?? new CorrectionFactorResolver(() => [])
 
     this.fusion.on('point', (point: GeoTimestamp) => {
       this.pointCount++

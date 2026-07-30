@@ -3,6 +3,7 @@ import { DeviceManager } from '../services/DeviceManager'
 import { SessionService } from '../services/SessionService'
 import { GeoFusionService } from '../services/GeoFusionService'
 import { RealDriverFactory } from '../factories/RealDriverFactory'
+import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 
 const { FakeSerialPort, gpsParserDataListeners, mockParseNmeaSentence } = vi.hoisted(() => {
@@ -135,7 +136,15 @@ describe('Smoke: full chain', () => {
     }
 
     deviceManager = new DeviceManager(mockScanner, new RealDriverFactory())
-    sessionService = new SessionService(new GeoFusionService())
+    sessionService = new SessionService(
+      new GeoFusionService(),
+      undefined,
+      undefined,
+      new CorrectionFactorResolver(() => [
+        { name: 'EF-0391', fMin: 0.1, fMax: 3000, uncertainty: 0, factor: 1.37 },
+        { name: 'EF-0691', fMin: 0.1, fMax: 3000, uncertainty: 0, factor: 1.15 }
+      ])
+    )
   })
 
   afterEach(() => {

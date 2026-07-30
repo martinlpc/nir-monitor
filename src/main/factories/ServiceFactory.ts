@@ -18,6 +18,8 @@ import { ExportOrchestrator } from '../export/ExportOrchestator'
 import { GeoJsonExporter } from '../export/GeoJsonExporter'
 import { XlsxExporter } from '../export/XlsxExporter'
 import type { IExporter, TemplateResolver } from '../export/IExporter'
+import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
+import { loadBuiltInProbeData } from '../uncertainty/loadBuiltInData'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -89,7 +91,8 @@ export function createServices(): Services {
   const deviceManager = new DeviceManager(scanner, driverFactory, config)
 
   // 3. Inyectar geoFusion y repositorio en SessionService
-  const sessionService = new SessionService(geoFusion, sessionRepository, config)
+  const correctionResolver = new CorrectionFactorResolver(loadBuiltInProbeData)
+  const sessionService = new SessionService(geoFusion, sessionRepository, config, correctionResolver)
 
   return {
     scanner,
