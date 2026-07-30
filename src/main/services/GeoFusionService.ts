@@ -1,23 +1,16 @@
 import { EventEmitter } from 'events'
-import { v4 as uuidv4 } from 'uuid'
-import type { GeoTimestamp, GeoPosition, EMFSample } from '../../shared/GeoTimestamp'
+import type { GeoPosition } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
+import { evaluateTrigger, buildGeoTimestamp } from '../geo/fusion/FusionEngine'
+import type { FusionConfig } from '../geo/fusion/FusionConfig'
 import { DEFAULT_GEO_FUSION } from '../../shared/config.constants'
-import { haversineMeters } from '../../shared/geo-utils'
 
-export type TriggerMode = 'distance' | 'time'
-
-export interface GeoFusionConfig {
-  triggerMode: TriggerMode
-  minDistanceMeters: number
-  intervalMs: number
-  testMode?: boolean
-}
-
-export const DEFAULT_FUSION_CONFIG: GeoFusionConfig = { ...DEFAULT_GEO_FUSION }
+export type TriggerMode = FusionConfig['triggerMode']
+export type GeoFusionConfig = FusionConfig
+export const DEFAULT_FUSION_CONFIG: FusionConfig = { ...DEFAULT_GEO_FUSION }
 
 export class GeoFusionService extends EventEmitter {
-  private config: GeoFusionConfig
+  private config: FusionConfig
   private sessionId: string = ''
   private nbm: INBMDriver | null = null
   private _gps: IGPSDriver | null = null
@@ -29,7 +22,7 @@ export class GeoFusionService extends EventEmitter {
   private sequenceNumber: number = 0 // incrementa cada captura en una sesión
   private gpsWasLost: boolean = false // true si hubo pérdida de GPS desde la última captura
 
-  constructor(config: GeoFusionConfig = DEFAULT_FUSION_CONFIG) {
+  constructor(config: FusionConfig = DEFAULT_FUSION_CONFIG) {
     super()
     this.config = config
   }
@@ -107,7 +100,7 @@ export class GeoFusionService extends EventEmitter {
     }
   }
 
-  updateConfig(config: Partial<GeoFusionConfig>): void {
+  updateConfig(config: Partial<FusionConfig>): void {
     const clean = Object.fromEntries(Object.entries(config).filter(([, v]) => v !== undefined))
     this.config = { ...this.config, ...clean }
   }
@@ -122,28 +115,7 @@ export class GeoFusionService extends EventEmitter {
     const currentPosition = this._gps.getLastPosition()
     if (!currentPosition) return
 
-    // En modo test, tomar cada punto sin umbral de distancia
-    if (this.config.testMode) {
-      console.log('[GeoFusionService] evaluateDistanceTrigger: test mode — capturing')
-      this.capture().catch((err) => {
-        console.error('[GeoFusionService] capture error (non-fatal):', err)
-      })
-      return
-    }
-
-    if (!this.lastSavedPosition) {
-      console.log('[GeoFusionService] evaluateDistanceTrigger: first position — capturing')
-      this.capture().catch((err) => {
-        console.error('[GeoFusionService] capture error (non-fatal):', err)
-      })
-      return
-    }
-
-    const dist = haversineMeters(this.lastSavedPosition, currentPosition)
-    if (dist >= this.config.minDistanceMeters) {
-      console.log(
-        `[GeoFusionService] evaluateDistanceTrigger: distance ${dist.toFixed(1)}m >= ${this.config.minDistanceMeters}m — capturing`
-      )
+    if (evaluateTrigger(currentPosition, this.lastSavedPosition, this.config)) {
       this.capture().catch((err) => {
         console.error('[GeoFusionService] capture error (non-fatal):', err)
       })
@@ -170,24 +142,10 @@ export class GeoFusionService extends EventEmitter {
       return
     }
 
-    // Siempre respetar el umbral de distancia para no duplicar puntos
-    if (this.config.testMode) {
+    if (evaluateTrigger(currentPosition, this.lastSavedPosition, this.config)) {
+      console.log(`[GeoFusionService] tryCapture(): About to capture...`)
       await this.capture()
-      return
     }
-
-    if (this.lastSavedPosition) {
-      const dist = haversineMeters(this.lastSavedPosition, currentPosition)
-      if (dist < this.config.minDistanceMeters) {
-        console.log(
-          `[GeoFusionService] tryCapture(): Skipping — only ${dist.toFixed(1)}m moved (< ${this.config.minDistanceMeters}m)`
-        )
-        return
-      }
-    }
-
-    console.log(`[GeoFusionService] tryCapture(): About to capture...`)
-    await this.capture()
   }
 
   // ── Captura ───────────────────────────────────────────────
@@ -231,28 +189,20 @@ export class GeoFusionService extends EventEmitter {
       }
 
       this.sequenceNumber++
-      const correctedMeasurement = sample.rss * this.correctionFactor
 
-      const gpsGap = this.gpsWasLost || undefined
-      this.gpsWasLost = false
-
-      const geoTimestamp: GeoTimestamp = {
-        id: uuidv4(),
+      const geoTimestamp = buildGeoTimestamp({
         sessionId: this.sessionId,
         sequenceNumber: this.sequenceNumber,
-        timestamp: position.nmeaUtcMs ?? Date.now(),
-        position: { ...position },
-        emf: {
-          deviceId: 'nbm550',
-          rawMeasurement: sample.rss,
-          unit: sample.unit as EMFSample['unit']
-        },
-        correctedMeasurement,
-        gpsGap
-      }
+        position,
+        sample: { rss: sample.rss, unit: sample.unit },
+        correctionFactor: this.correctionFactor,
+        gpsWasLost: this.gpsWasLost
+      })
+
+      this.gpsWasLost = false
 
       console.log(
-        `[GeoFusionService] capture(): Emitting point [#${this.sequenceNumber}] lat=${position.lat}, lon=${position.lon}, raw=${sample.rss} (factor=${this.correctionFactor}, corrected=${correctedMeasurement})`
+        `[GeoFusionService] capture(): Emitting point [#${this.sequenceNumber}] lat=${position.lat}, lon=${position.lon}, raw=${sample.rss} (factor=${this.correctionFactor}, corrected=${geoTimestamp.correctedMeasurement})`
       )
       this.lastSavedPosition = { ...position }
       this.emit('point', geoTimestamp)
