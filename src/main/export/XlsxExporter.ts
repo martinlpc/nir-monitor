@@ -22,14 +22,26 @@ export class XlsxExporter implements IExporter<string[]> {
     const reportPath = await this.fillReporte(metadata, points, safeLabel, folderPath)
     generatedFiles.push(reportPath)
 
-    const reportPPath = await this.fillReporteP(metadata, points, label ?? '', safeLabel, folderPath)
+    const reportPPath = await this.fillReporteP(
+      metadata,
+      points,
+      label ?? '',
+      safeLabel,
+      folderPath
+    )
     generatedFiles.push(reportPPath)
 
     const averifPoints = points.filter(
       (p) => electricFieldToMepPercent(p.correctedMeasurement) >= 50
     )
     if (averifPoints.length > 0) {
-      const averifPath = await this.fillAverif(metadata, averifPoints, label ?? '', safeLabel, folderPath)
+      const averifPath = await this.fillAverif(
+        metadata,
+        averifPoints,
+        label ?? '',
+        safeLabel,
+        folderPath
+      )
       generatedFiles.push(averifPath)
     }
 
@@ -58,7 +70,6 @@ export class XlsxExporter implements IExporter<string[]> {
     labelSuffix?: string,
     footerFontSize?: number
   ): Promise<string> {
-
     const templateBuffer = await this.templateResolver(templateName)
     const wb = new ExcelJS.Workbook()
     await wb.xlsx.load(templateBuffer as unknown as ArrayBuffer)
