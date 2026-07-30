@@ -4,7 +4,7 @@ import type { ExportContext, ExportResult, IExporter } from './IExporter'
 export class ExportOrchestrator {
   constructor(
     private repository: ISessionRepository,
-    private exporters: Map<string, IExporter<string | Buffer>>,
+    private exporters: Map<string, IExporter<string | Buffer | string[]>>,
     private maxExportPoints: number = 5000
   ) {}
 

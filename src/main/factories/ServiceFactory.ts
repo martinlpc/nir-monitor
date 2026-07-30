@@ -16,7 +16,8 @@ import type { DriverFactory } from '../../shared/driver-factory'
 import { KmzExporter } from '../export/KmzExporter'
 import { ExportOrchestrator } from '../export/ExportOrchestator'
 import { GeoJsonExporter } from '../export/GeoJsonExporter'
-import type { IExporter } from '../export/IExporter'
+import { XlsxExporter } from '../export/XlsxExporter'
+import type { IExporter, TemplateResolver } from '../export/IExporter'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -65,11 +66,22 @@ export function createServices(): Services {
   const iconPath = path.join(app.getAppPath(), 'resources', 'icon.png')
   const iconBuffer = fs.existsSync(iconPath) ? fs.readFileSync(iconPath) : null
   const kmzExporter = new KmzExporter(app.getVersion(), iconBuffer)
+
+  const templateDir = app.isPackaged
+    ? path.join(process.resourcesPath, 'plantillas')
+    : path.join(app.getAppPath(), 'resources', 'plantillas')
+  const templateResolver: TemplateResolver = async (name) => {
+    const filePath = path.join(templateDir, name)
+    return fs.promises.readFile(filePath) as Promise<Buffer>
+  }
+  const xlsxExporter = new XlsxExporter(templateResolver, app.getVersion())
+
   const exportOrchestrator = new ExportOrchestrator(
     sessionRepository,
-    new Map<string, IExporter<string | Buffer>>([
+    new Map<string, IExporter<string | Buffer | string[]>>([
       ['geojson', new GeoJsonExporter()],
-      ['kmz', kmzExporter]
+      ['kmz', kmzExporter],
+      ['xlsx', xlsxExporter]
     ])
   )
 

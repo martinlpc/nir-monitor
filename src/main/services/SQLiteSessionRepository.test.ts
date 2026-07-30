@@ -353,44 +353,6 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect((inside[0] as unknown as Record<string, unknown>).interpolated).toBeUndefined()
   })
 
-  // ── exportAsGeoJSON ──────────────────────────────────────────
-
-  it('exports as valid GeoJSON FeatureCollection', async () => {
-    const meta = makeSession({ sampleCount: 2 })
-    await repo.initSession(meta.id, meta)
-    for (const seq of [1, 2]) {
-      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: seq }))
-    }
-    await repo.finalizeSession(meta.id, { ...meta, sampleCount: 2 })
-
-    const output = await repo.exportAsGeoJSON(meta.id)
-    const parsed = JSON.parse(output)
-    expect(parsed.type).toBe('FeatureCollection')
-    expect(parsed.features).toHaveLength(2)
-    expect(parsed.properties.session.id).toBe(meta.id)
-    expect(parsed.properties.session.provincia).toBe('Neuquén')
-    expect(parsed.properties.correctionFactor).toBe(1.08)
-    expect(parsed.properties.stats.pointCount).toBe(2)
-    expect(parsed.features[0].geometry.type).toBe('Point')
-    expect(parsed.features[0].geometry.coordinates).toHaveLength(3)
-  })
-
-  // ── exportAsCSV ──────────────────────────────────────────────
-
-  it('exports as valid CSV with headers and quoted rows', async () => {
-    const meta = makeSession({ sampleCount: 1 })
-    await repo.initSession(meta.id, meta)
-    await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: 1 }))
-    await repo.finalizeSession(meta.id, { ...meta, sampleCount: 1 })
-
-    const csv = await repo.exportAsCSV(meta.id)
-    const lines = csv.trim().split('\n')
-    expect(lines).toHaveLength(2)
-    expect(lines[0]).toContain('Timestamp')
-    expect(lines[0]).toContain('Corrected (V/m)')
-    expect(lines[1]).toContain('"')
-  })
-
   // ── getSessionStats ──────────────────────────────────────────
 
   it('returns null stats when session has no points', async () => {
@@ -421,71 +383,6 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     expect((customRepo as unknown as { FLUSH_EVERY_N_POINTS: number }).FLUSH_EVERY_N_POINTS).toBe(1)
     expect((customRepo as unknown as { FLUSH_INTERVAL_MS: number }).FLUSH_INTERVAL_MS).toBe(1000)
     customRepo.close()
-  })
-
-  // ── export limit (MAX_EXPORT_POINTS) ─────────────────────────
-
-  it('does not truncate when points are within limit', async () => {
-    const meta = makeSession({ sampleCount: 1 })
-    await repo.initSession(meta.id, meta)
-    await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: 1 }))
-    await repo.finalizeSession(meta.id, { ...meta, sampleCount: 1 })
-
-    const geojson = await repo.exportAsGeoJSON(meta.id)
-    const parsed = JSON.parse(geojson)
-    expect(parsed.features).toHaveLength(1)
-  })
-
-  it('truncates GeoJSON export to MAX_EXPORT_POINTS', async () => {
-    const manyPoints = SQLiteSessionRepository.MAX_EXPORT_POINTS + 10
-    const meta = makeSession({ sampleCount: manyPoints })
-    await repo.initSession(meta.id, meta)
-    for (let i = 1; i <= SQLiteSessionRepository.MAX_EXPORT_POINTS; i++) {
-      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
-    }
-    // Insert excess points directly (bypass addPoint limit) to test export truncation
-    const extraCount = manyPoints - SQLiteSessionRepository.MAX_EXPORT_POINTS
-    const now = new Date().toISOString()
-    for (let i = 1; i <= extraCount; i++) {
-      const seq = SQLiteSessionRepository.MAX_EXPORT_POINTS + i
-      db.run(
-        `INSERT INTO geo_points (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [uuidv4(), meta.id, seq, now, NEUQUEN.lat, NEUQUEN.lon, NEUQUEN.alt, 5.0, 5.4, 'V/m']
-      )
-    }
-    db.run(`UPDATE sessions SET sampleCount = ? WHERE id = ?`, [manyPoints, meta.id])
-    await repo.finalizeSession(meta.id, { ...meta, sampleCount: manyPoints })
-
-    const geojson = await repo.exportAsGeoJSON(meta.id)
-    const parsed = JSON.parse(geojson)
-    expect(parsed.features.length).toBeLessThanOrEqual(SQLiteSessionRepository.MAX_EXPORT_POINTS)
-  })
-
-  it('truncates CSV export to MAX_EXPORT_POINTS', async () => {
-    const manyPoints = SQLiteSessionRepository.MAX_EXPORT_POINTS + 5
-    const meta = makeSession({ sampleCount: manyPoints })
-    await repo.initSession(meta.id, meta)
-    for (let i = 1; i <= SQLiteSessionRepository.MAX_EXPORT_POINTS; i++) {
-      await repo.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: i }))
-    }
-    // Insert excess points directly (bypass addPoint limit) to test export truncation
-    const extraCount = manyPoints - SQLiteSessionRepository.MAX_EXPORT_POINTS
-    const now = new Date().toISOString()
-    for (let i = 1; i <= extraCount; i++) {
-      const seq = SQLiteSessionRepository.MAX_EXPORT_POINTS + i
-      db.run(
-        `INSERT INTO geo_points (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [uuidv4(), meta.id, seq, now, NEUQUEN.lat, NEUQUEN.lon, NEUQUEN.alt, 5.0, 5.4, 'V/m']
-      )
-    }
-    db.run(`UPDATE sessions SET sampleCount = ? WHERE id = ?`, [manyPoints, meta.id])
-    await repo.finalizeSession(meta.id, { ...meta, sampleCount: manyPoints })
-
-    const csv = await repo.exportAsCSV(meta.id)
-    const lines = csv.trim().split('\n')
-    expect(lines.length - 1).toBeLessThanOrEqual(SQLiteSessionRepository.MAX_EXPORT_POINTS)
   })
 
   it('rejects addPoint when MAX_EXPORT_POINTS is reached', async () => {

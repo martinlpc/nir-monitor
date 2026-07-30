@@ -20,6 +20,6 @@ export type TemplateResolver = (
 ) => Promise<Buffer>
 
 export interface ExportResult {
-  data: string | Buffer
+  data: string | Buffer | string[]
   truncated?: boolean
 }

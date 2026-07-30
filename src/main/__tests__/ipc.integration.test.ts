@@ -1,4 +1,13 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
+
+vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn(() => '/tmp/nir-test'),
+    getAppPath: vi.fn(() => '/tmp/nir-test'),
+    getVersion: vi.fn(() => '0.0.0-test')
+  },
+  BrowserWindow: { getAllWindows: vi.fn(() => []) }
+}))
 import { createServices } from '../factories/ServiceFactory'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'

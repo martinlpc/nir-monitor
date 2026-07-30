@@ -216,8 +216,8 @@ export function registerSessionServiceHandlers(
         const folderPath = folderResult.filePaths[0]
 
         try {
-          const filePaths = await repository.exportAsXLSX(sessionId, folderPath, label)
-          return { success: true, filePaths, truncated: truncated || undefined }
+          const expResult = await exportOrchestrator.export(sessionId, 'xlsx', { folderPath, label })
+          return { success: true, filePaths: expResult.data as string[], truncated: truncated || undefined }
         } catch {
           return { success: false, error: 'Error al exportar la sesión como XLSX.' }
         }
