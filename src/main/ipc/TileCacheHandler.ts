@@ -1,7 +1,9 @@
 import { ipcMain, BrowserWindow, dialog } from 'electron'
-import { IPC_HANDLERS, IPC_EVENTS } from './channels'
+import { IPC_HANDLERS } from './channels'
 import { toUserError } from '../../shared/errors/toUserError'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
+import type { EventBus } from '../services/EventBus'
+import type { EventMap } from '../services/EventBus'
 
 function sanitizeReThrow(err: unknown): never {
   const { message, technical } = toUserError(err)
@@ -11,6 +13,7 @@ function sanitizeReThrow(err: unknown): never {
 
 export function registerTileCacheHandlers(
   window: BrowserWindow,
+  eventBus: EventBus,
   tileCache: TileCacheService
 ): void {
   ipcMain.handle(IPC_HANDLERS.TILE_CACHE_STATS, async () => {
@@ -46,11 +49,8 @@ export function registerTileCacheHandlers(
     ) => {
       try {
         const onProgress = (progress: unknown): void => {
-          if (!window.isDestroyed()) {
-            window.webContents.send(IPC_EVENTS.TILE_PRELOAD_PROGRESS, progress)
-          }
+          eventBus.send('tile:preload-progress', progress as EventMap['tile:preload-progress'])
         }
-
         tileCache.on('preload-progress', onProgress)
 
         try {
@@ -107,9 +107,7 @@ export function registerTileCacheHandlers(
         const sourcePath = result.filePaths[0]
 
         const onProgress = (imported: number, skipped: number, total: number): void => {
-          if (!window.isDestroyed()) {
-            window.webContents.send(IPC_EVENTS.TILE_IMPORT_PROGRESS, { imported, skipped, total })
-          }
+          eventBus.send('tile:import-progress', { imported, skipped, total })
         }
 
         const stats = await tileCache.importTiles(sourcePath, options.providerId, onProgress)

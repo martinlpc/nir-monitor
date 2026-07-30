@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
 import { registerSessionServiceHandlers, bindSessionServiceEvents } from './SessionServiceHandler'
 import { registerSettingsHandlers } from './SettingsHandler'
@@ -7,24 +6,11 @@ import { registerDriverHandlers } from './DriverHandler'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
-import { AlertLogger } from '../infrastructure/AlertLogger'
 import type { ExportOrchestrator } from '../export/ExportOrchestator'
-
-export function emitAlert(
-  window: BrowserWindow,
-  message: string,
-  type: 'error' | 'warning' | 'info' = 'info',
-  userAction?: string
-): void {
-  window.webContents.send('alert', { message, type, userAction })
-  AlertLogger.log(message, type)
-  if (userAction) {
-    AlertLogger.log(`[Acción sugerida] ${userAction}`, type)
-  }
-}
+import type { EventBus } from '../services/EventBus'
 
 export function setupIPC(
-  window: BrowserWindow,
+  eventBus: EventBus,
   deviceManager: DeviceManager,
   sessionService: SessionService,
   exportOrchestrator: ExportOrchestrator,
@@ -36,20 +22,24 @@ export function setupIPC(
   console.log('[IPC] Setting up IPC handlers...')
 
   registerDriverHandlers()
-  registerDeviceManagerHandlers(window, deviceManager)
-  registerSessionServiceHandlers(window, deviceManager, sessionService, exportOrchestrator)
+  registerDeviceManagerHandlers(deviceManager)
+  registerSessionServiceHandlers(eventBus, sessionService, exportOrchestrator)
   registerSettingsHandlers(deviceManager)
 
   if (tileCache) {
-    registerTileCacheHandlers(window, tileCache)
+    const window = eventBus.getWindow()
+    if (window) {
+      registerTileCacheHandlers(window, eventBus, tileCache)
+    }
   }
 
-  bindDeviceManagerEvents(window, deviceManager)
-  bindSessionServiceEvents(window, sessionService)
+  bindDeviceManagerEvents(eventBus, deviceManager)
+  bindSessionServiceEvents(eventBus, sessionService)
 
   console.log('[IPC] All IPC handlers and event listeners registered')
 
-  window.on('closed', () => {
+  const win = eventBus.getWindow()
+  win?.on('closed', () => {
     console.log('[IPC] Window closed - cleaning up listeners')
     deviceManager.removeAllListeners()
     sessionService.removeAllListeners()

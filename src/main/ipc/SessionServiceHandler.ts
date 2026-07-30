@@ -1,13 +1,12 @@
-import { ipcMain, BrowserWindow, dialog, app } from 'electron'
+import { ipcMain, dialog, app } from 'electron'
 import * as fs from 'fs'
 import * as path from 'path'
-import { IPC_EVENTS, IPC_HANDLERS } from './channels'
-import { emitAlert } from './handlers'
+import { IPC_HANDLERS } from './channels'
 import { toUserError } from '../../shared/errors/toUserError'
 import { encryptBuffer, decryptBuffer, isEncrypted } from '../services/CryptoService'
 import { isValidSessionId } from '../../shared/validate'
 import { SQLiteSessionRepository } from '../services/SQLiteSessionRepository'
-import type { DeviceManager } from '../services/DeviceManager'
+import type { EventBus } from '../services/EventBus'
 import type { SessionService } from '../services/SessionService'
 import type { GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
@@ -31,8 +30,7 @@ function sanitizeReThrow(err: unknown): never {
  * Registra handlers IPC para operaciones de sesión
  */
 export function registerSessionServiceHandlers(
-  _window: BrowserWindow,
-  _deviceManager: DeviceManager,
+  eventBus: EventBus,
   sessionService: SessionService,
   exportOrchestrator: ExportOrchestrator
 ): void {
@@ -65,7 +63,7 @@ export function registerSessionServiceHandlers(
       } catch (err) {
         const { message, technical } = toUserError(err)
         console.error(`[IPC] session:start error: ${technical}`)
-        emitAlert(_window, message || 'Error al iniciar sesión', 'error')
+        eventBus.alert(message || 'Error al iniciar sesión', 'error')
         throw new Error(message)
       }
     }
@@ -204,7 +202,7 @@ export function registerSessionServiceHandlers(
 
       // XLSX: selector de carpeta, 2-3 archivos
       if (format === 'xlsx') {
-        const folderResult = await dialog.showOpenDialog(_window, {
+        const folderResult = await dialog.showOpenDialog(eventBus.getWindow()!, {
           title: 'Seleccionar carpeta para exportar XLSX',
           properties: ['openDirectory']
         })
@@ -229,7 +227,7 @@ export function registerSessionServiceHandlers(
         kmz: { name: 'Google Earth KMZ', extensions: ['kmz'] }
       }
 
-      const result = await dialog.showSaveDialog(_window, {
+      const result = await dialog.showSaveDialog(eventBus.getWindow()!, {
         title: `Exportar sesión como ${format.toUpperCase()}`,
         defaultPath: defaultName,
         filters: [filterMap[format]]
@@ -274,7 +272,7 @@ export function registerSessionServiceHandlers(
     }
 
     try {
-      const result = await dialog.showOpenDialog(_window, {
+      const result = await dialog.showOpenDialog(eventBus.getWindow()!, {
         title: 'Importar GeoJSON',
         filters: [
           { name: 'GeoJSON cifrado', extensions: ['geojson.enc'] },
@@ -427,21 +425,12 @@ export function registerSessionServiceHandlers(
 /**
  * Vincula eventos de SessionService → Renderer (push)
  */
-export function bindSessionServiceEvents(
-  window: BrowserWindow,
-  sessionService: SessionService
-): void {
-  const sendIfReady = (event: string, data: unknown): void => {
-    if (!window.webContents.isDestroyed()) {
-      window.webContents.send(event, data)
-    }
-  }
-
-  sessionService.on('point', (point) => sendIfReady(IPC_EVENTS.SESSION_SAMPLE, point))
-  sessionService.on('started', (info) => sendIfReady(IPC_EVENTS.SESSION_STARTED, info))
-  sessionService.on('stopped', (summary) => sendIfReady(IPC_EVENTS.SESSION_STOPPED, summary))
+export function bindSessionServiceEvents(eventBus: EventBus, sessionService: SessionService): void {
+  sessionService.on('point', (point) => eventBus.send('session:sample', point))
+  sessionService.on('started', (info) => eventBus.send('session:started', info))
+  sessionService.on('stopped', (summary) => eventBus.send('session:stopped', summary))
   sessionService.on('alert', (data) => {
-    sendIfReady(IPC_EVENTS.SESSION_ALERT, data)
-    emitAlert(window, data.message, 'error')
+    eventBus.send('session:alert', data)
+    eventBus.alert(data.message, 'error')
   })
 }

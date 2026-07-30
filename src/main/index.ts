@@ -5,6 +5,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createServices, setupSessionWiring } from './factories/ServiceFactory'
 import { setupIPC } from './ipc/handlers'
+import { EventBus } from './services/EventBus'
 import { TileCacheService } from './tile-cache/TileCacheService'
 import { registerTileProtocol } from './tile-cache/TileProtocolHandler'
 import { setupLogService, getAppLogPath, readAppLog } from './infrastructure/LogService'
@@ -146,11 +147,14 @@ app.whenReady().then(() => {
   // 3. Create app services
   services = createServices()
 
+  const eventBus = new EventBus()
+
   const window = createWindow()
+  eventBus.setWindow(window)
 
   // 4. Setup IPC with tile cache
   setupIPC(
-    window,
+    eventBus,
     services.deviceManager,
     services.sessionService,
     services.exportOrchestrator,
@@ -170,8 +174,10 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0 && services) {
       const nextWindow = createWindow()
+      const nextEventBus = new EventBus()
+      nextEventBus.setWindow(nextWindow)
       setupIPC(
-        nextWindow,
+        nextEventBus,
         services.deviceManager,
         services.sessionService,
         services.exportOrchestrator,
