@@ -1,6 +1,6 @@
-import { ipcMain, app } from 'electron'
+import { ipcMain, app, dialog } from 'electron'
 import { SerialPort } from 'serialport'
-import { writeFileSync } from 'fs'
+import { readFileSync, writeFileSync } from 'fs'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
 import { registerSessionServiceHandlers, bindSessionServiceEvents } from './SessionServiceHandler'
 import { registerSettingsHandlers } from './SettingsHandler'
@@ -9,6 +9,7 @@ import { registerDriverHandlers } from './DriverHandler'
 import { registerPortsHandlers } from './PortsHandler'
 import { registerLogsHandlers } from './LogsHandler'
 import { getAppLogPath, readAppLog } from '../infrastructure/LogService'
+import { encrypt, decrypt, isEncrypted } from '../services/CryptoService'
 import { DriverDetector } from '../drivers/DriverDetector'
 import { DriverInstaller } from '../drivers/DriverInstaller'
 import type { DeviceManager } from '../services/DeviceManager'
@@ -50,7 +51,18 @@ export function setupIPC(
     now: () => Date.now()
   })
   registerDeviceManagerHandlers(deviceManager)
-  registerSessionServiceHandlers(eventBus, sessionService, exportOrchestrator)
+  registerSessionServiceHandlers(ipcMain, {
+    eventSink: eventBus,
+    sessionService,
+    exportOrchestrator,
+    dialog,
+    getDesktopPath: () => app.getPath('desktop'),
+    readFile: (filePath) => readFileSync(filePath),
+    writeFile: (filePath, data) => writeFileSync(filePath, data),
+    encrypt,
+    decrypt,
+    isEncrypted
+  })
   registerSettingsHandlers(deviceManager, probeDataService)
 
   if (tileCache) {
