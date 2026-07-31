@@ -8,7 +8,7 @@ const SCHEME = 'tile-cache'
 // tile-cache://providerId/z/x/y.png
 const URL_RE = new RegExp(`^${SCHEME}:\\/\\/([^/]+)\\/(\\d+)\\/(\\d+)\\/(\\d+)\\.png$`)
 
-function parseTileUrl(urlStr: string): {
+export function parseTileUrl(urlStr: string): {
   providerId: string
   z: number
   x: number

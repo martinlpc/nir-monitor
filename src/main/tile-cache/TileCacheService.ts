@@ -1,27 +1,41 @@
-import { app } from 'electron'
 import { join, dirname } from 'path'
-import { mkdir, writeFile, readFile, stat, rm, readdir } from 'fs/promises'
+import * as fsp from 'fs/promises'
 import { EventEmitter } from 'events'
 import type { TileProvider } from '../../shared/tileProviders'
 import { getProvider, buildOriginUrl } from '../../shared/tileProviders'
 import { getTileRange, estimateTileCount } from './tileMath'
 import { tileFetch } from './tileFetch'
-import { CacheStats, PreloadProgress } from '../../shared/tile.types'
+import type { CacheStats, PreloadProgress } from '../../shared/tile.types'
 
 const CACHE_ROOT = 'tile-cache'
 const PRELOAD_CONCURRENCY = 8
 
+export type TileFs = Pick<
+  typeof fsp,
+  'mkdir' | 'writeFile' | 'readFile' | 'stat' | 'rm' | 'readdir'
+>
+
+export interface TileCacheServiceOptions {
+  basePath?: string
+  fs?: TileFs
+  fetchFn?: (url: string) => Promise<Response>
+}
+
 export class TileCacheService extends EventEmitter {
-  private basePath: string
+  private readonly basePath: string
+  private readonly fs: TileFs
+  private readonly fetchFn: (url: string) => Promise<Response>
   private preloadAbort = false
 
-  constructor() {
+  constructor(options: TileCacheServiceOptions = {}) {
     super()
-    this.basePath = join(app.getPath('userData'), CACHE_ROOT)
+    this.basePath = options.basePath ?? getDefaultBasePath()
+    this.fs = options.fs ?? fsp
+    this.fetchFn = options.fetchFn ?? tileFetch
   }
 
   async ensureBaseDir(): Promise<void> {
-    await mkdir(this.basePath, { recursive: true })
+    await this.fs.mkdir(this.basePath, { recursive: true })
   }
 
   getBasePath(): string {
@@ -34,7 +48,7 @@ export class TileCacheService extends EventEmitter {
 
   async hasTile(providerId: string, z: number, x: number, y: number): Promise<boolean> {
     try {
-      await stat(this.tilePath(providerId, z, x, y))
+      await this.fs.stat(this.tilePath(providerId, z, x, y))
       return true
     } catch {
       return false
@@ -43,7 +57,7 @@ export class TileCacheService extends EventEmitter {
 
   async getTile(providerId: string, z: number, x: number, y: number): Promise<Buffer | null> {
     try {
-      return await readFile(this.tilePath(providerId, z, x, y))
+      return await this.fs.readFile(this.tilePath(providerId, z, x, y))
     } catch {
       return null
     }
@@ -51,8 +65,8 @@ export class TileCacheService extends EventEmitter {
 
   async setTile(providerId: string, z: number, x: number, y: number, data: Buffer): Promise<void> {
     const fp = this.tilePath(providerId, z, x, y)
-    await mkdir(dirname(fp), { recursive: true })
-    await writeFile(fp, data)
+    await this.fs.mkdir(dirname(fp), { recursive: true })
+    await this.fs.writeFile(fp, data)
   }
 
   async fetchAndCache(provider: TileProvider, z: number, x: number, y: number): Promise<Buffer> {
@@ -60,7 +74,7 @@ export class TileCacheService extends EventEmitter {
     if (cached) return cached
 
     const url = buildOriginUrl(provider, z, x, y)
-    const response = await tileFetch(url)
+    const response = await this.fetchFn(url)
     if (!response.ok) {
       throw new Error(`Tile fetch failed: ${url} (${response.status})`)
     }
@@ -76,7 +90,7 @@ export class TileCacheService extends EventEmitter {
     const walk = async (dir: string): Promise<void> => {
       let entries
       try {
-        entries = await readdir(dir, { withFileTypes: true })
+        entries = await this.fs.readdir(dir, { withFileTypes: true })
       } catch {
         return
       }
@@ -87,7 +101,7 @@ export class TileCacheService extends EventEmitter {
         } else if (entry.name.endsWith('.png')) {
           tileCount++
           try {
-            const s = await stat(fp)
+            const s = await this.fs.stat(fp)
             sizeBytes += s.size
           } catch {
             // skip
@@ -102,7 +116,7 @@ export class TileCacheService extends EventEmitter {
 
   async clearCache(): Promise<void> {
     try {
-      await rm(this.basePath, { recursive: true, force: true })
+      await this.fs.rm(this.basePath, { recursive: true, force: true })
     } catch {
       // already gone
     }
@@ -140,7 +154,7 @@ export class TileCacheService extends EventEmitter {
       const scanDir = async (dir: string): Promise<void> => {
         let items
         try {
-          items = await readdir(dir)
+          items = await this.fs.readdir(dir)
         } catch {
           return
         }
@@ -148,7 +162,7 @@ export class TileCacheService extends EventEmitter {
           const fp = join(dir, item)
           let s
           try {
-            s = await stat(fp)
+            s = await this.fs.stat(fp)
           } catch {
             continue
           }
@@ -162,7 +176,7 @@ export class TileCacheService extends EventEmitter {
             const x = parseInt(parts[parts.length - 2], 10)
             const y = parseInt(item.replace('.png', ''), 10)
             if (isNaN(z) || isNaN(x) || isNaN(y)) continue
-            const data = await readFile(fp)
+            const data = await this.fs.readFile(fp)
             entries.push({ z, x, y, data })
           }
         }
@@ -261,4 +275,10 @@ export class TileCacheService extends EventEmitter {
   ): Promise<{ imported: number; skipped: number }> {
     return this.importFromPath(sourcePath, providerId, onProgress)
   }
+}
+
+function getDefaultBasePath(): string {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { app } = require('electron') as typeof import('electron')
+  return join(app.getPath('userData'), CACHE_ROOT)
 }

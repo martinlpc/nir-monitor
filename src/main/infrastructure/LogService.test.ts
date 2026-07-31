@@ -1,16 +1,23 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import { LogService } from './LogService'
 
-function createMockFs() {
+function createMockFs(): {
+  appendFile: ReturnType<typeof vi.fn>
+  statSync: ReturnType<typeof vi.fn>
+  readFile: ReturnType<typeof vi.fn>
+  existsSync: ReturnType<typeof vi.fn>
+  writeFile: ReturnType<typeof vi.fn>
+  logLines: () => string
+} {
   let content = ''
   return {
-    appendFile: vi.fn((_path: string, data: string) => {
+    appendFile: vi.fn((path: string, data: string) => {
       content += data
     }),
     statSync: vi.fn(() => ({ size: content.length })),
-    readFile: vi.fn((_path: string) => content),
+    readFile: vi.fn(() => content),
     existsSync: vi.fn(() => true),
-    writeFile: vi.fn((_path: string, data: string) => {
+    writeFile: vi.fn((path: string, data: string) => {
       content = data
     }),
     logLines: () => content

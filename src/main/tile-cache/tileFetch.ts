@@ -1,13 +1,16 @@
-import { app } from 'electron'
+export function buildUserAgent(version: string): string {
+  const repo = 'https://github.com/martinlpc/nir-monitor'
+  const contact = 'mpacheco@enacom.gob.ar'
+  return `RNI-Monitor/${version} (+${repo}; contact: ${contact})`
+}
 
 let cachedUA: string | undefined
 
 function getUserAgent(): string {
   if (!cachedUA) {
-    const version = app.getVersion()
-    const repo = 'https://github.com/martinlpc/nir-monitor'
-    const contact = 'mpacheco@enacom.gob.ar'
-    cachedUA = `RNI-Monitor/${version} (+${repo}; contact: ${contact})`
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { app } = require('electron') as typeof import('electron')
+    cachedUA = buildUserAgent(app.getVersion())
   }
   return cachedUA
 }

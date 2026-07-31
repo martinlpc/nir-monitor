@@ -106,6 +106,7 @@ let defaultService: LogService | undefined
 
 function getDefaultLogService(): LogService {
   if (defaultService) return defaultService
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const { app } = require('electron') as typeof import('electron')
   defaultService = new LogService({
     logPath: join(app.getPath('userData'), 'app.log'),
