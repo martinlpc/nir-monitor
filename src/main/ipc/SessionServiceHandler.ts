@@ -3,7 +3,7 @@ import * as fs from 'fs'
 import * as path from 'path'
 import { IPC_HANDLERS } from './channels'
 import { toUserError } from '../../shared/errors/toUserError'
-import { encryptBuffer, decryptBuffer, isEncrypted } from '../services/CryptoService'
+import { encrypt, decrypt, isEncrypted } from '../services/CryptoService'
 import { isValidSessionId } from '../../shared/validate'
 import { SQLiteSessionRepository } from '../services/SQLiteSessionRepository'
 import type { EventBus } from '../services/EventBus'
@@ -88,7 +88,7 @@ export function registerSessionServiceHandlers(
             const filepath = path.join(desktop, filename)
             const result = await exportOrchestrator.export(summary.id, 'geojson')
             const geojson = result.data as string
-            const encrypted = encryptBuffer(Buffer.from(geojson, 'utf-8'))
+            const encrypted = encrypt(Buffer.from(geojson, 'utf-8'))
             fs.writeFileSync(filepath, encrypted)
             console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
           } catch (innerErr) {
@@ -214,8 +214,15 @@ export function registerSessionServiceHandlers(
         const folderPath = folderResult.filePaths[0]
 
         try {
-          const expResult = await exportOrchestrator.export(sessionId, 'xlsx', { folderPath, label })
-          return { success: true, filePaths: expResult.data as string[], truncated: truncated || undefined }
+          const expResult = await exportOrchestrator.export(sessionId, 'xlsx', {
+            folderPath,
+            label
+          })
+          return {
+            success: true,
+            filePaths: expResult.data as string[],
+            truncated: truncated || undefined
+          }
         } catch {
           return { success: false, error: 'Error al exportar la sesión como XLSX.' }
         }
@@ -246,7 +253,7 @@ export function registerSessionServiceHandlers(
           }
           finalPath += '.geojson.enc'
           const result = await exportOrchestrator.export(sessionId, 'geojson')
-          const encrypted = encryptBuffer(Buffer.from(result.data as string, 'utf-8'))
+          const encrypted = encrypt(Buffer.from(result.data as string, 'utf-8'))
           fs.writeFileSync(finalPath, encrypted)
         } else if (format === 'kmz') {
           while (finalPath.endsWith('.kmz')) {
@@ -291,7 +298,7 @@ export function registerSessionServiceHandlers(
       let geojsonStr: string
 
       if (isEncrypted(raw)) {
-        const decrypted = decryptBuffer(raw)
+        const decrypted = decrypt(raw)
         geojsonStr = decrypted.toString('utf-8')
       } else {
         geojsonStr = raw.toString('utf-8')
