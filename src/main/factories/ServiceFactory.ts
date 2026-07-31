@@ -20,6 +20,7 @@ import { XlsxExporter } from '../export/XlsxExporter'
 import type { IExporter, TemplateResolver } from '../export/IExporter'
 import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
 import { ProbeDataService } from '../uncertainty/loadBuiltInData'
+import { SessionSupervisor } from '../services/SessionSupervisor'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -103,7 +104,12 @@ export function createServices(): Services {
         : path.join(app.getAppPath(), 'resources', 'probe-data.json')
   )
   const correctionResolver = new CorrectionFactorResolver(() => probeDataService.load())
-  const sessionService = new SessionService(geoFusion, sessionRepository, config, correctionResolver)
+  const sessionService = new SessionService(
+    geoFusion,
+    sessionRepository,
+    config,
+    correctionResolver
+  )
 
   return {
     scanner,
@@ -124,116 +130,8 @@ export function createServices(): Services {
 export function setupSessionWiring(
   deviceManager: DeviceManager,
   sessionService: SessionService
-): void {
-  const nbm = deviceManager.getNBM()
-  const gps = deviceManager.getGPS()
-
-  if (nbm) {
-    console.log('[ServiceFactory] Wiring NBM to SessionService')
-    sessionService.setNBM(nbm)
-  } else {
-    console.warn('[ServiceFactory] NBM not available for wiring')
-  }
-
-  if (gps) {
-    console.log('[ServiceFactory] Wiring GPS to SessionService')
-    sessionService.setGPS(gps)
-  } else {
-    console.warn('[ServiceFactory] GPS not available for wiring')
-  }
-
-  // Sincronizar polling NBM con estado de sesión
-  sessionService.on('started', () => {
-    console.log('[ServiceFactory] Session started → NBM polling active')
-    deviceManager.setSessionActive(true)
-  })
-
-  sessionService.on('stopped', () => {
-    console.log('[ServiceFactory] Session stopped → NBM polling standby')
-    deviceManager.setSessionActive(false)
-  })
-
-  // ── Watchdog de sesión estancada ─────────────────────────────
-  // Si el NBM se desconecta durante una sesión activa y no reconecta
-  // en 30s, la sesión se detiene automáticamente.
-  let sessionStallTimer: NodeJS.Timeout | null = null
-  const SESSION_STALL_TIMEOUT_MS = 30_000
-
-  const clearStallTimer = (): void => {
-    if (sessionStallTimer) {
-      clearTimeout(sessionStallTimer)
-      sessionStallTimer = null
-    }
-  }
-
-  // Re-wire cuando DeviceManager reinicia un dispositivo
-  deviceManager.on(
-    'device:status',
-    (data: { deviceId: string; status: string; intentional?: boolean }) => {
-      if (data.deviceId === 'nbm550' && data.status === 'connected') {
-        // Cancelar watchdog si estaba activo
-        if (sessionStallTimer) {
-          console.log('[ServiceFactory] Session stall watchdog cancelled — NBM-550 reconnected')
-          clearStallTimer()
-          if (sessionService.getState() === 'running') {
-            console.log('[ServiceFactory] Alert sent to renderer: "NBM-550 reconectado..."')
-            sessionService.emit('alert', {
-              message: 'NBM-550 reconectado — la sesión continúa normalmente'
-            })
-          }
-        }
-
-        const latestNbm = deviceManager.getNBM()
-        if (latestNbm) {
-          console.log('[ServiceFactory] Re-wiring NBM after reconnection')
-          sessionService.setNBM(latestNbm)
-        }
-      } else if (
-        data.deviceId === 'nbm550' &&
-        (data.status === 'disconnected' || data.status === 'error') &&
-        !data.intentional
-      ) {
-        if (sessionService.getState() === 'running' && !sessionStallTimer) {
-          console.warn(
-            '[ServiceFactory] Session stall watchdog started — NBM-550 disconnected while session running, 30s timeout'
-          )
-          console.warn(
-            '[ServiceFactory] Alert sent to renderer: "NBM-550 desconectado — sesión se detendrá en 30s"'
-          )
-          sessionService.emit('alert', {
-            message:
-              'NBM-550 desconectado — la sesión se detendrá automáticamente en 30s si no se reconecta'
-          })
-          sessionStallTimer = setTimeout(() => {
-            sessionStallTimer = null
-            if (sessionService.getState() === 'running') {
-              console.log(
-                '[ServiceFactory] Auto-stopping session due to prolonged NBM disconnection'
-              )
-              sessionService.emit('alert', {
-                message: 'Sesión detenida por pérdida de comunicación con NBM-550'
-              })
-              sessionService.stop().catch((err) => {
-                console.error('[ServiceFactory] Error auto-stopping session:', err)
-              })
-            }
-          }, SESSION_STALL_TIMEOUT_MS)
-        }
-      } else if (data.deviceId === 'gps' && data.status === 'connected') {
-        const latestGps = deviceManager.getGPS()
-        if (latestGps) {
-          console.log('[ServiceFactory] Re-wiring GPS after reconnection')
-          sessionService.setGPS(latestGps)
-        }
-      }
-    }
-  )
-
-  // Limpiar watchdog si la sesión se detiene manualmente
-  sessionService.on('stopped', () => {
-    if (sessionStallTimer) {
-      console.log('[ServiceFactory] Session stall watchdog cancelled — session stopped manually')
-    }
-    clearStallTimer()
-  })
+): SessionSupervisor {
+  const supervisor = new SessionSupervisor({ deviceManager, sessionService })
+  supervisor.wire()
+  return supervisor
 }
