@@ -50,7 +50,13 @@ export function setupIPC(
     writeFile: writeFileSync,
     now: () => Date.now()
   })
-  registerDeviceManagerHandlers(deviceManager)
+  registerDeviceManagerHandlers(ipcMain, {
+    getState: () => deviceManager.getState(),
+    scan: () => deviceManager.scan(),
+    setPortManual: (device, port) => deviceManager.setPortManual(device, port),
+    connectDevice: (deviceId) => deviceManager.connectDevice(deviceId),
+    disconnectDevice: (deviceId) => deviceManager.disconnectDevice(deviceId)
+  })
   registerSessionServiceHandlers(ipcMain, {
     eventSink: eventBus,
     sessionService,
