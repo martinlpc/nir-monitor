@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events'
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { SessionSupervisor } from './SessionSupervisor'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import type { DeviceStatus } from '../../shared/device.types'
@@ -64,8 +65,8 @@ const GPS = {} as IGPSDriver
 describe('SessionSupervisor', () => {
   let dm: FakeDeviceManager
   let ss: FakeSessionService
-  let setTimer: ReturnType<typeof vi.fn>
-  let clearTimer: ReturnType<typeof vi.fn>
+  let setTimer: Mock<(fn: () => void, ms: number) => NodeJS.Timeout>
+  let clearTimer: Mock<(timer: NodeJS.Timeout) => void>
 
   function createSupervisor(stallTimeoutMs = 30_000): SessionSupervisor {
     setTimer = vi.fn((fn: () => void, ms: number) => setTimeout(fn, ms))

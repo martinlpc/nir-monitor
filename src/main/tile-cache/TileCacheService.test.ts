@@ -1,5 +1,6 @@
 import { dirname } from 'path'
 import { describe, expect, it, beforeEach, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import { TileCacheService } from './TileCacheService'
 import type { TileProvider } from '../../shared/tileProviders'
 import type { TileFs } from './TileCacheService'
@@ -9,9 +10,28 @@ interface FsNode {
   data?: Buffer
 }
 
-function createMockTileFs(
-  basePath: string
-): TileFs & { nodes: Map<string, FsNode>; addFile: (filePath: string, data: Buffer) => void } {
+interface MockDirEntry {
+  name: string | undefined
+  isDirectory: () => boolean
+}
+
+interface MockTileFs {
+  nodes: Map<string, FsNode>
+  addFile: (filePath: string, data: Buffer) => void
+  mkdir: Mock<(dir: string) => Promise<void>>
+  writeFile: Mock<(filePath: string, data: Buffer) => Promise<void>>
+  readFile: Mock<(filePath: string) => Promise<Buffer>>
+  stat: Mock<(filePath: string) => Promise<{ size: number; isDirectory: () => boolean }>>
+  rm: Mock<() => Promise<void>>
+  readdir: Mock<
+    (
+      dir: string,
+      opts?: { withFileTypes?: boolean }
+    ) => Promise<(string | undefined)[] | MockDirEntry[]>
+  >
+}
+
+function createMockTileFs(basePath: string): MockTileFs {
   const norm = (p: string): string => p.replace(/\\/g, '/')
   const nodes = new Map<string, FsNode>()
   nodes.set(norm(basePath), { kind: 'dir' })
@@ -78,12 +98,13 @@ const BASE_PATH = '/cache'
 const TEST_PROVIDER: TileProvider = {
   id: 'test',
   name: 'Test',
-  url: 'https://test.example/{z}/{x}/{y}.png'
+  url: 'https://test.example/{z}/{x}/{y}.png',
+  attribution: 'Test attribution'
 }
 
 describe('TileCacheService', () => {
   let mockFs: ReturnType<typeof createMockTileFs>
-  let fetchFn: ReturnType<typeof vi.fn>
+  let fetchFn: Mock<(url: string) => Promise<Response>>
   let service: TileCacheService
 
   function okResponse(): Response {
