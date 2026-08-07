@@ -76,6 +76,38 @@ describe('ConfigService', () => {
     expect(cfg.nbmPollingConfig).not.toBe(DEFAULT_NBM_POLLING)
   })
 
+  it('gpsDriverConfig returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.gpsDriverConfig
+    const b = cfg.gpsDriverConfig
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
+  it('nbmTimeouts returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.nbmTimeouts
+    const b = cfg.nbmTimeouts
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
+  it('serialProbeConfig returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.serialProbeConfig
+    const b = cfg.serialProbeConfig
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
+  it('geoFusionConfig returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.geoFusionConfig
+    const b = cfg.geoFusionConfig
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
   // ── App config with real files ────────────────────────
 
   describe('with real temp files', () => {
@@ -97,6 +129,40 @@ describe('ConfigService', () => {
     it('loadAppConfig returns empty object when file does not exist', () => {
       const result = cfg.loadAppConfig()
       expect(result).toEqual({})
+    })
+
+    it('loadAppConfig parses valid JSON from file', () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'app-config.json'),
+        JSON.stringify({ triggerMode: 'time', intervalMs: 2500 }),
+        'utf-8'
+      )
+      const loaded = cfg.loadAppConfig()
+      expect(loaded.triggerMode).toBe('time')
+      expect(loaded.intervalMs).toBe(2500)
+    })
+
+    it('loadAppConfig returns empty object on malformed JSON', () => {
+      fs.writeFileSync(path.join(tmpDir, 'app-config.json'), '{not valid json', 'utf-8')
+      const loaded = cfg.loadAppConfig()
+      expect(loaded).toEqual({})
+    })
+
+    it('saveAppConfig catches write errors', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const broken = new ConfigService({
+        appConfigPath: tmpDir,
+        portConfigPath: path.join(tmpDir, 'port-config.json')
+      })
+      expect(() => broken.saveAppConfig({ triggerMode: 'time' })).not.toThrow()
+      expect(errorSpy).toHaveBeenCalled()
+      errorSpy.mockRestore()
+    })
+
+    it('loadPortConfig returns empty object on malformed JSON', () => {
+      fs.writeFileSync(path.join(tmpDir, 'port-config.json'), '{not valid json', 'utf-8')
+      const loaded = cfg.loadPortConfig()
+      expect(loaded).toEqual({})
     })
 
     it('saveAppConfig persists and loadAppConfig retrieves', () => {
