@@ -1,22 +1,42 @@
-import { ipcMain, BrowserWindow, dialog } from 'electron'
 import { IPC_HANDLERS } from './channels'
-import { toUserError } from '../../shared/errors/toUserError'
-import type { TileCacheService } from '../tile-cache/TileCacheService'
-import type { EventBus } from '../services/EventBus'
-import type { EventMap } from '../services/EventBus'
+import type { IpcMainLike, EventSink, DialogLike } from './ipcEnv'
+import { sanitizeReThrow } from './ipcEnv'
+import type { PreloadProgress } from '../../shared/tile.types'
 
-function sanitizeReThrow(err: unknown): never {
-  const { message, technical } = toUserError(err)
-  console.error(`[IPC] ${technical}`)
-  throw new Error(message)
+export interface TileCacheLike {
+  getStats(): Promise<{ sizeBytes: number; tileCount: number }>
+  clearCache(): Promise<void>
+  preloadTiles(
+    providerId: string,
+    north: number,
+    south: number,
+    east: number,
+    west: number,
+    minZoom: number,
+    maxZoom: number
+  ): Promise<void>
+  cancelPreload(): void
+  importTiles(
+    sourcePath: string,
+    providerId: string,
+    onProgress?: (imported: number, skipped: number, total: number) => void
+  ): Promise<{ imported: number; skipped: number }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  on(event: string, listener: (...args: any[]) => void): unknown
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  removeListener(event: string, listener: (...args: any[]) => void): unknown
 }
 
-export function registerTileCacheHandlers(
-  window: BrowserWindow,
-  eventBus: EventBus,
-  tileCache: TileCacheService
-): void {
-  ipcMain.handle(IPC_HANDLERS.TILE_CACHE_STATS, async () => {
+export interface TileCacheHandlerDeps {
+  tileCache: TileCacheLike
+  eventSink: EventSink
+  dialog: DialogLike
+}
+
+export function registerTileCacheHandlers(ipc: IpcMainLike, deps: TileCacheHandlerDeps): void {
+  const { tileCache, eventSink } = deps
+
+  ipc.handle(IPC_HANDLERS.TILE_CACHE_STATS, async () => {
     try {
       return await tileCache.getStats()
     } catch (err) {
@@ -24,7 +44,7 @@ export function registerTileCacheHandlers(
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.TILE_CLEAR_CACHE, async () => {
+  ipc.handle(IPC_HANDLERS.TILE_CLEAR_CACHE, async () => {
     try {
       await tileCache.clearCache()
       return { success: true }
@@ -33,7 +53,7 @@ export function registerTileCacheHandlers(
     }
   })
 
-  ipcMain.handle(
+  ipc.handle(
     IPC_HANDLERS.TILE_PRELOAD,
     async (
       _event,
@@ -49,7 +69,7 @@ export function registerTileCacheHandlers(
     ) => {
       try {
         const onProgress = (progress: unknown): void => {
-          eventBus.send('tile:preload-progress', progress as EventMap['tile:preload-progress'])
+          eventSink.send('tile:preload-progress', progress as PreloadProgress)
         }
         tileCache.on('preload-progress', onProgress)
 
@@ -74,7 +94,7 @@ export function registerTileCacheHandlers(
     }
   )
 
-  ipcMain.handle(IPC_HANDLERS.TILE_PRELOAD_CANCEL, async () => {
+  ipc.handle(IPC_HANDLERS.TILE_PRELOAD_CANCEL, async () => {
     try {
       tileCache.cancelPreload()
       return { success: true }
@@ -83,39 +103,31 @@ export function registerTileCacheHandlers(
     }
   })
 
-  ipcMain.handle(
-    IPC_HANDLERS.TILE_IMPORT,
-    async (
-      _event,
-      options: {
-        providerId: string
+  ipc.handle(IPC_HANDLERS.TILE_IMPORT, async (_event, options: { providerId: string }) => {
+    try {
+      const result = await deps.dialog.showOpenDialog(eventSink.getWindow()!, {
+        properties: ['openFile', 'openDirectory'],
+        filters: [
+          { name: 'Tiles ZIP', extensions: ['zip'] },
+          { name: 'Todos', extensions: ['*'] }
+        ]
+      })
+
+      if (result.canceled || result.filePaths.length === 0) {
+        return { success: false, canceled: true }
       }
-    ) => {
-      try {
-        const result = await dialog.showOpenDialog(window, {
-          properties: ['openFile', 'openDirectory'],
-          filters: [
-            { name: 'Tiles ZIP', extensions: ['zip'] },
-            { name: 'Todos', extensions: ['*'] }
-          ]
-        })
 
-        if (result.canceled || result.filePaths.length === 0) {
-          return { success: false, canceled: true }
-        }
+      const sourcePath = result.filePaths[0]
 
-        const sourcePath = result.filePaths[0]
-
-        const onProgress = (imported: number, skipped: number, total: number): void => {
-          eventBus.send('tile:import-progress', { imported, skipped, total })
-        }
-
-        const stats = await tileCache.importTiles(sourcePath, options.providerId, onProgress)
-
-        return { success: true, ...stats }
-      } catch (err) {
-        sanitizeReThrow(err)
+      const onProgress = (imported: number, skipped: number, total: number): void => {
+        eventSink.send('tile:import-progress', { imported, skipped, total })
       }
+
+      const stats = await tileCache.importTiles(sourcePath, options.providerId, onProgress)
+
+      return { success: true, ...stats }
+    } catch (err) {
+      sanitizeReThrow(err)
     }
-  )
+  })
 }

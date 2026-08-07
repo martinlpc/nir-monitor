@@ -8,6 +8,7 @@ import { registerTileCacheHandlers } from './TileCacheHandler'
 import { registerDriverHandlers } from './DriverHandler'
 import { registerPortsHandlers } from './PortsHandler'
 import { registerLogsHandlers } from './LogsHandler'
+import { ConfigService } from '../services/ConfigService'
 import { getAppLogPath, readAppLog } from '../infrastructure/LogService'
 import { encrypt, decrypt, isEncrypted } from '../services/CryptoService'
 import { DriverDetector } from '../drivers/DriverDetector'
@@ -69,13 +70,20 @@ export function setupIPC(
     decrypt,
     isEncrypted
   })
-  registerSettingsHandlers(deviceManager, probeDataService)
+  registerSettingsHandlers(ipcMain, {
+    app,
+    readFile: (filePath) => readFileSync(filePath, 'utf-8'),
+    getNBM: () => deviceManager.getNBM(),
+    probeDataService,
+    config: new ConfigService()
+  })
 
   if (tileCache) {
-    const window = eventBus.getWindow()
-    if (window) {
-      registerTileCacheHandlers(window, eventBus, tileCache)
-    }
+    registerTileCacheHandlers(ipcMain, {
+      tileCache,
+      eventSink: eventBus,
+      dialog
+    })
   }
 
   bindDeviceManagerEvents(eventBus, deviceManager)
