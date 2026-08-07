@@ -4,7 +4,7 @@ import type { GeoPosition, GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { AppErrorInfo } from '../../shared/errors/error.types'
 import type { PreloadProgress } from '../../shared/tile.types'
-import { AlertLogger } from '../infrastructure/AlertLogger'
+import { AlertLogger, getDefaultAlertLogger } from '../infrastructure/AlertLogger'
 
 export interface EventMap {
   'gps:position': { coords: GeoPosition | null; valid: boolean; port: string }
@@ -33,6 +33,11 @@ export interface EventMap {
 
 export class EventBus {
   private window: BrowserWindow | null = null
+  private readonly alertLogger: AlertLogger
+
+  constructor(alertLogger: AlertLogger = getDefaultAlertLogger()) {
+    this.alertLogger = alertLogger
+  }
 
   setWindow(win: BrowserWindow): void {
     this.window = win
@@ -48,15 +53,11 @@ export class EventBus {
     }
   }
 
-  alert(
-    message: string,
-    type: 'error' | 'warning' | 'info' = 'info',
-    userAction?: string
-  ): void {
+  alert(message: string, type: 'error' | 'warning' | 'info' = 'info', userAction?: string): void {
     this.send('alert', { message, type, userAction })
-    AlertLogger.log(message, type)
+    this.alertLogger.log(message, type)
     if (userAction) {
-      AlertLogger.log(`[Acción sugerida] ${userAction}`, type)
+      this.alertLogger.log(`[Acción sugerida] ${userAction}`, type)
     }
   }
 }
