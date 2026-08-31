@@ -60,18 +60,12 @@ function getBuiltInPath(): string {
     : join(app.getAppPath(), 'resources', 'probe-data.json')
 }
 
-const defaultService = new ProbeDataService(
-  (path) => {
-    if (!existsSync(path)) return null
-    return readFileSync(path, 'utf-8')
-  },
-  () => getBuiltInPath()
-)
-
-export function loadBuiltInProbeData(): ProbeRecord[] {
-  return defaultService.load()
-}
-
-export function getBuiltInVersion(): number | null {
-  return defaultService.getVersion()
+export function createDefaultProbeDataService(): ProbeDataService {
+  return new ProbeDataService(
+    (path) => {
+      if (!existsSync(path)) return null
+      return readFileSync(path, 'utf-8')
+    },
+    () => getBuiltInPath()
+  )
 }

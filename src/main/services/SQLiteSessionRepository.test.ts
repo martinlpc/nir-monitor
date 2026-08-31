@@ -6,7 +6,7 @@ import * as path from 'path'
 import * as os from 'os'
 import { app } from 'electron'
 import { SQLiteSessionRepository } from './SQLiteSessionRepository'
-import { isEncrypted } from './CryptoService'
+import { isEncrypted, createCryptoServiceFromEnv } from './CryptoService'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 
@@ -647,7 +647,11 @@ describe('SQLiteSessionRepository (real file mode)', () => {
     getPathMock.mockImplementation(() => path.join(dir, 'userData'))
 
     try {
-      const realRepo = new SQLiteSessionRepository({ flushEveryNPoints: 2, flushIntervalMs: 5000 })
+      const realRepo = new SQLiteSessionRepository({
+        flushEveryNPoints: 2,
+        flushIntervalMs: 5000,
+        crypto: createCryptoServiceFromEnv()
+      })
       const [a, b] = await Promise.all([realRepo.listSessions(), realRepo.listSessions()])
       expect(a).toEqual([])
       expect(b).toEqual([])
@@ -662,7 +666,10 @@ describe('SQLiteSessionRepository (real file mode)', () => {
       expect(fs.existsSync(filePath)).toBe(true)
       expect(isEncrypted(fs.readFileSync(filePath))).toBe(true)
 
-      const reloaded = new SQLiteSessionRepository({ flushEveryNPoints: 2 })
+      const reloaded = new SQLiteSessionRepository({
+        flushEveryNPoints: 2,
+        crypto: createCryptoServiceFromEnv()
+      })
       const loaded = await reloaded.getSession(meta.id)
       expect(loaded?.metadata.sampleCount).toBe(2)
       expect(loaded?.points).toHaveLength(2)
@@ -691,7 +698,10 @@ describe('SQLiteSessionRepository (real file mode)', () => {
         Buffer.concat([Buffer.from('NIDB', 'ascii'), Buffer.from('garbage')])
       )
 
-      const repo = new SQLiteSessionRepository({ flushEveryNPoints: 2 })
+      const repo = new SQLiteSessionRepository({
+        flushEveryNPoints: 2,
+        crypto: createCryptoServiceFromEnv()
+      })
       await repo.listSessions()
       repo.close()
 
@@ -724,7 +734,10 @@ describe('SQLiteSessionRepository (real file mode)', () => {
       fs.writeFileSync(path.join(userDataDir, 'sessions.db'), Buffer.from(plainDb.export()))
       plainDb.close()
 
-      const repo = new SQLiteSessionRepository({ flushEveryNPoints: 2 })
+      const repo = new SQLiteSessionRepository({
+        flushEveryNPoints: 2,
+        crypto: createCryptoServiceFromEnv()
+      })
       await repo.listSessions()
       expect(isEncrypted(fs.readFileSync(path.join(userDataDir, 'sessions.db')))).toBe(true)
 

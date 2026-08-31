@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach, vi } from 'vitest'
-import { CryptoService, isEncrypted } from './CryptoService'
+import { CryptoService, isEncrypted, createCryptoServiceFromEnv } from './CryptoService'
 
 const PASSPHRASE = 'test-passphrase-123'
 const MAGIC = Buffer.from('NIDB', 'ascii')
@@ -57,10 +57,15 @@ describe('CryptoService', () => {
     expect(encrypted.subarray(0, MAGIC.length).equals(MAGIC)).toBe(true)
   })
 
-  it('module-level encrypt/decrypt work when env key is set', async () => {
+  it('createCryptoServiceFromEnv builds a service from the env key', () => {
     vi.stubEnv('NIR_DB_ENCRYPTION_KEY', PASSPHRASE)
-    const mod = await import('./CryptoService')
+    const mod = createCryptoServiceFromEnv()
     const ciphertext = mod.encrypt(Buffer.from('env key', 'utf-8'))
     expect(mod.decrypt(ciphertext).toString('utf-8')).toBe('env key')
+  })
+
+  it('createCryptoServiceFromEnv throws when the env key is missing', () => {
+    vi.stubEnv('NIR_DB_ENCRYPTION_KEY', '')
+    expect(() => createCryptoServiceFromEnv()).toThrow('NIR_DB_ENCRYPTION_KEY')
   })
 })

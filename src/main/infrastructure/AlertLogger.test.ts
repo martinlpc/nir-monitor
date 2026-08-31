@@ -1,7 +1,8 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import type { Mock } from 'vitest'
+import { join } from 'path'
 
-import { AlertLogger, getDefaultAlertLogger } from './AlertLogger'
+import { AlertLogger, createAlertLogger } from './AlertLogger'
 
 function makeLogger(): {
   logger: AlertLogger
@@ -60,7 +61,13 @@ describe('AlertLogger', () => {
     )
   })
 
-  it('getDefaultAlertLogger returns a singleton', () => {
-    expect(getDefaultAlertLogger()).toBe(getDefaultAlertLogger())
+  it('createAlertLogger logs to the resolved userData path', () => {
+    const appendFile = vi.fn((_p: string, _d: string, cb: (err: Error | null) => void) => cb(null))
+    const logger = createAlertLogger('/data/user')
+    ;(logger as unknown as { opts: { appendFile: Mock } }).opts.appendFile = appendFile
+    logger.log('mensaje')
+
+    expect(appendFile).toHaveBeenCalledTimes(1)
+    expect(appendFile.mock.calls[0][0]).toBe(join('/data/user', 'alert.log'))
   })
 })

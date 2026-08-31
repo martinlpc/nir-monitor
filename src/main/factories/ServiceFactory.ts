@@ -19,8 +19,12 @@ import { GeoJsonExporter } from '../export/GeoJsonExporter'
 import { XlsxExporter } from '../export/XlsxExporter'
 import type { IExporter, TemplateResolver } from '../export/IExporter'
 import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
-import { ProbeDataService } from '../uncertainty/loadBuiltInData'
+import {
+  ProbeDataService,
+  createDefaultProbeDataService
+} from '../uncertainty/loadBuiltInData'
 import { SessionSupervisor } from '../services/SessionSupervisor'
+import { CryptoService, createCryptoServiceFromEnv } from '../services/CryptoService'
 
 export interface Services {
   scanner: ISerialPortScanner
@@ -31,6 +35,7 @@ export interface Services {
   config: ConfigService
   exportOrchestrator: ExportOrchestrator
   probeDataService: ProbeDataService
+  cryptoService: CryptoService
 }
 
 function createSimulatedScanner(): ISerialPortScanner {
@@ -63,9 +68,13 @@ export function createServices(): Services {
     : new RealDriverFactory()
   const geoFusion = new GeoFusionService()
   const flushCfg = config.flushConfig
+  const cryptoService = process.env.NIR_DB_ENCRYPTION_KEY
+    ? createCryptoServiceFromEnv()
+    : new CryptoService('')
   const sessionRepository = new SQLiteSessionRepository({
     flushEveryNPoints: flushCfg.everyNPoints,
-    flushIntervalMs: flushCfg.intervalMs
+    flushIntervalMs: flushCfg.intervalMs,
+    crypto: cryptoService
   })
   const iconPath = path.join(app.getAppPath(), 'resources', 'icon.png')
   const iconBuffer = fs.existsSync(iconPath) ? fs.readFileSync(iconPath) : null
@@ -93,16 +102,7 @@ export function createServices(): Services {
   const deviceManager = new DeviceManager(scanner, driverFactory, config)
 
   // 3. Inyectar geoFusion y repositorio en SessionService
-  const probeDataService = new ProbeDataService(
-    (filePath: string) => {
-      if (!fs.existsSync(filePath)) return null
-      return fs.readFileSync(filePath, 'utf-8')
-    },
-    () =>
-      app.isPackaged
-        ? path.join(process.resourcesPath, 'probe-data.json')
-        : path.join(app.getAppPath(), 'resources', 'probe-data.json')
-  )
+  const probeDataService = createDefaultProbeDataService()
   const correctionResolver = new CorrectionFactorResolver(() => probeDataService.load())
   const sessionService = new SessionService(
     geoFusion,
@@ -119,7 +119,8 @@ export function createServices(): Services {
     geoFusion,
     config,
     exportOrchestrator,
-    probeDataService
+    probeDataService,
+    cryptoService
   }
 }
 

@@ -25,17 +25,9 @@ export class AlertLogger {
   }
 }
 
-let defaultLogger: AlertLogger | undefined
-
-export function getDefaultAlertLogger(): AlertLogger {
-  if (defaultLogger) return defaultLogger
-  defaultLogger = new AlertLogger({
-    getLogPath: () => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { app } = require('electron') as typeof import('electron')
-      return join(app.getPath('userData'), 'alert.log')
-    },
+export function createAlertLogger(userDataPath: string): AlertLogger {
+  return new AlertLogger({
+    getLogPath: () => join(userDataPath, 'alert.log'),
     appendFile
   })
-  return defaultLogger
 }

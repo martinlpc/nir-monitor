@@ -5,7 +5,7 @@ import type { GeoPosition, GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { AppErrorInfo } from '../../shared/errors/error.types'
 import type { PreloadProgress } from '../../shared/tile.types'
-import { AlertLogger, getDefaultAlertLogger } from '../infrastructure/AlertLogger'
+import type { AlertLogger } from '../infrastructure/AlertLogger'
 
 /** Canales IPC (push) posibles — fuente de verdad única en `IPC_EVENTS`. */
 export type EventChannel = (typeof IPC_EVENTS)[keyof typeof IPC_EVENTS]
@@ -51,7 +51,7 @@ export class EventBus {
   private window: BrowserWindow | null = null
   private readonly alertLogger: AlertLogger
 
-  constructor(alertLogger: AlertLogger = getDefaultAlertLogger()) {
+  constructor(alertLogger: AlertLogger) {
     this.alertLogger = alertLogger
   }
 

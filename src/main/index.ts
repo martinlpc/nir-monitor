@@ -9,6 +9,7 @@ import { EventBus } from './services/EventBus'
 import { TileCacheService } from './tile-cache/TileCacheService'
 import { registerTileProtocol } from './tile-cache/TileProtocolHandler'
 import { setupLogService } from './infrastructure/LogService'
+import { createAlertLogger } from './infrastructure/AlertLogger'
 import type { Services } from './factories/ServiceFactory'
 
 const TILE_CACHE_SCHEME = 'tile-cache'
@@ -129,7 +130,8 @@ app.whenReady().then(() => {
   // 3. Create app services
   services = createServices()
 
-  const eventBus = new EventBus()
+  const alertLogger = createAlertLogger(app.getPath('userData'))
+  const eventBus = new EventBus(alertLogger)
 
   const window = createWindow()
   eventBus.setWindow(window)
@@ -141,6 +143,7 @@ app.whenReady().then(() => {
     services.sessionService,
     services.exportOrchestrator,
     services.probeDataService,
+    services.cryptoService,
     tileCache ?? undefined
   )
 
@@ -157,7 +160,8 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0 && services) {
       const nextWindow = createWindow()
-      const nextEventBus = new EventBus()
+      const nextAlertLogger = createAlertLogger(app.getPath('userData'))
+      const nextEventBus = new EventBus(nextAlertLogger)
       nextEventBus.setWindow(nextWindow)
       setupIPC(
         nextEventBus,
@@ -165,6 +169,7 @@ app.whenReady().then(() => {
         services.sessionService,
         services.exportOrchestrator,
         services.probeDataService,
+        services.cryptoService,
         tileCache ?? undefined
       )
     }

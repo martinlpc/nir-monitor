@@ -10,7 +10,8 @@ import { registerPortsHandlers } from './PortsHandler'
 import { registerLogsHandlers } from './LogsHandler'
 import { ConfigService } from '../services/ConfigService'
 import { getAppLogPath, readAppLog } from '../infrastructure/LogService'
-import { encrypt, decrypt, isEncrypted } from '../services/CryptoService'
+import { isEncrypted } from '../services/CryptoService'
+import type { CryptoService } from '../services/CryptoService'
 import { DriverDetector } from '../drivers/DriverDetector'
 import { DriverInstaller } from '../drivers/DriverInstaller'
 import type { DeviceManager } from '../services/DeviceManager'
@@ -26,6 +27,7 @@ export function setupIPC(
   sessionService: SessionService,
   exportOrchestrator: ExportOrchestrator,
   probeDataService: ProbeDataService,
+  cryptoService: CryptoService,
   tileCache?: TileCacheService
 ): void {
   deviceManager.removeAllListeners()
@@ -66,8 +68,8 @@ export function setupIPC(
     getDesktopPath: () => app.getPath('desktop'),
     readFile: (filePath) => readFileSync(filePath),
     writeFile: (filePath, data) => writeFileSync(filePath, data),
-    encrypt,
-    decrypt,
+    encrypt: (plaintext) => cryptoService.encrypt(plaintext),
+    decrypt: (ciphertext) => cryptoService.decrypt(ciphertext),
     isEncrypted
   })
   registerSettingsHandlers(ipcMain, {

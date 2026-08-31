@@ -37,10 +37,7 @@ export function isEncrypted(buffer: Buffer): boolean {
   return buffer.subarray(0, MAGIC.length).equals(MAGIC)
 }
 
-let defaultService: CryptoService | undefined
-
-function getDefaultCryptoService(): CryptoService {
-  if (defaultService) return defaultService
+export function createCryptoServiceFromEnv(): CryptoService {
   const passphrase = process.env.NIR_DB_ENCRYPTION_KEY
   if (!passphrase) {
     throw new Error(
@@ -51,14 +48,5 @@ function getDefaultCryptoService(): CryptoService {
         '  Reinstale la aplicación o contacte al administrador del sistema.'
     )
   }
-  defaultService = new CryptoService(passphrase)
-  return defaultService
-}
-
-export function encrypt(plaintext: Buffer): Buffer {
-  return getDefaultCryptoService().encrypt(plaintext)
-}
-
-export function decrypt(ciphertext: Buffer): Buffer {
-  return getDefaultCryptoService().decrypt(ciphertext)
+  return new CryptoService(passphrase)
 }

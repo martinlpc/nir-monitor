@@ -10,7 +10,8 @@ import type {
   PersistedSession,
   SessionStats
 } from '../../shared/services/ISessionRepository'
-import { encrypt, decrypt, isEncrypted } from './CryptoService'
+import { isEncrypted } from './CryptoService'
+import type { CryptoService } from './CryptoService'
 
 /**
  * SQLite-based session persistence using sql.js (WASM)
@@ -31,14 +32,17 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private readonly FLUSH_EVERY_N_POINTS: number
   private readonly FLUSH_INTERVAL_MS: number
   private readonly isTestMode: boolean
+  private readonly crypto: CryptoService | null
 
   constructor(options?: {
     testDb?: SqlJsDatabase
     flushEveryNPoints?: number
     flushIntervalMs?: number
+    crypto?: CryptoService
   }) {
     this.FLUSH_EVERY_N_POINTS = options?.flushEveryNPoints ?? 5
     this.FLUSH_INTERVAL_MS = options?.flushIntervalMs ?? 5_000
+    this.crypto = options?.crypto ?? null
 
     if (options?.testDb) {
       this.db = options.testDb
@@ -128,8 +132,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       if (!this.isTestMode && fs.existsSync(this.dbPath)) {
         try {
           const raw = fs.readFileSync(this.dbPath)
-          if (isEncrypted(raw)) {
-            const decrypted = decrypt(raw)
+          if (this.crypto && isEncrypted(raw)) {
+            const decrypted = this.crypto.decrypt(raw)
             data = new Uint8Array(decrypted)
           } else {
             // Legacy plain SQLite — migracion automatica a cifrado
@@ -264,7 +268,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     try {
       const data = this.db.export()
       const buffer = Buffer.from(data)
-      const encrypted = encrypt(buffer)
+      const encrypted = this.crypto ? this.crypto.encrypt(buffer) : buffer
       fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
       fs.writeFileSync(this.dbPath, encrypted)
     } catch (err) {
