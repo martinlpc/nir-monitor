@@ -12,6 +12,8 @@ import type {
 } from '../../shared/services/ISessionRepository'
 import { isEncrypted } from './CryptoService'
 import type { CryptoService } from './CryptoService'
+import { applySchema } from '../db/SchemaManager'
+import { rowToGeoTimestamp, rowToSessionSummary, rowToSessionStats, unixToISO } from '../db/rowMappers'
 
 /**
  * SQLite-based session persistence using sql.js (WASM)
@@ -61,45 +63,6 @@ export class SQLiteSessionRepository implements ISessionRepository {
           ? path.join(process.env.APPDATA || os.homedir(), 'RNI Monitor')
           : path.join(os.homedir(), '.config', 'RNI Monitor')
       this.dbPath = path.join(dataPath, 'sessions.db')
-    }
-  }
-
-  /**
-   * Convertir Unix timestamp (ms) a formato ISO 8601 legible
-   */
-  private unixToISO(timestamp: number): string {
-    return new Date(timestamp).toISOString()
-  }
-
-  /**
-   * Convertir ISO 8601 a Unix timestamp (ms)
-   */
-  private isoToUnix(isoString: string): number {
-    return new Date(isoString).getTime()
-  }
-
-  /**
-   * Mapear una fila de geo_points a GeoTimestamp
-   */
-  private rowToGeoTimestamp(row: unknown[], columns: string[]): GeoTimestamp {
-    const rowMap = Object.fromEntries(columns.map((col, idx) => [col, row[idx]]))
-    return {
-      id: rowMap.id as string,
-      sessionId: rowMap.sessionId as string,
-      sequenceNumber: rowMap.sequenceNumber as number,
-      timestamp: this.isoToUnix(rowMap.timestamp as string),
-      position: {
-        lat: rowMap.lat as number,
-        lon: rowMap.lon as number,
-        alt: (rowMap.alt as number) || 0
-      },
-      emf: {
-        deviceId: 'nbm550',
-        rawMeasurement: rowMap.rawMeasurement as number,
-        unit: rowMap.unit as 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
-      },
-      correctedMeasurement: rowMap.correctedMeasurement as number,
-      gpsGap: (rowMap.gps_gap as number) === 1 || undefined
     }
   }
 
@@ -157,91 +120,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       this.db = new SQL.Database(data)
 
-      // Crear tablas si no existen
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS sessions (
-          id TEXT PRIMARY KEY,
-          label TEXT NOT NULL,
-          startedAt TEXT NOT NULL,
-          stoppedAt TEXT,
-          sampleCount INTEGER NOT NULL DEFAULT 0,
-          correctionFactor REAL,
-          instrument TEXT,
-          provincia TEXT,
-          localidad TEXT,
-          apellido1 TEXT,
-          apellido2 TEXT,
-          createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-      // Migraciones: agregar columnas si faltan
-      try {
-        this.db.run('ALTER TABLE sessions ADD COLUMN correctionFactor REAL')
-      } catch {
-        /* column may already exist */
-      }
-      try {
-        this.db.run('ALTER TABLE sessions ADD COLUMN instrument TEXT')
-      } catch {
-        /* column may already exist */
-      }
-      try {
-        this.db.run('ALTER TABLE sessions ADD COLUMN provincia TEXT')
-      } catch {
-        /* column may already exist */
-      }
-      try {
-        this.db.run('ALTER TABLE sessions ADD COLUMN localidad TEXT')
-      } catch {
-        /* column may already exist */
-      }
-      try {
-        this.db.run('ALTER TABLE sessions ADD COLUMN apellido1 TEXT')
-      } catch {
-        /* column may already exist */
-      }
-      try {
-        this.db.run('ALTER TABLE sessions ADD COLUMN apellido2 TEXT')
-      } catch {
-        /* column may already exist */
-      }
-
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS geo_points (
-          id TEXT PRIMARY KEY,
-          sessionId TEXT NOT NULL,
-          sequenceNumber INTEGER NOT NULL,
-          timestamp TEXT NOT NULL,
-          lat REAL NOT NULL,
-          lon REAL NOT NULL,
-          alt REAL,
-          rawMeasurement REAL NOT NULL,
-          correctedMeasurement REAL NOT NULL,
-          unit TEXT NOT NULL,
-          gps_gap INTEGER NOT NULL DEFAULT 0
-        )
-      `)
-      try {
-        this.db.run('ALTER TABLE geo_points ADD COLUMN gps_gap INTEGER NOT NULL DEFAULT 0')
-      } catch {
-        /* column may already exist */
-      }
-
-      this.db.run(`
-        CREATE TABLE IF NOT EXISTS session_stats (
-          sessionId TEXT PRIMARY KEY,
-          avgCorrected REAL,
-          maxCorrected REAL,
-          minCorrected REAL,
-          pointCount INTEGER,
-          computedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-      `)
-
-      // Crear índices
-      this.db.run(`CREATE INDEX IF NOT EXISTS idx_geo_session_id ON geo_points(sessionId)`)
-      this.db.run(`CREATE INDEX IF NOT EXISTS idx_geo_timestamp ON geo_points(timestamp)`)
-      this.db.run(`CREATE INDEX IF NOT EXISTS idx_geo_lat_lon ON geo_points(lat, lon)`)
+      // Crear tablas, migraciones e índices
+      applySchema(this.db)
 
       this.save()
       this.initialized = true
@@ -292,8 +172,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
         [
           sessionId,
           metadata.label,
-          this.unixToISO(metadata.startedAt),
-          metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
+          unixToISO(metadata.startedAt),
+          metadata.stoppedAt ? unixToISO(metadata.stoppedAt) : null,
           metadata.sampleCount,
           metadata.correctionFactor ?? null,
           metadata.instrument ? JSON.stringify(metadata.instrument) : null
@@ -312,7 +192,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
               point.id,
               point.sessionId,
               point.sequenceNumber,
-              this.unixToISO(point.timestamp),
+              unixToISO(point.timestamp),
               point.position.lat,
               point.position.lon,
               point.position.alt,
@@ -378,7 +258,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
         [
           sessionId,
           metadata.label,
-          this.unixToISO(metadata.startedAt),
+          unixToISO(metadata.startedAt),
           null,
           0,
           metadata.correctionFactor ?? null,
@@ -427,7 +307,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
           point.id,
           sessionId,
           point.sequenceNumber,
-          this.unixToISO(point.timestamp),
+          unixToISO(point.timestamp),
           point.position.lat,
           point.position.lon,
           point.position.alt,
@@ -466,7 +346,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
         `UPDATE sessions SET stoppedAt = ?, sampleCount = ?, correctionFactor = ?,
          instrument = ?, provincia = ?, localidad = ?, apellido1 = ?, apellido2 = ? WHERE id = ?`,
         [
-          metadata.stoppedAt ? this.unixToISO(metadata.stoppedAt) : null,
+          metadata.stoppedAt ? unixToISO(metadata.stoppedAt) : null,
           metadata.sampleCount,
           metadata.correctionFactor ?? null,
           metadata.instrument ? JSON.stringify(metadata.instrument) : null,
@@ -550,22 +430,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       const metadataRow = metadataResult[0].values[0]
       const columns = metadataResult[0].columns
-      const metadataMap = Object.fromEntries(columns.map((col, idx) => [col, metadataRow[idx]]))
 
-      const metadata: SessionSummary = {
-        id: metadataMap.id as string,
-        label: metadataMap.label as string,
-        startedAt: this.isoToUnix(metadataMap.startedAt as string),
-        stoppedAt: metadataMap.stoppedAt ? this.isoToUnix(metadataMap.stoppedAt as string) : null,
-        sampleCount: metadataMap.sampleCount as number,
-        instrument: metadataMap.instrument ? JSON.parse(metadataMap.instrument as string) : null,
-        correctionFactor:
-          metadataMap.correctionFactor != null ? Number(metadataMap.correctionFactor) : null,
-        provincia: metadataMap.provincia as string | undefined,
-        localidad: metadataMap.localidad as string | undefined,
-        apellido1: metadataMap.apellido1 as string | undefined,
-        apellido2: metadataMap.apellido2 as string | undefined
-      }
+      const metadata = rowToSessionSummary(metadataRow, columns)
 
       // Obtener puntos
       let pointsSql = 'SELECT * FROM geo_points WHERE sessionId = ? ORDER BY timestamp ASC'
@@ -577,7 +443,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       const pointsResult = db.exec(pointsSql, pointsParams)
 
       const points: GeoTimestamp[] = (pointsResult[0]?.values || []).map((row) =>
-        this.rowToGeoTimestamp(row, pointsResult[0].columns)
+        rowToGeoTimestamp(row, pointsResult[0].columns)
       )
 
       return { metadata, points }
@@ -601,24 +467,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) => {
-        const cols = result[0].columns
-        const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
-        return {
-          id: rowMap.id as string,
-          label: rowMap.label as string,
-          startedAt: this.isoToUnix(rowMap.startedAt as string),
-          stoppedAt: rowMap.stoppedAt ? this.isoToUnix(rowMap.stoppedAt as string) : null,
-          sampleCount: rowMap.sampleCount as number,
-          instrument: rowMap.instrument ? JSON.parse(rowMap.instrument as string) : null,
-          correctionFactor:
-            rowMap.correctionFactor != null ? Number(rowMap.correctionFactor) : null,
-          provincia: rowMap.provincia as string | undefined,
-          localidad: rowMap.localidad as string | undefined,
-          apellido1: rowMap.apellido1 as string | undefined,
-          apellido2: rowMap.apellido2 as string | undefined
-        } as SessionSummary
-      })
+      return result[0].values.map((row) => rowToSessionSummary(row, result[0].columns))
     } catch (err) {
       console.error('[SQLiteSessionRepository] Error listing sessions:', err)
       return []
@@ -656,7 +505,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) => this.rowToGeoTimestamp(row, result[0].columns))
+      return result[0].values.map((row) => rowToGeoTimestamp(row, result[0].columns))
     } catch (err) {
       console.error(`[SQLiteSessionRepository] Error loading points:`, err)
       return []
@@ -679,15 +528,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
       if (!result[0] || !result[0].values[0]) return null
 
       const row = result[0].values[0]
-      const cols = result[0].columns
-      const rowMap = Object.fromEntries(cols.map((col, idx) => [col, row[idx]]))
 
-      return {
-        avgCorrected: rowMap.avgCorrected as number,
-        maxCorrected: rowMap.maxCorrected as number,
-        minCorrected: rowMap.minCorrected as number,
-        pointCount: rowMap.pointCount as number
-      }
+      return rowToSessionStats(row, result[0].columns)
     } catch (err) {
       console.error('[SQLiteSessionRepository] Error loading stats:', err)
       return null
@@ -719,7 +561,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
 
       if (!result[0]) return []
 
-      return result[0].values.map((row) => this.rowToGeoTimestamp(row, result[0].columns))
+      return result[0].values.map((row) => rowToGeoTimestamp(row, result[0].columns))
     } catch (err) {
       console.error('[SQLiteSessionRepository] Error querying bounds:', err)
       return []

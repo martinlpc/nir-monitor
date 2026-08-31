@@ -7,6 +7,7 @@ import * as os from 'os'
 import { app } from 'electron'
 import { SQLiteSessionRepository } from './SQLiteSessionRepository'
 import { isEncrypted, createCryptoServiceFromEnv } from './CryptoService'
+import { applySchema } from '../db/SchemaManager'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 
@@ -61,49 +62,6 @@ function makeSession(overrides: Partial<SessionSummary> = {}): SessionSummary {
   }
 }
 
-async function createSchema(db: SqlJsDatabase): Promise<void> {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS sessions (
-      id TEXT PRIMARY KEY,
-      label TEXT NOT NULL,
-      startedAt TEXT NOT NULL,
-      stoppedAt TEXT,
-      sampleCount INTEGER NOT NULL DEFAULT 0,
-      correctionFactor REAL,
-      instrument TEXT,
-      provincia TEXT,
-      localidad TEXT,
-      apellido1 TEXT,
-      apellido2 TEXT,
-      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS geo_points (
-      id TEXT PRIMARY KEY,
-      sessionId TEXT NOT NULL,
-      sequenceNumber INTEGER NOT NULL,
-      timestamp TEXT NOT NULL,
-      lat REAL NOT NULL,
-      lon REAL NOT NULL,
-      alt REAL,
-      rawMeasurement REAL NOT NULL,
-      correctedMeasurement REAL NOT NULL,
-      unit TEXT NOT NULL,
-      gps_gap INTEGER NOT NULL DEFAULT 0
-    );
-    CREATE TABLE IF NOT EXISTS session_stats (
-      sessionId TEXT PRIMARY KEY,
-      avgCorrected REAL,
-      maxCorrected REAL,
-      minCorrected REAL,
-      pointCount INTEGER,
-      computedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE INDEX IF NOT EXISTS idx_geo_session_id ON geo_points(sessionId);
-    CREATE INDEX IF NOT EXISTS idx_geo_timestamp ON geo_points(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_geo_lat_lon ON geo_points(lat, lon);
-  `)
-}
-
 describe('SQLiteSessionRepository (in-memory)', () => {
   let repo: SQLiteSessionRepository
   let db: SqlJsDatabase
@@ -111,7 +69,7 @@ describe('SQLiteSessionRepository (in-memory)', () => {
   beforeEach(async () => {
     const SQL = await initSqlJs()
     db = new SQL.Database()
-    await createSchema(db)
+    applySchema(db)
     repo = new SQLiteSessionRepository({ testDb: db })
   })
 
