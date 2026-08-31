@@ -22,16 +22,16 @@ Desktop EMF mapper basado en ITU-T K.113. Electron 42 + React 19 + Leaflet + SQL
 
 | Remote   | URL                                                         | Uso                        |
 | -------- | ----------------------------------------------------------- | -------------------------- |
-| `origin` | `https://github.com/martinlpc/nir-monitor.git`              | GitHub — desarrollo diario |
-| `gitlab` | `https://gitlab-desa.enacom.gob.ar/esartor/rni-monitor.git` | GitLab — branch `main`     |
+| `gitlab` | `https://gitlab-desa.enacom.gob.ar/esartor/rni-monitor.git` | GitLab — repo PRIMARIO |
+| `origin` | `https://github.com/martinlpc/nir-monitor.git`              | GitHub — mirror           |
 
-Flujo: se trabaja normalmente sobre `origin` (GitHub, cualquier rama). Cuando se necesita publicar en GitLab, se pushea manualmente a `gitlab main`:
+Flujo: GitLab es el repositorio primario (RAMAS, push, issues y MRs van aca). GitLab - «branch `main`»; ver ramas de feature bajo `git push gitlab <tipo>/<descripcion>`. GitHub (`origin`) es un mirror profesional, se sincroniza manualmente despues de publicar en GitLab. Asi hasta que se especifique lo contrario.
+
+Post-merge en GitLab:
 
 ```
-git push gitlab HEAD:main
+git checkout main && git pull gitlab main
 ```
-
-Los remotos son independientes. No hay sincronización automática entre ellos.
 
 ## Scripts clave
 

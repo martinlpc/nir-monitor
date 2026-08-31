@@ -1,3 +1,44 @@
+## 0.16.2 — 2026-08-31
+
+### Refactorización
+
+- extract export layer with orchestrator and typed exporters
+- extract FusionEngine pure functions from GeoFusionService
+- add typed EventBus replacing raw webContents.send calls
+- add typed event maps, extract PreloadProgress to shared types
+- replace static ConfigService access with shared config constants
+- extract Haversine distance to shared util
+- extract session validation and config building from SessionService.start()
+- extract CorrectionFactorResolver class with injected dependencies
+- extract ProbeDataService class with injected dependencies
+- extract LogService class with DI and remove dead AppConfig module
+- extract SessionSupervisor with testable watchdog logic
+- extract CryptoService class with injected passphrase
+- make tile cache testable with dependency injection
+- extract DeviceEventPresenter and DI DeviceManagerHandler
+- extract SettingsHandler and TileCacheHandler to DI and pure helpers
+- make AlertLogger testable with injectable deps
+- extract SessionServiceHandler to DI and pure helpers
+- move IPC channels to shared and unify duplicated types
+- decouple SessionService from concrete GeoFusionService via interface
+- remove module-level singletons in favor of explicit injection
+- remove dead PortConfig module and stale doc references
+- extract schema and row mappers from SQLiteSessionRepository
+
+### Pruebas
+
+- add coverage for services and simulated drivers
+- cover KMZ and XLSX exporters with real file assertions
+
+### Correcciones
+
+- wire missing ports:list handler and move logs handlers into ipc
+- correct mock types in LogService, SessionSupervisor and TileCacheService tests
+
+### Tareas varias
+
+- stop tracking coverage reports
+
 ## 0.16.1 — 2026-07-21
 
 ### Correcciones
