@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { haversineMeters } from '../../../shared/geo-utils'
 import type { GeoPosition, GeoTimestamp, EMFSample } from '../../../shared/GeoTimestamp'
-import type { FusionConfig } from './FusionConfig'
+import type { FusionConfig } from '../../../shared/FusionConfig'
 
 export interface RawSample {
   rss: number

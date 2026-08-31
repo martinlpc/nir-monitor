@@ -1,5 +1,5 @@
 import type { UserAppConfig } from '../../shared/config.types'
-import type { FusionConfig } from '../geo/fusion/FusionConfig'
+import type { FusionConfig } from '../../shared/FusionConfig'
 
 export interface SessionConfigInput {
   triggerMode?: 'distance' | 'time'

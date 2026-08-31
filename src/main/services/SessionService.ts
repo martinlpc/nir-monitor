@@ -1,6 +1,5 @@
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import { GeoFusionService } from './GeoFusionService'
 import { validateCanStart } from './SessionValidator'
 import { buildFusionConfig } from './SessionConfigBuilder'
 import type { SessionConfigInput } from './SessionConfigBuilder'
@@ -8,6 +7,7 @@ import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
+import type { IGeoFusionService } from '../../shared/services/IGeoFusionService'
 import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
 import { ConfigService } from './ConfigService'
 import { AppError } from '../../shared/errors/AppError'
@@ -24,7 +24,7 @@ export class SessionService extends EventEmitter {
   private pendingFinalize = false
   private readonly MAX_SAVE_RETRIES = 3
 
-  private fusion: GeoFusionService
+  private fusion: IGeoFusionService
   private nbm: INBMDriver | null = null
   private gps: IGPSDriver | null = null
   private repository: ISessionRepository | null = null
@@ -51,7 +51,7 @@ export class SessionService extends EventEmitter {
   }
 
   constructor(
-    fusion: GeoFusionService,
+    fusion: IGeoFusionService,
     repository?: ISessionRepository,
     config?: ConfigService,
     correctionResolver?: CorrectionFactorResolver

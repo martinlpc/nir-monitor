@@ -2,14 +2,15 @@ import { EventEmitter } from 'events'
 import type { GeoPosition } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import { evaluateTrigger, buildGeoTimestamp } from '../geo/fusion/FusionEngine'
-import type { FusionConfig } from '../geo/fusion/FusionConfig'
+import type { FusionConfig } from '../../shared/FusionConfig'
 import { DEFAULT_GEO_FUSION } from '../../shared/config.constants'
+import type { IGeoFusionService } from '../../shared/services/IGeoFusionService'
 
 export type TriggerMode = FusionConfig['triggerMode']
 export type GeoFusionConfig = FusionConfig
 export const DEFAULT_FUSION_CONFIG: FusionConfig = { ...DEFAULT_GEO_FUSION }
 
-export class GeoFusionService extends EventEmitter {
+export class GeoFusionService extends EventEmitter implements IGeoFusionService {
   private config: FusionConfig
   private sessionId: string = ''
   private nbm: INBMDriver | null = null
