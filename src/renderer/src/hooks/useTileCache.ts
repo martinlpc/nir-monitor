@@ -1,18 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-
-export interface TileCacheStats {
-  sizeBytes: number
-  tileCount: number
-}
-
-export interface PreloadProgress {
-  current: number
-  total: number
-  zoom: number
-  phase: 'counting' | 'downloading' | 'done' | 'cancelled' | 'error'
-  error?: string
-}
-
+import { PreloadProgress, CacheStats } from '../../../shared/tile.types'
 export interface ImportProgress {
   imported: number
   skipped: number
@@ -20,7 +7,7 @@ export interface ImportProgress {
 }
 
 export function useTileCache(): {
-  stats: TileCacheStats | null
+  stats: CacheStats | null
   isLoading: boolean
   preloadProgress: PreloadProgress | null
   importProgress: ImportProgress | null
@@ -38,7 +25,7 @@ export function useTileCache(): {
   cancelPreload: () => Promise<void>
   importTiles: (providerId: string) => Promise<{ imported: number; skipped: number } | null>
 } {
-  const [stats, setStats] = useState<TileCacheStats | null>(null)
+  const [stats, setStats] = useState<CacheStats | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [preloadProgress, setPreloadProgress] = useState<PreloadProgress | null>(null)
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null)

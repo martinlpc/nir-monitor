@@ -1,58 +1,11 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { ConfigService } from './ConfigService'
+import { DEFAULT_NBM_POLLING } from '../../shared/config.constants'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
 
 describe('ConfigService', () => {
-  // ── Static defaults ───────────────────────────────────
-
-  it('has correct baud rates', () => {
-    expect(ConfigService.NBM_BAUD_RATE).toBe(460800)
-    expect(ConfigService.GPS_BAUD_RATE).toBe(4800)
-  })
-
-  it('has correct default NBM polling config', () => {
-    const cfg = ConfigService.DEFAULT_NBM_POLLING
-    expect(cfg.activePollIntervalMs).toBe(200)
-    expect(cfg.standbyBatteryIntervalMs).toBe(30000)
-    expect(cfg.maxConsecutiveReadFailures).toBe(8)
-  })
-
-  it('has correct default reconnect config', () => {
-    expect(ConfigService.DEFAULT_NBM_RECONNECT.intervalMs).toBe(3000)
-    expect(ConfigService.DEFAULT_NBM_RECONNECT.timeoutMs).toBe(30000)
-    expect(ConfigService.DEFAULT_GPS_RECONNECT.intervalMs).toBe(3000)
-    expect(ConfigService.DEFAULT_GPS_RECONNECT.timeoutMs).toBe(30000)
-  })
-
-  it('has correct default geo fusion config', () => {
-    const cfg = ConfigService.DEFAULT_GEO_FUSION
-    expect(cfg.triggerMode).toBe('distance')
-    expect(cfg.minDistanceMeters).toBe(20)
-    expect(cfg.intervalMs).toBe(5000)
-    expect(cfg.testMode).toBe(false)
-  })
-
-  it('has correct default serial probe config', () => {
-    const cfg = ConfigService.DEFAULT_SERIAL_PROBE
-    expect(cfg.nbmTimeoutMs).toBe(6000)
-    expect(cfg.nmeaListenMs).toBe(12000)
-  })
-
-  it('has correct default flush config', () => {
-    const cfg = ConfigService.DEFAULT_FLUSH
-    expect(cfg.everyNPoints).toBe(5)
-    expect(cfg.intervalMs).toBe(5000)
-  })
-
-  it('has correct default NBM driver config', () => {
-    const cfg = ConfigService.DEFAULT_NBM_DRIVER
-    expect(cfg.baudRate).toBe(460800)
-    expect(cfg.pollIntervalMs).toBe(200)
-    expect(cfg.unit).toBe('V/m')
-  })
-
   // ── simulationMode ────────────────────────────────────
 
   it('detects simulation mode from env var', () => {
@@ -120,7 +73,39 @@ describe('ConfigService', () => {
 
   it('nbmPollingConfig returns a copy', () => {
     const cfg = new ConfigService()
-    expect(cfg.nbmPollingConfig).not.toBe(ConfigService.DEFAULT_NBM_POLLING)
+    expect(cfg.nbmPollingConfig).not.toBe(DEFAULT_NBM_POLLING)
+  })
+
+  it('gpsDriverConfig returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.gpsDriverConfig
+    const b = cfg.gpsDriverConfig
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
+  it('nbmTimeouts returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.nbmTimeouts
+    const b = cfg.nbmTimeouts
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
+  it('serialProbeConfig returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.serialProbeConfig
+    const b = cfg.serialProbeConfig
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
+  })
+
+  it('geoFusionConfig returns a copy', () => {
+    const cfg = new ConfigService()
+    const a = cfg.geoFusionConfig
+    const b = cfg.geoFusionConfig
+    expect(a).toEqual(b)
+    expect(a).not.toBe(b)
   })
 
   // ── App config with real files ────────────────────────
@@ -144,6 +129,40 @@ describe('ConfigService', () => {
     it('loadAppConfig returns empty object when file does not exist', () => {
       const result = cfg.loadAppConfig()
       expect(result).toEqual({})
+    })
+
+    it('loadAppConfig parses valid JSON from file', () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'app-config.json'),
+        JSON.stringify({ triggerMode: 'time', intervalMs: 2500 }),
+        'utf-8'
+      )
+      const loaded = cfg.loadAppConfig()
+      expect(loaded.triggerMode).toBe('time')
+      expect(loaded.intervalMs).toBe(2500)
+    })
+
+    it('loadAppConfig returns empty object on malformed JSON', () => {
+      fs.writeFileSync(path.join(tmpDir, 'app-config.json'), '{not valid json', 'utf-8')
+      const loaded = cfg.loadAppConfig()
+      expect(loaded).toEqual({})
+    })
+
+    it('saveAppConfig catches write errors', () => {
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const broken = new ConfigService({
+        appConfigPath: tmpDir,
+        portConfigPath: path.join(tmpDir, 'port-config.json')
+      })
+      expect(() => broken.saveAppConfig({ triggerMode: 'time' })).not.toThrow()
+      expect(errorSpy).toHaveBeenCalled()
+      errorSpy.mockRestore()
+    })
+
+    it('loadPortConfig returns empty object on malformed JSON', () => {
+      fs.writeFileSync(path.join(tmpDir, 'port-config.json'), '{not valid json', 'utf-8')
+      const loaded = cfg.loadPortConfig()
+      expect(loaded).toEqual({})
     })
 
     it('saveAppConfig persists and loadAppConfig retrieves', () => {

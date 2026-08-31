@@ -2,16 +2,19 @@ import { EventEmitter } from 'events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeviceManager } from './DeviceManager'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
-import type { PortConfigData } from './PortConfig'
+import type { PortConfigData } from './ConfigService'
+import { AppError } from '../../shared/errors/AppError'
 
 interface DeviceManagerPrivate {
   nbm: unknown
   gps: unknown
   portConfig: PortConfigData
+  scanning: boolean
   nbmReconnect: { stop: ReturnType<typeof vi.fn>; reset: ReturnType<typeof vi.fn> }
   gpsReconnect: { stop: ReturnType<typeof vi.fn>; reset: ReturnType<typeof vi.fn> }
   nbmPolling: { stop: ReturnType<typeof vi.fn> }
   initNBM: (...args: string[]) => Promise<unknown>
+  initGPS: (...args: string[]) => Promise<unknown>
   setPortManual: (device: 'nbm550' | 'gps', port: string) => Promise<void>
 }
 
@@ -380,5 +383,303 @@ describe('DeviceManager', () => {
     await manager.connectDevice('nbm550')
 
     expect(setPortManualSpy).toHaveBeenCalledWith('nbm550', 'COM8')
+  })
+
+  // ── Polling activo y muestras ────────────────────────────
+
+  it('emits nbm samples and battery while polling in active mode', async () => {
+    vi.useFakeTimers()
+    const localFactory: DriverFactory = {
+      createNBM: (port) => {
+        const driver = new FakeNBMDriver(port)
+        driver.readBattery = vi.fn(async () => 90)
+        driver.readMeasurement = vi.fn(async () => ({ rss: 2.5, unit: 'V/m', battery: 88 }))
+        return driver as unknown as INBMDriver
+      },
+      createGPS: (port) => new FakeGPSDriver(port) as unknown as IGPSDriver
+    }
+    const manager = new DeviceManager(mockScanner, localFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM10',
+      gpsPort: null,
+      allProbed: []
+    }))
+
+    const samples: unknown[] = []
+    manager.on('nbm:sample', (s) => samples.push(s))
+    const batteries: unknown[] = []
+    manager.on('nbm:battery', (b) => batteries.push(b))
+
+    await manager.scan()
+    await vi.advanceTimersByTimeAsync(0)
+
+    expect(batteries.length).toBeGreaterThan(0)
+
+    manager.setSessionActive(true)
+    await vi.advanceTimersByTimeAsync(250)
+
+    expect(samples.length).toBeGreaterThan(0)
+  })
+
+  it('starts NBM reconnect after consecutive read failures', async () => {
+    vi.useFakeTimers()
+    const manager = new DeviceManager(mockScanner, fakeFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM10',
+      gpsPort: null,
+      allProbed: []
+    }))
+
+    await manager.scan()
+    const nbm = manager.getNBM() as unknown as FakeNBMDriver
+    nbm.readMeasurement = vi.fn(async () => null)
+
+    const errors: unknown[] = []
+    manager.on('device:error', (e) => errors.push(e))
+
+    manager.setSessionActive(true)
+    await vi.advanceTimersByTimeAsync(2000)
+
+    expect(errors.length).toBeGreaterThan(0)
+    expect((errors[0] as { error: { code: string } }).error.code).toBe('NBM_POLL_FAILURE')
+    expect(
+      (pvt(manager).nbmReconnect as unknown as { isReconnecting: boolean }).isReconnecting
+    ).toBe(true)
+  })
+
+  // ── Reconexión automática ────────────────────────────────
+
+  it('reconnects the NBM after an unexpected disconnect', async () => {
+    vi.useFakeTimers()
+    const manager = new DeviceManager(mockScanner, fakeFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM10',
+      gpsPort: null,
+      allProbed: []
+    }))
+
+    await manager.scan()
+    const nbm = manager.getNBM() as unknown as FakeNBMDriver
+
+    nbm.emit('status', 'disconnected')
+    expect(
+      (pvt(manager).nbmReconnect as unknown as { isReconnecting: boolean }).isReconnecting
+    ).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(
+      (pvt(manager).nbmReconnect as unknown as { isReconnecting: boolean }).isReconnecting
+    ).toBe(false)
+    expect(manager.getNBM()).not.toBeNull()
+  })
+
+  it('reconnects the GPS after an unexpected disconnect', async () => {
+    vi.useFakeTimers()
+    const manager = new DeviceManager(mockScanner, fakeFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: 'COM12',
+      allProbed: []
+    }))
+
+    await manager.scan()
+    const gps = manager.getGPS() as FakeGPSDriver
+
+    gps.emit('status', 'disconnected')
+    expect(
+      (pvt(manager).gpsReconnect as unknown as { isReconnecting: boolean }).isReconnecting
+    ).toBe(true)
+
+    await vi.advanceTimersByTimeAsync(3000)
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(
+      (pvt(manager).gpsReconnect as unknown as { isReconnecting: boolean }).isReconnecting
+    ).toBe(false)
+    expect(manager.getGPS()).not.toBeNull()
+  })
+
+  // ── Manejo de errores de drivers ─────────────────────────
+
+  it('emits device:error for NBM AppError and generic errors', async () => {
+    const manager = new DeviceManager(mockScanner, fakeFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM10',
+      gpsPort: null,
+      allProbed: []
+    }))
+
+    await manager.scan()
+
+    const errors: unknown[] = []
+    manager.on('device:error', (e) => errors.push(e))
+
+    const nbm = manager.getNBM() as unknown as FakeNBMDriver
+    nbm.emit(
+      'error',
+      new AppError({
+        code: 'NBM_101',
+        message: 'error 101',
+        severity: 'error',
+        category: 'nbm',
+        userAction: 'x'
+      })
+    )
+    expect((errors[0] as { error: { code: string } }).error.code).toBe('NBM_101')
+
+    nbm.emit('error', new Error('generic failure'))
+    expect((errors[1] as { error: { code: string } }).error.code).toBe('NBM_ERROR')
+  })
+
+  it('emits device:error for GPS AppError and generic errors', async () => {
+    const manager = new DeviceManager(mockScanner, fakeFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: 'COM12',
+      allProbed: []
+    }))
+
+    await manager.scan()
+
+    const errors: unknown[] = []
+    manager.on('device:error', (e) => errors.push(e))
+
+    const gps = manager.getGPS() as FakeGPSDriver
+    gps.emit(
+      'error',
+      new AppError({
+        code: 'GPS_1',
+        message: 'gps error',
+        severity: 'error',
+        category: 'gps',
+        userAction: 'x'
+      })
+    )
+    expect((errors[0] as { error: { code: string } }).error.code).toBe('GPS_1')
+
+    gps.emit('error', new Error('generic gps failure'))
+    expect((errors[1] as { error: { code: string } }).error.code).toBe('GPS_ERROR')
+  })
+
+  // ── Fallos de conexión en init ───────────────────────────
+
+  it('logs and keeps the driver when NBM connect fails', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const failingFactory: DriverFactory = {
+      createNBM: (port) => {
+        const driver = new FakeNBMDriver(port)
+        driver.connect = async () => {
+          throw new Error('port busy')
+        }
+        return driver as unknown as INBMDriver
+      },
+      createGPS: (port) => new FakeGPSDriver(port) as unknown as IGPSDriver
+    }
+    const manager = new DeviceManager(mockScanner, failingFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: 'COM10',
+      gpsPort: null,
+      allProbed: []
+    }))
+
+    await manager.scan()
+    expect(manager.getNBM()).not.toBeNull()
+    expect(consoleSpy).toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
+  it('retries the GPS connect and eventually succeeds', async () => {
+    const failingFactory: DriverFactory = {
+      createNBM: (port) => new FakeNBMDriver(port) as unknown as INBMDriver,
+      createGPS: (port) => {
+        const driver = new FakeGPSDriver(port)
+        const original = driver.connect.bind(driver)
+        let attempts = 0
+        driver.connect = async () => {
+          attempts++
+          if (attempts < 3) throw new Error('not ready')
+          return original()
+        }
+        return driver as unknown as IGPSDriver
+      }
+    }
+    const manager = new DeviceManager(mockScanner, failingFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: 'COM12',
+      allProbed: []
+    }))
+
+    await manager.scan()
+    expect(manager.getGPS()).not.toBeNull()
+  })
+
+  it('returns the GPS driver when all connect attempts fail', async () => {
+    const failingFactory: DriverFactory = {
+      createNBM: (port) => new FakeNBMDriver(port) as unknown as INBMDriver,
+      createGPS: (port) => {
+        const driver = new FakeGPSDriver(port)
+        driver.connect = async () => {
+          throw new Error('not ready')
+        }
+        return driver as unknown as IGPSDriver
+      }
+    }
+    const manager = new DeviceManager(mockScanner, failingFactory)
+
+    mockScanner.scanAndProbeAll = vi.fn(async () => ({
+      nbmPort: null,
+      gpsPort: 'COM12',
+      allProbed: []
+    }))
+
+    await manager.scan()
+    expect(manager.getGPS()).not.toBeNull()
+    expect(manager.getGPS()?.status).toBe('disconnected')
+  })
+
+  // ── Config manual GPS y guardas ──────────────────────────
+
+  it('sets the GPS port manually and persists the mapping', async () => {
+    const config = new ConfigService()
+    const savePortConfigSpy = vi.spyOn(config, 'savePortConfig')
+
+    const manager = new DeviceManager(mockScanner, fakeFactory, config)
+    const previousGPS = createFakeDevice('COM2')
+    pvt(manager).gps = previousGPS
+
+    const initGPSSpy = vi
+      .spyOn(pvt(manager), 'initGPS')
+      .mockImplementation(async (...args: unknown[]) => {
+        pvt(manager).gps = createFakeDevice(args[0] as string)
+      })
+
+    await manager.setPortManual('gps', 'COM6')
+
+    expect(previousGPS.disconnect).toHaveBeenCalledTimes(1)
+    expect(initGPSSpy).toHaveBeenCalledWith('COM6')
+    expect(savePortConfigSpy).toHaveBeenCalledWith({ gps: 'COM6' })
+    expect(manager.getState().gps.port).toBe('COM6')
+  })
+
+  it('returns the current state when a scan is already in progress', async () => {
+    const manager = new DeviceManager(mockScanner, fakeFactory)
+    vi.mocked(mockScanner.scanAndProbeAll).mockClear()
+    pvt(manager).scanning = true
+
+    const state = await manager.scan()
+
+    expect(state.scanning).toBe(true)
+    expect(mockScanner.scanAndProbeAll).not.toHaveBeenCalled()
   })
 })

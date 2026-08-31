@@ -4,8 +4,8 @@ import type { DeviceManagerStateDTO } from '../shared/dto'
 import type { DeviceStatus } from '../shared/device.types'
 import type { SessionSummary, InstrumentInfo } from '../shared/ipc.types'
 import type { PersistedSession } from '../shared/services/ISessionRepository'
-import { IPC_EVENTS, IPC_HANDLERS } from '../main/ipc/channels'
-import type { CacheStats, PreloadProgress } from '../main/tile-cache/TileCacheService'
+import { IPC_EVENTS, IPC_HANDLERS } from '../shared/ipc-channels'
+import type { CacheStats, PreloadProgress } from '../shared/tile.types'
 import type { DriverCheckResult, DriverType } from '../shared/driver.types'
 import type { AppErrorInfo } from '../shared/errors/error.types'
 
@@ -153,11 +153,6 @@ const api = {
       sessionId: string
     ): Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }> =>
       ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_GEOJSON, sessionId),
-
-    exportCSV: (
-      sessionId: string
-    ): Promise<{ success: boolean; data?: string; error?: string; truncated?: boolean }> =>
-      ipcRenderer.invoke(IPC_HANDLERS.SESSION_EXPORT_CSV, sessionId),
 
     export: (
       sessionId: string,

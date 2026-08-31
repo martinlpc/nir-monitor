@@ -5,9 +5,11 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { createServices, setupSessionWiring } from './factories/ServiceFactory'
 import { setupIPC } from './ipc/handlers'
+import { EventBus } from './services/EventBus'
 import { TileCacheService } from './tile-cache/TileCacheService'
 import { registerTileProtocol } from './tile-cache/TileProtocolHandler'
-import { setupLogService, getAppLogPath, readAppLog } from './infrastructure/LogService'
+import { setupLogService } from './infrastructure/LogService'
+import { createAlertLogger } from './infrastructure/AlertLogger'
 import type { Services } from './factories/ServiceFactory'
 
 const TILE_CACHE_SCHEME = 'tile-cache'
@@ -116,24 +118,6 @@ app.whenReady().then(() => {
 
   ipcMain.on('ping', () => console.log('pong'))
 
-  ipcMain.handle('logs:get-path', async () => {
-    return { success: true, path: getAppLogPath() }
-  })
-
-  ipcMain.handle('logs:export', async () => {
-    try {
-      const logContent = readAppLog()
-      const desktop = app.getPath('desktop')
-      const { writeFileSync } = await import('fs')
-      const { join } = await import('path')
-      const destPath = join(desktop, `nir-monitor-${Date.now()}.log`)
-      writeFileSync(destPath, logContent, 'utf-8')
-      return { success: true, path: destPath }
-    } catch (err) {
-      return { success: false, error: (err as Error).message }
-    }
-  })
-
   // 1. Initialize tile cache service
   tileCache = new TileCacheService()
   tileCache.ensureBaseDir().catch((err) => {
@@ -146,10 +130,22 @@ app.whenReady().then(() => {
   // 3. Create app services
   services = createServices()
 
+  const alertLogger = createAlertLogger(app.getPath('userData'))
+  const eventBus = new EventBus(alertLogger)
+
   const window = createWindow()
+  eventBus.setWindow(window)
 
   // 4. Setup IPC with tile cache
-  setupIPC(window, services.deviceManager, services.sessionService, tileCache ?? undefined)
+  setupIPC(
+    eventBus,
+    services.deviceManager,
+    services.sessionService,
+    services.exportOrchestrator,
+    services.probeDataService,
+    services.cryptoService,
+    tileCache ?? undefined
+  )
 
   void services.deviceManager
     .initialize()
@@ -164,7 +160,18 @@ app.whenReady().then(() => {
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0 && services) {
       const nextWindow = createWindow()
-      setupIPC(nextWindow, services.deviceManager, services.sessionService, tileCache ?? undefined)
+      const nextAlertLogger = createAlertLogger(app.getPath('userData'))
+      const nextEventBus = new EventBus(nextAlertLogger)
+      nextEventBus.setWindow(nextWindow)
+      setupIPC(
+        nextEventBus,
+        services.deviceManager,
+        services.sessionService,
+        services.exportOrchestrator,
+        services.probeDataService,
+        services.cryptoService,
+        tileCache ?? undefined
+      )
     }
   })
 })

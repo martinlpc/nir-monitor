@@ -98,7 +98,7 @@ React hooks
 | ------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | Drivers       | `src/main/devices/gps/GPSDriver.ts`, `src/main/devices/nbm550/NBM550Driver.ts`, `src/main/devices/nbm550/NBM550Parser.ts` |
 | Servicios     | `src/main/services/DeviceManager.ts`, `src/main/services/SessionService.ts`, `src/main/services/GeoFusionService.ts`      |
-| DB            | `src/main/services/SQLiteSessionRepository.ts`, `src/main/services/FileSessionRepository.ts`                              |
+| DB            | `src/main/services/SQLiteSessionRepository.ts`                                                                             |
 | DB schema     | 3 tablas: `sessions`, `geo_points`, `session_stats`                                                                       |
 | Incertidumbre | `src/main/uncertainty/correctionFactor.ts`                                                                                |
 | Preload       | `src/preload/index.ts` -- `window.api`                                                                                    |

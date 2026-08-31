@@ -5,7 +5,39 @@ const IV_LENGTH = 12
 const AUTH_TAG_LENGTH = 16
 const MAGIC = Buffer.from('NIDB', 'ascii')
 
-function getKey(): Buffer {
+export class CryptoService {
+  private readonly key: Buffer
+
+  constructor(passphrase: string) {
+    this.key = crypto.createHash('sha256').update(passphrase, 'utf8').digest()
+  }
+
+  encrypt(plaintext: Buffer): Buffer {
+    const iv = crypto.randomBytes(IV_LENGTH)
+    const cipher = crypto.createCipheriv(ALGORITHM, this.key, iv)
+    const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()])
+    const authTag = cipher.getAuthTag()
+    return Buffer.concat([MAGIC, authTag, iv, encrypted])
+  }
+
+  decrypt(ciphertext: Buffer): Buffer {
+    const authTag = ciphertext.subarray(MAGIC.length, MAGIC.length + AUTH_TAG_LENGTH)
+    const iv = ciphertext.subarray(
+      MAGIC.length + AUTH_TAG_LENGTH,
+      MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH
+    )
+    const payload = ciphertext.subarray(MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH)
+    const decipher = crypto.createDecipheriv(ALGORITHM, this.key, iv)
+    decipher.setAuthTag(authTag)
+    return Buffer.concat([decipher.update(payload), decipher.final()])
+  }
+}
+
+export function isEncrypted(buffer: Buffer): boolean {
+  return buffer.subarray(0, MAGIC.length).equals(MAGIC)
+}
+
+export function createCryptoServiceFromEnv(): CryptoService {
   const passphrase = process.env.NIR_DB_ENCRYPTION_KEY
   if (!passphrase) {
     throw new Error(
@@ -16,33 +48,5 @@ function getKey(): Buffer {
         '  Reinstale la aplicación o contacte al administrador del sistema.'
     )
   }
-  return crypto.createHash('sha256').update(passphrase, 'utf8').digest()
+  return new CryptoService(passphrase)
 }
-
-export function encrypt(plaintext: Buffer): Buffer {
-  const key = getKey()
-  const iv = crypto.randomBytes(IV_LENGTH)
-  const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
-  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()])
-  const authTag = cipher.getAuthTag()
-  return Buffer.concat([MAGIC, authTag, iv, encrypted])
-}
-
-export function decrypt(ciphertext: Buffer): Buffer {
-  const key = getKey()
-  const authTag = ciphertext.subarray(MAGIC.length, MAGIC.length + AUTH_TAG_LENGTH)
-  const iv = ciphertext.subarray(
-    MAGIC.length + AUTH_TAG_LENGTH,
-    MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH
-  )
-  const payload = ciphertext.subarray(MAGIC.length + AUTH_TAG_LENGTH + IV_LENGTH)
-  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv)
-  decipher.setAuthTag(authTag)
-  return Buffer.concat([decipher.update(payload), decipher.final()])
-}
-
-export function isEncrypted(buffer: Buffer): boolean {
-  return buffer.subarray(0, MAGIC.length).equals(MAGIC)
-}
-
-export { encrypt as encryptBuffer, decrypt as decryptBuffer }

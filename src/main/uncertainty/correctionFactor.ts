@@ -1,4 +1,6 @@
-import { loadBuiltInProbeData } from './loadBuiltInData'
+import type { ProbeRecord } from './loadBuiltInData'
+
+export type ProbeDataLoader = () => ProbeRecord[]
 
 export function normalizeProbeName(name: string): string {
   return name.toUpperCase().replace(/[^A-Z0-9]/g, '')
@@ -18,9 +20,13 @@ export function findFactor(
   return matched?.factor ?? null
 }
 
-export function resolveBuiltInFactor(probeModel: string | null): number | null {
-  if (!probeModel) return null
-  const records = loadBuiltInProbeData()
-  if (records.length === 0) return null
-  return findFactor(records, probeModel)
+export class CorrectionFactorResolver {
+  constructor(private loadProbeData: ProbeDataLoader) {}
+
+  resolve(probeModel: string | null): number | null {
+    if (!probeModel) return null
+    const records = this.loadProbeData()
+    if (records.length === 0) return null
+    return findFactor(records, probeModel)
+  }
 }

@@ -60,25 +60,6 @@ export interface ISessionRepository {
   getSessionPoints(sessionId: string): Promise<GeoTimestamp[]>
 
   /**
-   * Exportar sesión como GeoJSON (con metadata de sesión en propiedades del FeatureCollection)
-   */
-  exportAsGeoJSON(sessionId: string): Promise<string>
-
-  /**
-   * Exportar sesión como XLSX (3 archivos ENACOM: reporte, reporte_p, averif)
-   * @param sessionId ID de la sesión
-   * @param folderPath Carpeta destino
-   * @param label Etiqueta para nombres de archivo
-   * @returns Lista de rutas de archivos generados
-   */
-  exportAsXLSX(sessionId: string, folderPath: string, label: string): Promise<string[]>
-
-  /**
-   * Exportar sesión como KMZ (KML comprimido para Google Earth)
-   */
-  exportAsKMZ(sessionId: string): Promise<Buffer>
-
-  /**
    * Obtener estadísticas pre-calculadas de una sesión
    */
   getSessionStats(sessionId: string): Promise<SessionStats | null>
@@ -93,9 +74,4 @@ export interface ISessionRepository {
     east: number,
     west: number
   ): Promise<GeoTimestamp[]>
-
-  /**
-   * Exportar sesión como CSV
-   */
-  exportAsCSV(sessionId: string): Promise<string>
 }

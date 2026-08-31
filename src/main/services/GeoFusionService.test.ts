@@ -340,4 +340,265 @@ describe('GeoFusionService', () => {
     expect(point.timestamp).toBe(fixedDate.getTime())
     vi.useRealTimers()
   })
+
+  // ── Guardas y manejo de errores ────────────────────────
+
+  it('does not schedule time captures without a session id', async () => {
+    vi.useFakeTimers()
+    const nbm = new FakeNBMDriver()
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'time',
+      minDistanceMeters: 0,
+      intervalMs: 1000
+    })
+
+    gps.setPosition({ lat: -34.6, lon: -58.38, alt: 20 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('')
+
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(nbm.readMeasurement).not.toHaveBeenCalled()
+  })
+
+  it('logs a non-fatal error when the time capture fails', async () => {
+    vi.useFakeTimers()
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    nbm.readMeasurement.mockImplementation(() => Promise.reject(new Error('read failed')))
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'time',
+      minDistanceMeters: 0,
+      intervalMs: 1000
+    })
+
+    gps.setPosition({ lat: -34.6, lon: -58.38, alt: 20 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-fail')
+
+    await vi.advanceTimersByTimeAsync(1100)
+    service.stop()
+    expect(errorSpy).toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('logs a non-fatal error when the distance capture rejects', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    nbm.readMeasurement.mockImplementation(() => Promise.reject(new Error('read failed')))
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-fail2')
+
+    const pointListener = vi.fn()
+    service.on('point', pointListener)
+    service.onGPSPosition(true)
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(pointListener).not.toHaveBeenCalled()
+    expect(errorSpy).toHaveBeenCalled()
+    errorSpy.mockRestore()
+  })
+
+  it('warns when the NBM driver is missing on time capture', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'time',
+      minDistanceMeters: 0,
+      intervalMs: 1000
+    })
+
+    gps.setPosition({ lat: -34.6, lon: -58.38, alt: 20 })
+    service.setGPS(gps as never)
+    service.start('session-nonbm-time')
+
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NBM not available'))
+    warnSpy.mockRestore()
+  })
+
+  it('warns when the GPS driver is missing on time capture', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'time',
+      minDistanceMeters: 0,
+      intervalMs: 1000
+    })
+
+    service.setNBM(nbm as never)
+    service.start('session-nogps-time')
+
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('GPS not available'))
+    warnSpy.mockRestore()
+  })
+
+  it('warns when the GPS fix is invalid on time capture', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'time',
+      minDistanceMeters: 0,
+      intervalMs: 1000
+    })
+
+    gps.setPosition({ lat: -34.6, lon: -58.38, alt: 20 }, false)
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-nofix-time')
+
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('GPS position not valid'))
+    warnSpy.mockRestore()
+  })
+
+  it('warns when no position is available on time capture', async () => {
+    vi.useFakeTimers()
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'time',
+      minDistanceMeters: 0,
+      intervalMs: 1000
+    })
+
+    gps.setPosition(null as never, true)
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-nopos-time')
+
+    await vi.advanceTimersByTimeAsync(1100)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('No position available'))
+    warnSpy.mockRestore()
+  })
+
+  it('ignores distance triggers when the GPS driver is missing', async () => {
+    const nbm = new FakeNBMDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    service.setNBM(nbm as never)
+    service.start('session-nogps-dist')
+    service.onGPSPosition(true)
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(nbm.readMeasurement).not.toHaveBeenCalled()
+  })
+
+  it('ignores distance triggers when no position is available', async () => {
+    const nbm = new FakeNBMDriver()
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-nopos-dist')
+    service.onGPSPosition(true)
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(nbm.readMeasurement).not.toHaveBeenCalled()
+  })
+
+  it('skips capture when another capture is already running', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    nbm.readMeasurement.mockImplementation(() => new Promise(() => {}))
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 1000,
+      intervalMs: 5000,
+      testMode: true
+    })
+
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-busy')
+
+    service.onGPSPosition(true)
+    await new Promise((r) => setTimeout(r, 5))
+    nbm.readMeasurement.mockClear()
+    service.onGPSPosition(true)
+    await new Promise((r) => setTimeout(r, 5))
+
+    expect(nbm.readMeasurement).not.toHaveBeenCalled()
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Already capturing'))
+    logSpy.mockRestore()
+  })
+
+  it('continues capture when resetMaxHold fails', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver()
+    nbm.resetMaxHold.mockImplementation(() => Promise.reject(new Error('reset failed')))
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-resetfail')
+
+    const pointPromise = new Promise<GeoTimestamp>((resolve) => service.once('point', resolve))
+    service.onGPSPosition(true)
+    const point = await pointPromise
+
+    expect(point.emf.rawMeasurement).toBe(8.2)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('resetMaxHold failed'))
+    warnSpy.mockRestore()
+  })
+
+  it('warns when the NBM sample is null', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const nbm = new FakeNBMDriver(null as never)
+    const gps = new FakeGPSDriver()
+    const service = new GeoFusionService({
+      triggerMode: 'distance',
+      minDistanceMeters: 10,
+      intervalMs: 5000
+    })
+
+    gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 25 })
+    service.setNBM(nbm as never)
+    service.setGPS(gps as never)
+    service.start('session-nullsample')
+
+    const pointListener = vi.fn()
+    service.on('point', pointListener)
+    service.onGPSPosition(true)
+    await new Promise((r) => setTimeout(r, 10))
+
+    expect(pointListener).not.toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NBM sample is null'))
+    warnSpy.mockRestore()
+  })
 })

@@ -2,11 +2,11 @@ import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import type { DriverFactory } from '../../shared/driver-factory'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
-import { ConfigService } from '../services/ConfigService'
+import { DEFAULT_NBM_DRIVER, GPS_BAUD_RATE } from '../../shared/config.constants'
 
 export class RealDriverFactory implements DriverFactory {
   createNBM(port: string): INBMDriver {
-    const cfg = ConfigService.DEFAULT_NBM_DRIVER
+    const cfg = DEFAULT_NBM_DRIVER
     return new NBM550Driver({
       port,
       baudRate: cfg.baudRate,
@@ -16,6 +16,6 @@ export class RealDriverFactory implements DriverFactory {
   }
 
   createGPS(port: string): IGPSDriver {
-    return new GPSDriver({ port, baudRate: ConfigService.GPS_BAUD_RATE })
+    return new GPSDriver({ port, baudRate: GPS_BAUD_RATE })
   }
 }

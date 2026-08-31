@@ -1,95 +1,108 @@
-import { ipcMain, app } from 'electron'
-import { readFileSync } from 'fs'
 import { join } from 'path'
-import { IPC_HANDLERS } from './channels'
-import { toUserError } from '../../shared/errors/toUserError'
-import { loadBuiltInProbeData, getBuiltInVersion } from '../uncertainty/loadBuiltInData'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import { normalizeProbeName } from '../uncertainty/correctionFactor'
-import { ConfigService } from '../services/ConfigService'
-import type { DeviceManager } from '../services/DeviceManager'
+import type { IpcMainLike, AppEnv } from './ipcEnv'
+import { sanitizeReThrow } from './ipcEnv'
+import type { ProbeRecord } from '../uncertainty/loadBuiltInData'
+import type { INBMDriver } from '../../shared/driver-interfaces'
+import type { UserAppConfig } from '../../shared/config.types'
 
-function sanitizeReThrow(err: unknown): never {
-  const { message, technical } = toUserError(err)
-  console.error(`[IPC] ${technical}`)
-  throw new Error(message)
+export interface ProbeDataServiceLike {
+  load(): ProbeRecord[]
+  getVersion(): number | null
 }
 
-export function registerSettingsHandlers(deviceManager: DeviceManager): void {
-  ipcMain.handle(IPC_HANDLERS.GET_APP_VERSION, async () => {
+export interface ConfigLike {
+  loadAppConfig(): UserAppConfig
+  updateAppConfig(partial: Partial<UserAppConfig>): void
+}
+
+export interface SettingsHandlerDeps {
+  app: AppEnv
+  readFile: (path: string) => string
+  getNBM: () => INBMDriver | null
+  probeDataService: ProbeDataServiceLike
+  config: ConfigLike
+}
+
+export function matchProbeRecord(records: ProbeRecord[], probeModel: string): ProbeRecord | null {
+  const normalized = normalizeProbeName(probeModel)
+  return (
+    records.find((r) => normalizeProbeName(r.name) === normalized) ??
+    records.find((r) => {
+      const nr = normalizeProbeName(r.name)
+      return normalized.includes(nr) || nr.includes(normalized)
+    }) ??
+    null
+  )
+}
+
+export function registerSettingsHandlers(ipc: IpcMainLike, deps: SettingsHandlerDeps): void {
+  ipc.handle(IPC_HANDLERS.GET_APP_VERSION, async () => {
     try {
-      return { version: app.getVersion() }
+      return { version: deps.app.getVersion() }
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.GET_CHANGELOG, async () => {
+  ipc.handle(IPC_HANDLERS.GET_CHANGELOG, async () => {
     try {
-      const changelogPath = app.isPackaged
+      const changelogPath = deps.app.isPackaged
         ? join(process.resourcesPath, 'CHANGELOG.md')
-        : join(app.getAppPath(), 'CHANGELOG.md')
-      const content = readFileSync(changelogPath, 'utf-8')
+        : join(deps.app.getAppPath(), 'CHANGELOG.md')
+      const content = deps.readFile(changelogPath)
       return { content }
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA, async () => {
+  ipc.handle(IPC_HANDLERS.GET_BUILT_IN_PROBE_DATA, async () => {
     try {
-      const records = loadBuiltInProbeData()
-      const version = getBuiltInVersion()
+      const records = deps.probeDataService.load()
+      const version = deps.probeDataService.getVersion()
       return { success: true, version, records }
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.GET_PROBE_INFO, async () => {
+  ipc.handle(IPC_HANDLERS.GET_PROBE_INFO, async () => {
     try {
-      const nbm = deviceManager.getNBM()
+      const nbm = deps.getNBM()
       if (!nbm || !nbm.isConnected()) {
         return { success: false, error: 'NBM-550 no conectado' }
       }
-      const probeInfo = nbm.getProbeInfo()
-      return { success: true, probeInfo }
+      return { success: true, probeInfo: nbm.getProbeInfo() }
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.GET_DEVICE_INFO, async () => {
+  ipc.handle(IPC_HANDLERS.GET_DEVICE_INFO, async () => {
     try {
-      const nbm = deviceManager.getNBM()
+      const nbm = deps.getNBM()
       if (!nbm || !nbm.isConnected()) {
         return { success: false, error: 'NBM-550 no conectado' }
       }
-      const deviceInfo = nbm.getDeviceInfo()
-      return { success: true, deviceInfo }
+      return { success: true, deviceInfo: nbm.getDeviceInfo() }
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY, async () => {
+  ipc.handle(IPC_HANDLERS.GET_ACTIVE_UNCERTAINTY, async () => {
     try {
-      const nbm = deviceManager.getNBM()
-      const probeInfo = nbm?.getProbeInfo() ?? null
+      const probeInfo = deps.getNBM()?.getProbeInfo() ?? null
       const probeModel = probeInfo?.model ?? null
 
       if (!probeModel) {
         return { success: true, factor: null, matchedRecord: null, probeModel }
       }
 
-      const records = loadBuiltInProbeData()
-      const normalizedProbe = normalizeProbeName(probeModel)
-      const matched =
-        records.find((r) => normalizeProbeName(r.name) === normalizedProbe) ??
-        records.find(
-          (r) =>
-            normalizedProbe.includes(normalizeProbeName(r.name)) ||
-            normalizeProbeName(r.name).includes(normalizedProbe)
-        )
+      const records = deps.probeDataService.load()
+      const matched = matchProbeRecord(records, probeModel)
 
       return {
         success: true,
@@ -102,20 +115,18 @@ export function registerSettingsHandlers(deviceManager: DeviceManager): void {
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.GET_SOUNDS_ENABLED, async () => {
+  ipc.handle(IPC_HANDLERS.GET_SOUNDS_ENABLED, async () => {
     try {
-      const config = new ConfigService()
-      const appConfig = config.loadAppConfig()
+      const appConfig = deps.config.loadAppConfig()
       return { success: true, enabled: appConfig.soundsEnabled ?? true }
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.SET_SOUNDS_ENABLED, async (_, enabled: boolean) => {
+  ipc.handle(IPC_HANDLERS.SET_SOUNDS_ENABLED, async (_event, enabled: boolean) => {
     try {
-      const config = new ConfigService()
-      config.updateAppConfig({ soundsEnabled: enabled })
+      deps.config.updateAppConfig({ soundsEnabled: enabled })
       return { success: true }
     } catch (err) {
       sanitizeReThrow(err)

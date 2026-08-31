@@ -1,31 +1,25 @@
-import { ipcMain } from 'electron'
-import { IPC_HANDLERS } from './channels'
-import { toUserError } from '../../shared/errors/toUserError'
-import { DriverDetector } from '../drivers/DriverDetector'
-import { DriverInstaller } from '../drivers/DriverInstaller'
-import type { DriverType } from '../../shared/driver.types'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
+import type { IpcMainLike } from './ipcEnv'
+import { sanitizeReThrow } from './ipcEnv'
+import type { DriverCheckResult, DriverType } from '../../shared/driver.types'
 
-function sanitizeReThrow(err: unknown): never {
-  const { message, technical } = toUserError(err)
-  console.error(`[IPC] ${technical}`)
-  throw new Error(message)
+export interface DriverHandlerDeps {
+  checkDrivers: () => Promise<DriverCheckResult>
+  installDriver: (driverType: DriverType) => Promise<void>
 }
 
-export function registerDriverHandlers(): void {
-  const detector = new DriverDetector()
-  const installer = new DriverInstaller()
-
-  ipcMain.handle(IPC_HANDLERS.DRIVERS_CHECK, async () => {
+export function registerDriverHandlers(ipc: IpcMainLike, deps: DriverHandlerDeps): void {
+  ipc.handle(IPC_HANDLERS.DRIVERS_CHECK, async () => {
     try {
-      return await detector.check()
+      return await deps.checkDrivers()
     } catch (err) {
       sanitizeReThrow(err)
     }
   })
 
-  ipcMain.handle(IPC_HANDLERS.DRIVERS_INSTALL, async (_event, driverType: DriverType) => {
+  ipc.handle(IPC_HANDLERS.DRIVERS_INSTALL, async (_event, driverType: DriverType) => {
     try {
-      await installer.install(driverType)
+      await deps.installDriver(driverType)
     } catch (err) {
       sanitizeReThrow(err)
     }

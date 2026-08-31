@@ -75,7 +75,6 @@ CREATE INDEX IF NOT EXISTS idx_geo_lat_lon ON geo_points(lat, lon)
 
 - `ISessionRepository` en `src/shared/services/` (interface)
 - `SQLiteSessionRepository` (principal, activa)
-- `FileSessionRepository` (GeoJSON-based, fallback inactivo)
 
 ## Batching
 

@@ -1,11 +1,14 @@
 import { EventEmitter } from 'events'
 import { v4 as uuidv4 } from 'uuid'
-import { GeoFusionService, type GeoFusionConfig } from './GeoFusionService'
+import { validateCanStart } from './SessionValidator'
+import { buildFusionConfig } from './SessionConfigBuilder'
+import type { SessionConfigInput } from './SessionConfigBuilder'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { INBMDriver, IGPSDriver } from '../../shared/driver-interfaces'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
 import type { ISessionRepository } from '../../shared/services/ISessionRepository'
-import { resolveBuiltInFactor } from '../uncertainty/correctionFactor'
+import type { IGeoFusionService } from '../../shared/services/IGeoFusionService'
+import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
 import { ConfigService } from './ConfigService'
 import { AppError } from '../../shared/errors/AppError'
 
@@ -21,21 +24,21 @@ export class SessionService extends EventEmitter {
   private pendingFinalize = false
   private readonly MAX_SAVE_RETRIES = 3
 
-  private fusion: GeoFusionService
+  private fusion: IGeoFusionService
   private nbm: INBMDriver | null = null
   private gps: IGPSDriver | null = null
   private repository: ISessionRepository | null = null
   private config: ConfigService | null = null
   private instrument: InstrumentInfo | null = null
   private correctionFactor: number | null = null
+  private correctionResolver: CorrectionFactorResolver
   private provincia: string = ''
   private localidad: string = ''
   private apellido1: string = ''
   private apellido2: string = ''
 
   private resolveCorrectionFactor(probeModel: string | null): number | null {
-    if (!probeModel) return null
-    return resolveBuiltInFactor(probeModel)
+    return this.correctionResolver.resolve(probeModel)
   }
 
   private syncCorrectionFactorFromProbe(probeModel: string | null): void {
@@ -47,11 +50,17 @@ export class SessionService extends EventEmitter {
     )
   }
 
-  constructor(fusion: GeoFusionService, repository?: ISessionRepository, config?: ConfigService) {
+  constructor(
+    fusion: IGeoFusionService,
+    repository?: ISessionRepository,
+    config?: ConfigService,
+    correctionResolver?: CorrectionFactorResolver
+  ) {
     super()
     this.fusion = fusion
     this.repository = repository || null
     this.config = config ?? null
+    this.correctionResolver = correctionResolver ?? new CorrectionFactorResolver(() => [])
 
     this.fusion.on('point', (point: GeoTimestamp) => {
       this.pointCount++
@@ -125,7 +134,7 @@ export class SessionService extends EventEmitter {
 
   async start(
     label: string = '',
-    fusionConfig?: Partial<GeoFusionConfig>,
+    fusionConfig?: SessionConfigInput,
     locationData?: {
       provincia?: string
       localidad?: string
@@ -133,46 +142,7 @@ export class SessionService extends EventEmitter {
       apellido2?: string
     }
   ): Promise<string> {
-    if (this.state === 'running') {
-      throw new AppError({
-        code: 'SESSION_ALREADY_RUNNING',
-        message: 'Ya hay una sesión en curso',
-        severity: 'warning',
-        category: 'session',
-        userAction: 'Detenga la sesión actual antes de iniciar una nueva',
-        retryable: true
-      })
-    }
-    if (!this.nbm?.isConnected()) {
-      throw new AppError({
-        code: 'SESSION_NBM_NOT_CONNECTED',
-        message: 'NBM-550 no conectado',
-        severity: 'error',
-        category: 'session',
-        userAction: 'Conecte el NBM-550 en el panel de dispositivos antes de iniciar la sesión',
-        retryable: true
-      })
-    }
-    if (!this.gps?.isConnected()) {
-      throw new AppError({
-        code: 'SESSION_GPS_NOT_CONNECTED',
-        message: 'GPS no conectado',
-        severity: 'error',
-        category: 'session',
-        userAction: 'Conecte el GPS en el panel de dispositivos antes de iniciar la sesión',
-        retryable: true
-      })
-    }
-    if (!this.gps.isPositionValid()) {
-      throw new AppError({
-        code: 'SESSION_GPS_NO_FIX',
-        message: 'GPS sin fix: espere a obtener señal antes de iniciar la sesión',
-        severity: 'warning',
-        category: 'session',
-        userAction: 'Despeje la vista al cielo y espere a que el GPS obtenga señal',
-        retryable: true
-      })
-    }
+    validateCanStart(this.state, this.nbm, this.gps)
 
     this.currentSessionId = uuidv4()
     this.startedAt = Date.now()
@@ -189,40 +159,14 @@ export class SessionService extends EventEmitter {
     console.log(`[SessionService] fusionConfig:`, fusionConfig)
 
     const appConfig = this.config?.loadAppConfig() ?? {}
-    const merged: Partial<GeoFusionConfig> = {}
+    const resolved = buildFusionConfig(appConfig, fusionConfig as SessionConfigInput | undefined)
 
-    if (appConfig.triggerMode) merged.triggerMode = appConfig.triggerMode
-    if (appConfig.intervalMs != null) merged.intervalMs = appConfig.intervalMs
-    if (appConfig.minDistanceMeters != null) merged.minDistanceMeters = appConfig.minDistanceMeters
-
-    if (fusionConfig) {
-      if (fusionConfig.triggerMode !== undefined) merged.triggerMode = fusionConfig.triggerMode
-      if (fusionConfig.intervalMs !== undefined) merged.intervalMs = fusionConfig.intervalMs
-      if (fusionConfig.minDistanceMeters !== undefined)
-        merged.minDistanceMeters = fusionConfig.minDistanceMeters
-      if (fusionConfig.testMode !== undefined) merged.testMode = fusionConfig.testMode
-    }
-
-    fusionConfig = Object.keys(merged).length > 0 ? merged : undefined
-
-    // En modo test, convertir a captura por tiempo
-    if (fusionConfig?.testMode) {
-      console.log(
-        `[SessionService] testMode detected - converting to time-based trigger (5s intervals)`
-      )
-      fusionConfig = {
-        ...fusionConfig,
-        triggerMode: 'time',
-        intervalMs: fusionConfig.intervalMs || 5000
-      }
-    }
-
-    console.log(`[SessionService] final fusionConfig:`, fusionConfig)
-    if (fusionConfig) this.fusion.updateConfig(fusionConfig)
+    console.log(`[SessionService] final fusionConfig:`, resolved)
+    if (resolved) this.fusion.updateConfig(resolved)
 
     console.log(`[SessionService] Resetting NBM max hold...`)
     try {
-      await this.nbm.resetMaxHold()
+      await this.nbm!.resetMaxHold()
     } catch (err) {
       const isNormalError = err instanceof AppError && err.code === 'NBM_100'
       if (isNormalError) {
@@ -234,14 +178,14 @@ export class SessionService extends EventEmitter {
 
     // Inicializar sesión en el repositorio antes de empezar a capturar
     if (this.repository) {
-      const probeInfo = this.nbm.getProbeInfo()
-      const deviceInfo = this.nbm.getDeviceInfo()
+      const probeInfo = this.nbm!.getProbeInfo()
+      const deviceInfo = this.nbm!.getDeviceInfo()
 
       this.instrument = {
         meter: {
           brand: 'Narda',
           model: 'NBM-550',
-          serial: deviceInfo?.serialNumber ?? this.nbm.getMeterSerial() ?? null,
+          serial: deviceInfo?.serialNumber ?? this.nbm!.getMeterSerial() ?? null,
           lastCalibrationDate: deviceInfo?.calDate ?? null
         },
         probe: {
