@@ -1,12 +1,7 @@
 import { createContext, useEffect, useState, type ReactNode } from 'react'
+import type { GeoPosition } from '../../../shared/GeoTimestamp'
 
-export interface GpsPosition {
-  lat: number
-  lon: number
-  alt: number
-  heading?: number
-  speed?: number
-}
+export type GpsPosition = GeoPosition
 
 export interface GpsPositionState {
   position: GpsPosition | null

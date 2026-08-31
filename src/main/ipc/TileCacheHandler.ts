@@ -1,4 +1,4 @@
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import type { IpcMainLike, EventSink, DialogLike } from './ipcEnv'
 import { sanitizeReThrow } from './ipcEnv'
 import type { PreloadProgress } from '../../shared/tile.types'

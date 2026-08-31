@@ -1,6 +1,6 @@
 // Handlers IPC para DeviceManager - sin lógica de negocio
 // Solo orquesta: DeviceManager → Renderer
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import type { IpcMainLike, EventSink } from './ipcEnv'
 import { sanitizeReThrow } from './ipcEnv'
 import { DeviceEventPresenter } from './DeviceEventPresenter'

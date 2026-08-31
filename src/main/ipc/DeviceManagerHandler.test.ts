@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import { registerDeviceManagerHandlers } from './DeviceManagerHandler'
 import type { DeviceManagerHandlerDeps } from './DeviceManagerHandler'
 import type { DeviceManagerState } from '../services/DeviceManager'

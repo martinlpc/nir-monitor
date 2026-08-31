@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { join } from 'path'
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import {
   buildEncryptedDesktopFilename,
   buildImportedSession,

@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import { toUserError } from '../../shared/errors/toUserError'
 import { isValidSessionId } from '../../shared/validate'
 import { v4 as uuidv4 } from 'uuid'

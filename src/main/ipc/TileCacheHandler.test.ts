@@ -1,7 +1,7 @@
 import { EventEmitter } from 'events'
 import { describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import { registerTileCacheHandlers } from './TileCacheHandler'
 import type { TileCacheHandlerDeps } from './TileCacheHandler'
 import type { EventSink, DialogLike } from './ipcEnv'

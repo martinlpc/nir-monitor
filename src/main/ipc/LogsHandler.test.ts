@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import { registerLogsHandlers } from './LogsHandler'
 import type { LogsHandlerDeps } from './LogsHandler'
 import { createFakeIpc } from './ipcTestUtils'

@@ -1,5 +1,7 @@
 // DTOs para comunicación IPC - Desacoplados de implementaciones internas
-export type DeviceStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
+import type { DeviceStatus } from '../device.types'
+
+export type { DeviceStatus }
 
 export interface DeviceDTO {
   id: string

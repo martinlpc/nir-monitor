@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { IPC_HANDLERS } from './channels'
+import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import { registerDriverHandlers } from './DriverHandler'
 import type { DriverHandlerDeps } from './DriverHandler'
 import type { DriverCheckResult } from '../../shared/driver.types'

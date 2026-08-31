@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+import { IPC_EVENTS } from '../../shared/ipc-channels'
 import type { DeviceStatus } from '../../shared/device.types'
 import type { GeoPosition, GeoTimestamp } from '../../shared/GeoTimestamp'
 import type { SessionSummary, InstrumentInfo } from '../../shared/ipc.types'
@@ -6,7 +7,11 @@ import type { AppErrorInfo } from '../../shared/errors/error.types'
 import type { PreloadProgress } from '../../shared/tile.types'
 import { AlertLogger, getDefaultAlertLogger } from '../infrastructure/AlertLogger'
 
-export interface EventMap {
+/** Canales IPC (push) posibles — fuente de verdad única en `IPC_EVENTS`. */
+export type EventChannel = (typeof IPC_EVENTS)[keyof typeof IPC_EVENTS]
+
+/** Tipos de payload por canal, alineados con `IPC_EVENTS`. */
+export interface EventPayloads {
   'gps:position': { coords: GeoPosition | null; valid: boolean; port: string }
   'gps:nmea': { line: string; port: string }
   'gps:fix-lost': null
@@ -31,6 +36,17 @@ export interface EventMap {
   'tile:import-progress': { imported: number; skipped: number; total: number }
 }
 
+// Verificación en tiempo de compilación: las claves de EventPayloads deben
+// coincidir con todos los canales definidos en IPC_EVENTS.
+type ChannelsInPayloads = keyof EventPayloads
+export type AssertChannelsSynchronized = Exclude<EventChannel, ChannelsInPayloads> extends never
+  ? Exclude<ChannelsInPayloads, EventChannel> extends never
+    ? true
+    : 'EventPayloads has channels not in IPC_EVENTS'
+  : 'IPC_EVENTS has channels missing from EventPayloads'
+
+export type EventMap = EventPayloads
+
 export class EventBus {
   private window: BrowserWindow | null = null
   private readonly alertLogger: AlertLogger
@@ -47,7 +63,7 @@ export class EventBus {
     return this.window
   }
 
-  send<K extends keyof EventMap>(channel: K, data: EventMap[K]): void {
+  send<K extends EventChannel>(channel: K, data: EventPayloads[K]): void {
     if (this.window && !this.window.webContents.isDestroyed()) {
       this.window.webContents.send(channel, data)
     }
