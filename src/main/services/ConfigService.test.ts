@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { ConfigService } from './ConfigService'
-import { DEFAULT_NBM_POLLING } from '../../shared/config.constants'
+import { DEFAULT_NBM_POLLING, NBM_BAUD_RATE, NBM_OPTICAL_BAUD_RATE } from '../../shared/config.constants'
 import * as fs from 'fs'
 import * as path from 'path'
 import * as os from 'os'
@@ -222,6 +222,28 @@ describe('ConfigService', () => {
       const loaded = cfg.loadPortConfig()
       expect(loaded.nbm550).toBe('COM7')
       expect(loaded.gps).toBeUndefined()
+    })
+
+    it('nbmConnectionType defaults to usb', () => {
+      expect(cfg.nbmConnectionType).toBe('usb')
+    })
+
+    it('nbmConnectionType reads persisted connectionType', () => {
+      cfg.saveAppConfig({ connectionType: 'optical' })
+      expect(cfg.nbmConnectionType).toBe('optical')
+    })
+
+    it('nbmDriverConfig reflects persisted connectionType and baud', () => {
+      cfg.saveAppConfig({ connectionType: 'optical' })
+      const driverConfig = cfg.nbmDriverConfig
+      expect(driverConfig.connectionType).toBe('optical')
+      expect(driverConfig.baudRate).toBe(NBM_OPTICAL_BAUD_RATE)
+    })
+
+    it('nbmDriverConfig keeps default baud when no connectionType is set', () => {
+      const driverConfig = cfg.nbmDriverConfig
+      expect(driverConfig.connectionType).toBe('usb')
+      expect(driverConfig.baudRate).toBe(NBM_BAUD_RATE)
     })
   })
 })

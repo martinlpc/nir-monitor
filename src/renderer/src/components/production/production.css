@@ -304,6 +304,22 @@
   color: var(--nir-accent-warm);
 }
 
+.device-card__interface-select {
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  border-radius: 4px;
+  border: 1px solid var(--nir-border-blue);
+  background: rgba(23, 34, 75, 0.7);
+  color: var(--nir-text);
+  outline: none;
+  cursor: pointer;
+}
+
+.device-card__interface-select option {
+  background: inherit;
+  color: inherit;
+}
+
 .device-info-separator {
   height: 1px;
   background: var(--nir-border-blue);

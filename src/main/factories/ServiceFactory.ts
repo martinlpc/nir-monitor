@@ -62,7 +62,7 @@ export function createServices(): Services {
   // 1. Crear dependencias base
   const scanner: ISerialPortScanner = config.simulationMode
     ? createSimulatedScanner()
-    : new SerialPortScanner()
+    : new SerialPortScanner(undefined, config.nbmConnectionType)
   const driverFactory: DriverFactory = config.simulationMode
     ? new SimulatedDriverFactory()
     : new RealDriverFactory()

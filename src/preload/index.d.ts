@@ -167,6 +167,10 @@ declare global {
         }>
         getSoundsEnabled: () => Promise<{ success: boolean; enabled: boolean }>
         setSoundsEnabled: (enabled: boolean) => Promise<{ success: boolean }>
+        getNbmConnectionType: () => Promise<{ success: boolean; connectionType: 'usb' | 'optical' }>
+        setNbmConnectionType: (
+          connectionType: 'usb' | 'optical'
+        ) => Promise<{ success: boolean }>
       }
       tileCache: {
         getStats: () => Promise<{

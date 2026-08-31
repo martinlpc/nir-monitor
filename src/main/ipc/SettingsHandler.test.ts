@@ -250,6 +250,42 @@ describe('registerSettingsHandlers', () => {
     expect(result).toEqual({ success: true, enabled: false })
   })
 
+  it('GET_NBM_CONNECTION_TYPE defaults to usb', async () => {
+    const { ipc, handlers } = createFakeIpc()
+    const deps = makeDeps()
+
+    registerSettingsHandlers(ipc, deps)
+
+    const result = await handlers.get(IPC_HANDLERS.GET_NBM_CONNECTION_TYPE)!(undefined)
+    expect(result).toEqual({ success: true, connectionType: 'usb' })
+  })
+
+  it('GET_NBM_CONNECTION_TYPE reads the persisted connectionType', async () => {
+    const { ipc, handlers } = createFakeIpc()
+    const deps = makeDeps({
+      config: {
+        loadAppConfig: () => ({ connectionType: 'optical' }),
+        updateAppConfig: vi.fn()
+      }
+    })
+
+    registerSettingsHandlers(ipc, deps)
+
+    const result = await handlers.get(IPC_HANDLERS.GET_NBM_CONNECTION_TYPE)!(undefined)
+    expect(result).toEqual({ success: true, connectionType: 'optical' })
+  })
+
+  it('SET_NBM_CONNECTION_TYPE persists the value', async () => {
+    const { ipc, handlers } = createFakeIpc()
+    const deps = makeDeps()
+
+    registerSettingsHandlers(ipc, deps)
+
+    await handlers.get(IPC_HANDLERS.SET_NBM_CONNECTION_TYPE)!(undefined, 'optical')
+    const result = await handlers.get(IPC_HANDLERS.GET_NBM_CONNECTION_TYPE)!(undefined)
+    expect(result).toEqual({ success: true, connectionType: 'optical' })
+  })
+
   it('GET_CHANGELOG rethrows a sanitized error when reading fails', async () => {
     const { ipc, handlers } = createFakeIpc()
     const deps = makeDeps({

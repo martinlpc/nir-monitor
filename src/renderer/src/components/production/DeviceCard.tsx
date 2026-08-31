@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { DeviceStatus } from '../../../../shared/device.types'
 import { useGpsCardInfo, useNbmCardInfo } from './useDeviceCardState'
 import './production.css'
@@ -33,6 +33,25 @@ export default function DeviceCard({
   const gpsInfo = useGpsCardInfo(device.type === 'gps')
   const nbmInfo = useNbmCardInfo(device.type === 'emf', status)
   const [confirmDisconnect, setConfirmDisconnect] = useState(false)
+  const [connectionType, setConnectionType] = useState<'usb' | 'optical'>('usb')
+
+  useEffect(() => {
+    if (device.type !== 'emf') return
+    let cancelled = false
+    window.api.settings.getNbmConnectionType().then((res) => {
+      if (!cancelled && res.success) setConnectionType(res.connectionType)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [device.type])
+
+  const handleInterfaceChange = async (value: string): Promise<void> => {
+    const next = value === 'optical' ? 'optical' : 'usb'
+    setConnectionType(next)
+    await window.api.settings.setNbmConnectionType(next)
+  }
+
   const isConnected = status === 'connected'
   const isStandby = device.type === 'emf' && isConnected && nbmInfo.mode === 'standby'
 
@@ -163,6 +182,18 @@ export default function DeviceCard({
             <div className="info-row">
               <span className="info-label">Puerto:</span>
               <span className={`info-value ${!hasPort ? 'no-port' : ''}`}>{device.port}</span>
+            </div>
+            <div className="info-row">
+              <span className="info-label">Interface:</span>
+              <select
+                className="device-card__interface-select"
+                value={connectionType}
+                onChange={(e) => handleInterfaceChange(e.target.value)}
+                aria-label="Interface NBM-550"
+              >
+                <option value="usb">USB</option>
+                <option value="optical">Óptico</option>
+              </select>
             </div>
           </>
         )}

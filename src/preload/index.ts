@@ -297,7 +297,13 @@ const api = {
       ipcRenderer.invoke(IPC_HANDLERS.GET_SOUNDS_ENABLED),
 
     setSoundsEnabled: (enabled: boolean): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke(IPC_HANDLERS.SET_SOUNDS_ENABLED, enabled)
+      ipcRenderer.invoke(IPC_HANDLERS.SET_SOUNDS_ENABLED, enabled),
+
+    getNbmConnectionType: (): Promise<{ success: boolean; connectionType: 'usb' | 'optical' }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.GET_NBM_CONNECTION_TYPE),
+
+    setNbmConnectionType: (connectionType: 'usb' | 'optical'): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.SET_NBM_CONNECTION_TYPE, connectionType)
   },
 
   tileCache: {
