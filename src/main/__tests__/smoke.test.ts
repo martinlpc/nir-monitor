@@ -91,11 +91,6 @@ vi.mock('@serialport/parser-readline', () => ({
   ReadlineParser: vi.fn()
 }))
 
-vi.mock('../services/PortConfig', () => ({
-  loadPortConfig: vi.fn(() => ({})),
-  savePortConfig: vi.fn()
-}))
-
 vi.mock('nmea-simple', () => ({
   parseNmeaSentence: (...args: unknown[]) => mockParseNmeaSentence(...args)
 }))

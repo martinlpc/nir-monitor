@@ -24,6 +24,11 @@ import {
   DEFAULT_GEO_FUSION
 } from '../../shared/config.constants'
 
+export interface PortConfigData {
+  nbm550?: string
+  gps?: string
+}
+
 export class ConfigService {
   // ── Instance state ─────────────────────────────────────
 
@@ -90,16 +95,16 @@ export class ConfigService {
 
   // ── Port config (persisted port assignments) ───────────
 
-  loadPortConfig(): { nbm550?: string; gps?: string } {
+  loadPortConfig(): PortConfigData {
     try {
       if (!existsSync(this.portConfigPath)) return {}
-      return JSON.parse(readFileSync(this.portConfigPath, 'utf-8'))
+      return JSON.parse(readFileSync(this.portConfigPath, 'utf-8')) as PortConfigData
     } catch {
       return {}
     }
   }
 
-  savePortConfig(config: { nbm550?: string; gps?: string }): void {
+  savePortConfig(config: PortConfigData): void {
     try {
       writeFileSync(this.portConfigPath, JSON.stringify(config, null, 2), 'utf-8')
     } catch {

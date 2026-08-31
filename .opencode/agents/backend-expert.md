@@ -81,7 +81,7 @@ ServiceFactory → inyección manual de dependencias + wiring de eventos
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Drivers           | `src/main/devices/gps/GPSDriver.ts`, `src/main/devices/nbm550/NBM550Driver.ts`, `src/main/devices/nbm550/NBM550Parser.ts`                                                                                                    |
 | Servicios         | `src/main/services/DeviceManager.ts`, `src/main/services/SessionService.ts`, `src/main/services/GeoFusionService.ts`                                                                                                         |
-| Persistencia      | `src/main/services/SQLiteSessionRepository.ts`, `src/main/services/FileSessionRepository.ts`, `src/main/services/PortConfig.ts`                                                                                              |
+| Persistencia      | `src/main/services/SQLiteSessionRepository.ts`                                                                                                             |
 | IPC               | `src/main/ipc/channels.ts`, `src/main/ipc/handlers.ts`, `src/main/ipc/DeviceManagerHandler.ts`, `src/main/ipc/SessionServiceHandler.ts`                                                                                      |
 | Fábrica           | `src/main/factories/ServiceFactory.ts`                                                                                                                                                                                       |
 | Infraestructura   | `src/main/infrastructure/SerialPortScanner.ts`                                                                                                                                                                               |
@@ -115,9 +115,7 @@ ServiceFactory → inyección manual de dependencias + wiring de eventos
 - Puede modificar interfaces en `src/shared/services/` y tipos en `src/shared/` cuando el cambio lo requiera
 - NO introducir dependencias nuevas sin aprobación explícita
 - NO romper la compatibilidad del esquema SQLite sin plan de migración
-- NO eliminar el `FileSessionRepository` (es fallback activo)
 - SIEMPRE considerar el impacto en la reconexión y el re-wiring al modificar drivers o servicios
-- Al agregar un nuevo dispositivo, seguir el patrón existente: crear carpeta en `src/main/devices/<nombre>/`, implementar `IDeviceDriver`, registrar en `DeviceManager` y `SerialPortScanner`
 
 ## Coordinación con otros agentes
 

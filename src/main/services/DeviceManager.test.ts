@@ -2,7 +2,7 @@ import { EventEmitter } from 'events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeviceManager } from './DeviceManager'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
-import type { PortConfigData } from './PortConfig'
+import type { PortConfigData } from './ConfigService'
 import { AppError } from '../../shared/errors/AppError'
 
 interface DeviceManagerPrivate {

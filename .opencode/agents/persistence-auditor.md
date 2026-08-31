@@ -16,7 +16,6 @@ You are a **persistence and data-storage auditor** specialized in Electron + SQL
 This project (RNI Monitor) uses:
 
 - **SQLite** (via sql.js/WASM) as primary storage for sessions, geo points, and stats
-- **FileSessionRepository** as alternative (GeoJSON-based, currently unused)
 - **Repository Pattern** with `ISessionRepository` interface
 - **IPC-based architecture**: React hooks → IPC channels → Services → Repositories → DB
 - **Real-time data flow**: GPS + NBM device fusion → GeoTimestamp points → incremental saves
@@ -24,7 +23,6 @@ This project (RNI Monitor) uses:
 Key files to audit:
 
 - `src/main/services/SQLiteSessionRepository.ts` — primary persistence
-- `src/main/services/FileSessionRepository.ts` — alternative persistence
 - `src/main/services/SessionService.ts` — session orchestration & point accumulation
 - `src/main/services/GeoFusionService.ts` — sensor data fusion
 - `src/main/factories/ServiceFactory.ts` — dependency wiring
