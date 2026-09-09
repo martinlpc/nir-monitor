@@ -330,7 +330,7 @@
       />
       <h1>RNI <span>Monitor</span></h1>
       <p class="subtitle">Manual de uso</p>
-      <p class="meta">Versión <strong>0.16.2</strong> &mdash; Agosto 2026</p>
+      <p class="meta">Versión <strong>0.17.0</strong> &mdash; Septiembre 2026</p>
       <p class="cover-org">
         <strong>Ente Nacional de Comunicaciones</strong><br />
         Dirección Nacional de Control y Fiscalización
@@ -526,6 +526,29 @@
           para poder iniciar una sesión. Mientras no tenga fix, el LED se muestra en rojo y el
           cartel indica "Buscando posición...". Puede tomar desde segundos hasta varios minutos
           según las condiciones.
+        </div>
+
+        <h3>4.4 Interfaz del NBM-550 (USB / Óptico)</h3>
+        <p>
+          El NBM-550 puede conectarse por <strong>USB</strong> (460800 bps) o por su
+          <strong>puerto óptico</strong> (115200 bps). En la tarjeta del device, la app muestra un
+          selector de <strong>Interface</strong>:
+        </p>
+        <ul>
+          <li>Seleccioná <strong>USB</strong> cuando uses el cable propietario Narda a USB.</li>
+          <li>
+            Seleccioná <strong>Óptico</strong> cuando conectes el NBM-550 por su puerto óptico.
+          </li>
+        </ul>
+        <p>
+          La opción elegida se <strong>guarda automáticamente</strong> y se aplica en el próximo
+          escaneo y conexión. El protocolo de medición es idéntico en ambos casos; solo cambia la
+          velocidad del puerto serie.
+        </p>
+        <div class="info-box">
+          <strong>Importante:</strong> Si cambiás la interfaz, volvé a presionar
+          <strong>"Escanear puertos"</strong> para que la detección se haga con el baud
+          correspondiente a la interfaz seleccionada.
         </div>
       </section>
 
@@ -1023,10 +1046,11 @@
             </tr>
             <tr>
               <td><strong>Error de conexión NBM-550</strong></td>
-              <td>Cable propietario mal conectado; baud rate incorrecto; NBM apagado.</td>
+              <td>Cable propietario mal conectado; interfaz (USB/Óptico) incorrecta; NBM apagado.</td>
               <td>
-                Verificá que el NBM-550 esté encendido. Revisá el cable en ambos extremos. Volvé a
-                escanear y reconectar.
+                Verificá que el NBM-550 esté encendido. Revisá el cable en ambos extremos. Confirmá
+                que el selector de <strong>Interface</strong> en la tarjeta del device coincida con
+                la conexión física (USB u Óptico) y volvé a escanear y reconectar.
               </td>
             </tr>
             <tr>
@@ -1088,7 +1112,7 @@
         Contacto:
         <a href="mailto:mpacheco@enacom.gob.ar" style="color: #bce4f4">mpacheco@enacom.gob.ar</a>
       </p>
-      <p style="margin-top: 0.3rem; font-size: 0.75rem">Versión 0.16.2 &mdash; Agosto 2026</p>
+      <p style="margin-top: 0.3rem; font-size: 0.75rem">Versión 0.17.0 &mdash; Septiembre 2026</p>
     </footer>
   </body>
 </html>
