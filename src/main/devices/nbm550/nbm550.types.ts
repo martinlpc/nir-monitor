@@ -31,6 +31,7 @@ export interface NBM550Config {
   baudRate: number // 460800
   pollIntervalMs: number // cada cuántos ms pedir muestra, mínimo 200 (5Hz)
   unit: 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
+  connectionType?: 'usb' | 'optical'
 }
 
 export const NBM550_DEFAULTS: NBM550Config = {

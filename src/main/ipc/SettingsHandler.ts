@@ -132,4 +132,22 @@ export function registerSettingsHandlers(ipc: IpcMainLike, deps: SettingsHandler
       sanitizeReThrow(err)
     }
   })
+
+  ipc.handle(IPC_HANDLERS.GET_NBM_CONNECTION_TYPE, async () => {
+    try {
+      const appConfig = deps.config.loadAppConfig()
+      return { success: true, connectionType: appConfig.connectionType ?? 'usb' }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
+  })
+
+  ipc.handle(IPC_HANDLERS.SET_NBM_CONNECTION_TYPE, async (_event, connectionType: 'usb' | 'optical') => {
+    try {
+      deps.config.updateAppConfig({ connectionType })
+      return { success: true }
+    } catch (err) {
+      sanitizeReThrow(err)
+    }
+  })
 }

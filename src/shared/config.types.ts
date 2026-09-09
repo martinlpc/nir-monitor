@@ -1,7 +1,10 @@
+export type NbmConnectionType = 'usb' | 'optical'
+
 export interface NbmDriverConfig {
   baudRate: number
   pollIntervalMs: number
   unit: string
+  connectionType?: NbmConnectionType
 }
 
 export interface GpsDriverConfig {
@@ -48,4 +51,5 @@ export interface UserAppConfig {
   intervalMs?: number
   minDistanceMeters?: number
   soundsEnabled?: boolean
+  connectionType?: NbmConnectionType
 }

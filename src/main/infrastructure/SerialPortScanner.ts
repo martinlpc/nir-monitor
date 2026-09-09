@@ -4,18 +4,22 @@ import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 import type { ProbedDeviceInfo } from '../../shared/dto/index'
-import { DEFAULT_SERIAL_PROBE, NBM_BAUD_RATE, GPS_BAUD_RATE } from '../../shared/config.constants'
+import { DEFAULT_SERIAL_PROBE, GPS_BAUD_RATE, nbmBaudRateFor } from '../../shared/config.constants'
+import type { NbmConnectionType } from '../../shared/config.types'
 
 const PROBE_TIMEOUT_MS = DEFAULT_SERIAL_PROBE.nbmTimeoutMs
 const NMEA_LISTEN_MS = DEFAULT_SERIAL_PROBE.nmeaListenMs
 
 export interface DriverFactories {
-  createNBM?: (port: string) => NBM550Driver
+  createNBM?: (port: string, connectionType?: NbmConnectionType) => NBM550Driver
   createGPS?: (port: string) => GPSDriver
 }
 
 export class SerialPortScanner implements ISerialPortScanner {
-  constructor(private readonly factories?: DriverFactories) {}
+  constructor(
+    private readonly factories?: DriverFactories,
+    private readonly connectionType: NbmConnectionType = 'usb'
+  ) {}
 
   async listAvailablePorts(): Promise<string[]> {
     const ports = await SerialPort.list()
@@ -107,12 +111,13 @@ export class SerialPortScanner implements ISerialPortScanner {
   async probeNBM(port: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {
     console.log(`[SerialPortScanner] Probing NBM550 on ${port}...`)
     const driver =
-      this.factories?.createNBM?.(port) ??
+      this.factories?.createNBM?.(port, this.connectionType) ??
       new NBM550Driver({
         port,
-        baudRate: NBM_BAUD_RATE,
+        baudRate: nbmBaudRateFor(this.connectionType),
         pollIntervalMs: 200,
-        unit: 'V/m'
+        unit: 'V/m',
+        connectionType: this.connectionType
       })
 
     try {

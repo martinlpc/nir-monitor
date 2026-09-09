@@ -50,6 +50,8 @@ export const IPC_HANDLERS = {
   GET_CHANGELOG: 'app:changelog',
   GET_SOUNDS_ENABLED: 'settings:get-sounds-enabled',
   SET_SOUNDS_ENABLED: 'settings:set-sounds-enabled',
+  GET_NBM_CONNECTION_TYPE: 'settings:get-nbm-connection-type',
+  SET_NBM_CONNECTION_TYPE: 'settings:set-nbm-connection-type',
   LOGS_GET_PATH: 'logs:get-path',
   LOGS_EXPORT: 'logs:export'
 } as const

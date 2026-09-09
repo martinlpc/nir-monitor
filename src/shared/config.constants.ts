@@ -6,18 +6,30 @@ import type {
   SerialProbeConfig,
   FlushConfig,
   GeoFusionConfigOptions,
-  NbmDriverTimeouts
+  NbmDriverTimeouts,
+  NbmConnectionType
 } from './config.types'
 
 // -- Baud rates (single source of truth) ----------
 export const NBM_BAUD_RATE = 460800
+export const NBM_OPTICAL_BAUD_RATE = 115200
 export const GPS_BAUD_RATE = 4800
+
+export const NBM_BAUD_BY_CONNECTION: Record<NbmConnectionType, number> = {
+  usb: NBM_BAUD_RATE,
+  optical: NBM_OPTICAL_BAUD_RATE
+}
+
+export function nbmBaudRateFor(connectionType: NbmConnectionType): number {
+  return NBM_BAUD_BY_CONNECTION[connectionType]
+}
 
 // -- Driver configs -------------------------------
 export const DEFAULT_NBM_DRIVER: NbmDriverConfig = {
   baudRate: NBM_BAUD_RATE,
   pollIntervalMs: 200,
-  unit: 'V/m'
+  unit: 'V/m',
+  connectionType: 'usb'
 }
 
 export const DEFAULT_GPS_DRIVER: GpsDriverConfig = {

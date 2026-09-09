@@ -262,7 +262,7 @@ export class DeviceManager extends EventEmitter {
   private async initNBM(port: string): Promise<INBMDriver> {
     console.log(`[DeviceManager] initNBM starting on port ${port}`)
     this.nbmIntentionalDisconnect = false
-    this.nbm = this.factory.createNBM(port)
+    this.nbm = this.factory.createNBM(port, this.config.nbmConnectionType)
 
     this.nbm.on('status', (status: DeviceStatus) => {
       console.log(`[DeviceManager] NBM status changed to: ${status}`)

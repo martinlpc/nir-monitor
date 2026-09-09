@@ -21,7 +21,8 @@ import {
   DEFAULT_NBM_RECONNECT,
   DEFAULT_GPS_RECONNECT,
   DEFAULT_FLUSH,
-  DEFAULT_GEO_FUSION
+  DEFAULT_GEO_FUSION,
+  nbmBaudRateFor
 } from '../../shared/config.constants'
 
 export interface PortConfigData {
@@ -119,7 +120,19 @@ export class ConfigService {
   }
 
   get nbmDriverConfig(): NbmDriverConfig {
+    const appConfig = this.loadAppConfig()
+    if (appConfig.connectionType) {
+      return {
+        ...DEFAULT_NBM_DRIVER,
+        connectionType: appConfig.connectionType,
+        baudRate: nbmBaudRateFor(appConfig.connectionType)
+      }
+    }
     return { ...DEFAULT_NBM_DRIVER }
+  }
+
+  get nbmConnectionType(): 'usb' | 'optical' {
+    return this.loadAppConfig().connectionType ?? 'usb'
   }
 
   get gpsDriverConfig(): GpsDriverConfig {
