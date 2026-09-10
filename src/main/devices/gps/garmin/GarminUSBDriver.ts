@@ -39,6 +39,15 @@ const FIX_LOSS_TIMEOUT_MS = 5000
 const COMMAND_TIMEOUT_MS = 3000
 const READ_TIMEOUT_MS = 10000
 const MAX_PENDING_BYTES = 8192
+const READ_LOOP_DRAIN_MS = 1500
+const RELEASE_TIMEOUT_MS = 1000
+
+function waitFor(promise: Promise<unknown>, timeoutMs: number): Promise<void> {
+  return Promise.race([
+    promise.then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))
+  ])
+}
 
 interface FrameRequest {
   matcher: (frame: GarminFrame) => boolean
@@ -57,6 +66,7 @@ export class GarminUSBDriver extends EventEmitter implements IDeviceDriver, IGPS
   private outEp: usb.OutEndpoint | null = null
   private state: GPSState = { ...INITIAL_GPS_STATE }
   private running = false
+  private readLoopDone: Promise<void> = Promise.resolve()
   private pending: Buffer = Buffer.alloc(0)
   private sessionRequests: FrameRequest[] = []
   private fixLossTimeoutRef: NodeJS.Timeout | null = null
@@ -145,15 +155,16 @@ export class GarminUSBDriver extends EventEmitter implements IDeviceDriver, IGPS
       }
     }
 
-    try {
-      this.iface?.release(true)
-    } catch {
-      // best effort
-    }
-    try {
-      this.device?.close()
-    } catch {
-      // best effort
+    // El loop de lectura puede estar esperando el próximo PVT (~1 Hz); darle tiempo
+    // para resolver el transfer pendiente antes de liberar la interfaz.
+    await waitFor(this.readLoopDone, READ_LOOP_DRAIN_MS)
+    await this.releaseInterface()
+    if (this.device) {
+      try {
+        this.device.close()
+      } catch {
+        // best effort
+      }
     }
 
     this.device = null
@@ -166,6 +177,26 @@ export class GarminUSBDriver extends EventEmitter implements IDeviceDriver, IGPS
     this.pending = Buffer.alloc(0)
 
     this.setStatus('disconnected')
+  }
+
+  private releaseInterface(): Promise<void> {
+    if (!this.iface) return Promise.resolve()
+    return new Promise<void>((resolve) => {
+      let settled = false
+      const finish = (): void => {
+        if (settled) return
+        settled = true
+        resolve()
+      }
+      try {
+        // closeEndpoints=true libera la interfaz y cancela transfers del poll loop.
+        // En usb v2 release es asíncrono (callback); close() falla si hay request pendiente.
+        this.iface!.release(true, () => finish())
+        setTimeout(finish, RELEASE_TIMEOUT_MS)
+      } catch {
+        finish()
+      }
+    })
   }
 
   isConnected(): boolean {
@@ -193,7 +224,7 @@ export class GarminUSBDriver extends EventEmitter implements IDeviceDriver, IGPS
   }
 
   private startReadLoop(): void {
-    void this.readLoop()
+    this.readLoopDone = this.readLoop()
   }
 
   private async readLoop(): Promise<void> {
@@ -323,9 +354,13 @@ export class GarminUSBDriver extends EventEmitter implements IDeviceDriver, IGPS
   }
 
   private findInEndpoint(): usb.InEndpoint {
-    const endpoint = this.iface!.endpoints.find((endpoint) => endpoint.direction === 'in') as
-      | usb.InEndpoint
-      | undefined
+    const inEndpoints = this.iface!.endpoints.filter(
+      (endpoint) => endpoint.direction === 'in'
+    ) as usb.InEndpoint[]
+    // El protocolo Garmin opera sobre el endpoint IN tipo interrupt (USB: 3).
+    // El 18x USB además expone un bulk IN (0x81) que jamás entrega datos.
+    const interrupt = inEndpoints.find((endpoint) => endpoint.transferType === 3)
+    const endpoint = interrupt ?? inEndpoints[0]
     if (!endpoint) {
       throw this.fail('GARMIN_USB_ENDPOINT_MISSING', 'El Garmin no expone endpoint USB de entrada')
     }

@@ -46,7 +46,7 @@ export function setupIPC(
   })
   registerPortsHandlers(ipcMain, async () => {
     const ports = await SerialPort.list()
-    if (detectGarminUsb().present) {
+    if ((await detectGarminUsb()).present) {
       return [
         ...ports.map((p) => ({ path: p.path, manufacturer: p.manufacturer })),
         { path: GARMIN_USB_PORT_PREFIX, manufacturer: 'Garmin' }

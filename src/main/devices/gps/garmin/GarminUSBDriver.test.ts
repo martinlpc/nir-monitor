@@ -60,11 +60,14 @@ function pvtFrame(fix = 3, latRad = 0.9, lonRad = -0.5): Buffer {
 
 class MockInEndpoint {
   direction = 'in'
+  transferType = 3
   timeout = 0
+  totalTransfers = 0
   private queue: Buffer[] = []
   private waiter: { resolve: (buffer: Buffer) => void } | null = null
 
   transferAsync(): Promise<Buffer> {
+    this.totalTransfers++
     const next = this.queue.shift()
     if (next) return Promise.resolve(next)
     return new Promise<Buffer>((resolve) => {
@@ -85,6 +88,7 @@ class MockInEndpoint {
 
 class MockOutEndpoint {
   direction = 'out'
+  transferType = 2
   transfers: Buffer[] = []
   autoRespond = true
 
@@ -101,6 +105,8 @@ class MockOutEndpoint {
     } else if (packetId === GARMIN_PID_COMMAND_DATA) {
       const command = frame.readUInt16LE(GARMIN_HEADER_LENGTH)
       if (command === 49) this.inEp.push(pvtFrame())
+      // al pedir detener PVT, resolver el read pendiente del loop de lectura
+      if (command === 50) this.inEp.push(pvtFrame(1))
     }
     return Promise.resolve(frame.length)
   }
@@ -108,7 +114,9 @@ class MockOutEndpoint {
 
 class MockInterface {
   claim = vi.fn()
-  release = vi.fn()
+  release = vi.fn((_closeEndpoints?: boolean, callback?: (error?: Error) => void) => {
+    callback?.()
+  })
   endpoints: Array<MockInEndpoint | MockOutEndpoint> = []
 }
 
@@ -151,6 +159,25 @@ describe('GarminUSBDriver', () => {
     expect(driver.meta.type).toBe('gps')
     expect(driver.meta.port).toBe('garmin-usb')
     expect(driver.meta.baudRate).toBe(0)
+  })
+
+  it('prefers the interrupt IN endpoint over the bulk one', async () => {
+    const bulkIn = new MockInEndpoint()
+    bulkIn.transferType = 2
+    const interruptIn = new MockInEndpoint()
+    interruptIn.transferType = 3
+    const outEp = new MockOutEndpoint(interruptIn)
+    const iface = new MockInterface()
+    iface.endpoints = [bulkIn, outEp, interruptIn]
+    const device = new MockDevice(iface)
+    mocks.findByIds.mockReturnValue(device)
+    const driver = new GarminUSBDriver({ port: 'garmin-usb' })
+
+    await driver.connect()
+
+    expect(driver.status).toBe('connected')
+    expect(interruptIn.totalTransfers).toBeGreaterThan(0)
+    expect(bulkIn.totalTransfers).toBe(0)
   })
 
   it('connects and completes the handshake with a PVT record', async () => {

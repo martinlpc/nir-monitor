@@ -27,7 +27,7 @@ function formatPosition(pos: GeoPosition): string {
 async function main(): Promise<void> {
   console.log('\n=== 📡 GARMIN 18X USB - TEST DE CONEXIÓN ===\n')
 
-  const status = detectGarminUsb()
+  const status = await detectGarminUsb()
   console.log(`Presencia: ${status.present ? 'SÍ' : 'NO'}`)
   console.log(`Accesible (WinUSB): ${status.accessible ? 'SÍ' : 'NO'}`)
 

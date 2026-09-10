@@ -22,7 +22,7 @@ export class SerialPortScanner implements ISerialPortScanner {
   constructor(
     private readonly factories?: DriverFactories,
     private readonly connectionType: NbmConnectionType = 'usb',
-    private readonly garminDetect: () => GarminUsbStatus = detectGarminUsb
+    private readonly garminDetect: () => Promise<GarminUsbStatus> = detectGarminUsb
   ) {}
 
   async listAvailablePorts(): Promise<string[]> {
@@ -43,7 +43,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     const allProbed: ProbedDeviceInfo[] = []
 
     // Paso 0: si el Garmin 18x USB está conectado y accesible, es el GPS
-    const garmin = this.garminDetect()
+    const garmin = await this.garminDetect()
     if (garmin.accessible) {
       gpsPort = GARMIN_USB_PORT_PREFIX
       allProbed.push({ port: GARMIN_USB_PORT_PREFIX, type: 'gps' })

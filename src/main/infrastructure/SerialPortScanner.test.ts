@@ -73,6 +73,11 @@ beforeEach(() => {
   serialPortListMock.mockReset()
 })
 
+const noGarmin = async (): Promise<{ present: boolean; accessible: boolean }> => ({
+  present: false,
+  accessible: false
+})
+
 afterEach(() => {
   vi.useRealTimers()
 })
@@ -126,7 +131,7 @@ describe('SerialPortScanner', () => {
   it('scanAndProbeAll uses preferred ports first', async () => {
     serialPortListMock.mockResolvedValue([{ path: 'COM5' }, { path: 'COM6' }])
 
-    const scanner = new SerialPortScanner()
+    const scanner = new SerialPortScanner(undefined, 'usb', noGarmin)
     // Los preferidos se prueban primero; mockeamos probe para evitar timeouts reales
     vi.spyOn(scanner, 'probeGPS').mockImplementation(async (port) => port === 'COM6')
     vi.spyOn(scanner, 'probeNBM').mockImplementation(async (port) => port === 'COM5')
@@ -140,7 +145,7 @@ describe('SerialPortScanner', () => {
   it('scanAndProbeAll falls back when preferred ports fail', async () => {
     serialPortListMock.mockResolvedValue([{ path: 'COM7' }, { path: 'COM8' }])
 
-    const scanner = new SerialPortScanner()
+    const scanner = new SerialPortScanner(undefined, 'usb', noGarmin)
     vi.spyOn(scanner, 'probeGPS').mockImplementation(async (port) => port === 'COM7')
     vi.spyOn(scanner, 'probeNBM').mockImplementation(async (port) => port === 'COM8')
 
@@ -156,7 +161,7 @@ describe('SerialPortScanner', () => {
     const probeNBM = vi.fn().mockResolvedValue(true)
     const probeGPS = vi.fn().mockResolvedValue(true)
 
-    const scanner = new SerialPortScanner()
+    const scanner = new SerialPortScanner(undefined, 'usb', noGarmin)
     scanner.probeNBM = probeNBM
     scanner.probeGPS = probeGPS
 
@@ -239,7 +244,7 @@ describe('SerialPortScanner', () => {
   it('scanAndProbeAll returns null ports when nothing found', async () => {
     serialPortListMock.mockResolvedValue([{ path: 'COM1' }, { path: 'COM2' }])
 
-    const scanner = new SerialPortScanner()
+    const scanner = new SerialPortScanner(undefined, 'usb', noGarmin)
     vi.spyOn(scanner, 'probeGPS').mockResolvedValue(false)
     vi.spyOn(scanner, 'probeNBM').mockResolvedValue(false)
 
@@ -252,7 +257,7 @@ describe('SerialPortScanner', () => {
   it('scanAndProbeAll uses Garmin USB as GPS when it is accessible', async () => {
     serialPortListMock.mockResolvedValue([{ path: 'COM1' }])
     const probeGPS = vi.fn().mockResolvedValue(true)
-    const scanner = new SerialPortScanner(undefined, 'usb', () => ({
+    const scanner = new SerialPortScanner(undefined, 'usb', async () => ({
       present: true,
       accessible: true
     }))
@@ -270,7 +275,7 @@ describe('SerialPortScanner', () => {
     const scanner = new SerialPortScanner(
       { createGPS: () => fakeGPS('COM7', true) as unknown as GPSDriver },
       'usb',
-      () => ({ present: true, accessible: false })
+      async () => ({ present: true, accessible: false })
     )
 
     const result = await scanner.scanAndProbeAll()

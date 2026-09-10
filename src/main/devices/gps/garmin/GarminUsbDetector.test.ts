@@ -20,7 +20,9 @@ interface MockGarminUsbDevice {
 function makeDevice(claim: () => void = () => undefined): MockGarminUsbDevice {
   const iface = {
     claim: vi.fn(claim),
-    release: vi.fn()
+    release: vi.fn((_closeEndpoints?: boolean, callback?: (error?: Error) => void) => {
+      callback?.()
+    })
   }
   return {
     open: vi.fn(),
@@ -35,39 +37,49 @@ describe('detectGarminUsb', () => {
     mocks.findByIds.mockReset()
   })
 
-  it('reports absent when no such device is connected', () => {
+  it('reports absent when no such device is connected', async () => {
     mocks.findByIds.mockReturnValue(undefined)
 
-    expect(detectGarminUsb()).toEqual({ present: false, accessible: false })
+    expect(await detectGarminUsb()).toEqual({ present: false, accessible: false })
   })
 
-  it('reports present and accessible when the interface can be claimed', () => {
+  it('reports present and accessible when the interface can be claimed', async () => {
     const device = makeDevice()
     mocks.findByIds.mockReturnValue(device)
 
-    expect(detectGarminUsb()).toEqual({ present: true, accessible: true })
+    expect(await detectGarminUsb()).toEqual({ present: true, accessible: true })
     expect(device.open).toHaveBeenCalledTimes(1)
     expect(device.iface.claim).toHaveBeenCalledTimes(1)
-    expect(device.iface.release).toHaveBeenCalledWith(true)
+    expect(device.iface.release).toHaveBeenCalledWith(true, expect.any(Function))
     expect(device.close).toHaveBeenCalledTimes(1)
   })
 
-  it('reports present but not accessible when claiming fails', () => {
+  it('reports present but not accessible when claiming fails', async () => {
     const device = makeDevice(() => {
       throw new Error('LIBUSB_ERROR_ACCESS')
     })
     mocks.findByIds.mockReturnValue(device)
 
-    expect(detectGarminUsb()).toEqual({ present: true, accessible: false })
+    expect(await detectGarminUsb()).toEqual({ present: true, accessible: false })
     expect(device.iface.claim).toHaveBeenCalledTimes(1)
     expect(device.close).toHaveBeenCalledTimes(1)
   })
 
-  it('reports absent when the usb backend throws while enumerating', () => {
+  it('reports present but not accessible when close fails after a successful claim', async () => {
+    const device = makeDevice()
+    device.close.mockImplementation(() => {
+      throw new Error('Can not close device with a pending request')
+    })
+    mocks.findByIds.mockReturnValue(device)
+
+    expect(await detectGarminUsb()).toEqual({ present: true, accessible: false })
+  })
+
+  it('reports absent when the usb backend throws while enumerating', async () => {
     mocks.findByIds.mockImplementation(() => {
       throw new Error('no libusb backend')
     })
 
-    expect(detectGarminUsb()).toEqual({ present: false, accessible: false })
+    expect(await detectGarminUsb()).toEqual({ present: false, accessible: false })
   })
 })
