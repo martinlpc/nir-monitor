@@ -1,18 +1,3 @@
-# 0.18.0 — 2026-09-10
-
-### Novedades
-
-- add Garmin USB protocol framing and PVT decoding
-- add GarminUsbDetector for presence and WinUSB accessibility
-- add GarminUSBDriver implementing IGPSDriver over node-usb
-- add test:garmin E2E diagnostic script for Garmin 18x USB
-- auto-detect Garmin 18x USB during port scan and list it as GPS port
-- route garmin-usb ports to GarminUSBDriver in RealDriverFactory
-
-### Tareas varias
-
-- add usb dependency for Garmin 18x USB driver
-
 # 0.17.0 — 2026-09-09
 
 ### Novedades
@@ -21,9 +6,26 @@
 
 ## 0.16.2 — 2026-08-31
 
+### Refactorización
+
+- remove module-level singletons in favor of explicit injection
+- move IPC channels to shared and unify duplicated types
+- add typed EventBus replacing raw webContents.send calls
+- extract export layer with orchestrator and typed exporters
+- decouple SessionService from concrete GeoFusionService via interface
+- extract schema and row mappers from SQLiteSessionRepository
+
+### Pruebas
+
+- cover KMZ and XLSX exporters with real file assertions
+
 ### Correcciones
 
 - wire missing ports:list handler and move logs handlers into ipc
+
+### Tareas varias
+
+- stop tracking coverage reports
 
 ## 0.16.1 — 2026-07-21
 
