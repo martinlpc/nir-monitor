@@ -25,6 +25,7 @@
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
     "test:fusion": "tsx src/main/scripts/testFusion.ts",
+    "test:garmin": "tsx src/main/scripts/testGarminUSB.ts",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
     "generate:nsh-key": "node scripts/generateNshKey.mjs",
