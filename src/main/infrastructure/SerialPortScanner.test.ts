@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { SerialPortScanner } from './SerialPortScanner'
 import type { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import type { GPSDriver } from '../devices/gps/GPSDriver'
+import { GARMIN_USB_PORT_PREFIX } from '../devices/gps/garmin/GarminUSBProtocol'
 
 const { serialPortListMock } = vi.hoisted(() => {
   const serialPortListMock = vi.fn()
@@ -246,5 +247,34 @@ describe('SerialPortScanner', () => {
 
     expect(result.nbmPort).toBeNull()
     expect(result.gpsPort).toBeNull()
+  })
+
+  it('scanAndProbeAll uses Garmin USB as GPS when it is accessible', async () => {
+    serialPortListMock.mockResolvedValue([{ path: 'COM1' }])
+    const probeGPS = vi.fn().mockResolvedValue(true)
+    const scanner = new SerialPortScanner(undefined, 'usb', () => ({
+      present: true,
+      accessible: true
+    }))
+    scanner.probeGPS = probeGPS
+
+    const result = await scanner.scanAndProbeAll()
+
+    expect(result.gpsPort).toBe(GARMIN_USB_PORT_PREFIX)
+    expect(result.nbmPort).toBeNull()
+    expect(probeGPS).not.toHaveBeenCalled()
+  })
+
+  it('scanAndProbeAll falls back to serial GPS when Garmin is present but not accessible', async () => {
+    serialPortListMock.mockResolvedValue([{ path: 'COM7' }])
+    const scanner = new SerialPortScanner(
+      { createGPS: () => fakeGPS('COM7', true) as unknown as GPSDriver },
+      'usb',
+      () => ({ present: true, accessible: false })
+    )
+
+    const result = await scanner.scanAndProbeAll()
+
+    expect(result.gpsPort).toBe('COM7')
   })
 })

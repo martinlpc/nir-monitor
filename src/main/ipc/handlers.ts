@@ -14,6 +14,8 @@ import { isEncrypted } from '../services/CryptoService'
 import type { CryptoService } from '../services/CryptoService'
 import { DriverDetector } from '../drivers/DriverDetector'
 import { DriverInstaller } from '../drivers/DriverInstaller'
+import { detectGarminUsb } from '../devices/gps/garmin/GarminUsbDetector'
+import { GARMIN_USB_PORT_PREFIX } from '../devices/gps/garmin/GarminUSBProtocol'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
@@ -44,6 +46,12 @@ export function setupIPC(
   })
   registerPortsHandlers(ipcMain, async () => {
     const ports = await SerialPort.list()
+    if (detectGarminUsb().present) {
+      return [
+        ...ports.map((p) => ({ path: p.path, manufacturer: p.manufacturer })),
+        { path: GARMIN_USB_PORT_PREFIX, manufacturer: 'Garmin' }
+      ]
+    }
     return ports.map((p) => ({ path: p.path, manufacturer: p.manufacturer }))
   })
   registerLogsHandlers(ipcMain, {
