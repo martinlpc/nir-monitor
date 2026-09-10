@@ -10,8 +10,18 @@ import { AppError } from '../../shared/errors/AppError'
 import { ConfigService } from './ConfigService'
 
 export interface DeviceManagerState {
-  nbm550: { id: string | null; port: string | null; status: DeviceStatus }
-  gps: { id: string | null; port: string | null; status: DeviceStatus }
+  nbm550: {
+    id: string | null
+    port: string | null
+    status: DeviceStatus
+    reconnecting: boolean
+  }
+  gps: {
+    id: string | null
+    port: string | null
+    status: DeviceStatus
+    reconnecting: boolean
+  }
   scanning: boolean
 }
 
@@ -132,12 +142,14 @@ export class DeviceManager extends EventEmitter {
       nbm550: {
         id: this.nbm?.meta.id ?? null,
         port: this.nbm?.meta.port ?? null,
-        status: this.nbm?.status ?? 'disconnected'
+        status: this.nbm?.status ?? 'disconnected',
+        reconnecting: this.nbmReconnect.isReconnecting
       },
       gps: {
         id: this.gps?.meta.id ?? null,
         port: this.gps?.meta.port ?? null,
-        status: this.gps?.status ?? 'disconnected'
+        status: this.gps?.status ?? 'disconnected',
+        reconnecting: this.gpsReconnect.isReconnecting
       },
       scanning: this.scanning
     }

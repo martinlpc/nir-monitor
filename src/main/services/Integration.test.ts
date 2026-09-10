@@ -23,8 +23,18 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
     // Setup mocks
     deviceManager = {
       getState: vi.fn(() => ({
-        nbm550: { id: 'nbm550', port: '/dev/ttyUSB0', status: 'connected' as const },
-        gps: { id: 'gps', port: '/dev/ttyUSB1', status: 'connected' as const },
+        nbm550: {
+          id: 'nbm550',
+          port: '/dev/ttyUSB0',
+          status: 'connected' as const,
+          reconnecting: false
+        },
+        gps: {
+          id: 'gps',
+          port: '/dev/ttyUSB1',
+          status: 'connected' as const,
+          reconnecting: false
+        },
         scanning: false
       })),
       initialize: vi.fn(),

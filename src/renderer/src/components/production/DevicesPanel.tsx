@@ -168,13 +168,17 @@ export default function DevicesPanel({
       console.error('Error stopping session:', err)
     }
   }
-
   // Construir lista de dispositivos para mostrar
-  const GPS_NAME_BY_ID: Record<string, string> = {
-    'gps-usb': 'GPS (GARMIN 18X USB)',
-    'gps-sim': 'GPS (SIMULADO)'
+  const GPS_LABEL_BY_ID: Record<string, string> = {
+    'gps-usb': 'Garmin 18X USB',
+    'gps-sim': 'Simulado'
   }
-  const gpsName = devices.gps?.id ? (GPS_NAME_BY_ID[devices.gps.id] ?? 'GPS (NMEA)') : 'GPS (NMEA)'
+  const gps = devices.gps
+  const gpsSuffix =
+    gps?.id && (gps.status === 'connected' || gps.reconnecting)
+      ? (GPS_LABEL_BY_ID[gps.id] ?? 'NMEA')
+      : null
+  const gpsName = gpsSuffix ? `GPS (${gpsSuffix})` : 'GPS'
   const devicesList = KNOWN_DEVICE_IDS.map((id) => ({
     id,
     name: id === 'gps' ? gpsName : KNOWN_DEVICES[id].name,
@@ -182,7 +186,6 @@ export default function DevicesPanel({
     port: (id === 'nbm550' ? devices.nbm550?.port : devices.gps?.port) || 'No detectado',
     baudRate: KNOWN_DEVICES[id].baudRate
   }))
-
   const allConnected = devices.isConnected('nbm550') && devices.isConnected('gps')
 
   return (
