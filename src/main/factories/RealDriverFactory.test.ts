@@ -19,4 +19,21 @@ describe('RealDriverFactory', () => {
     const nbm = factory.createNBM('COM3', 'usb')
     expect(nbm.meta.baudRate).toBe(NBM_BAUD_RATE)
   })
+
+  it('createGPS routes a plain serial port to the NMEA driver', () => {
+    const gps = factory.createGPS('COM5')
+    expect(gps.meta.id).toBe('gps-primary')
+    expect(gps.meta.baudRate).toBe(4800)
+  })
+
+  it('createGPS routes a garmin-usb port to the USB driver', () => {
+    const gps = factory.createGPS('garmin-usb')
+    expect(gps.meta.id).toBe('gps-usb')
+    expect(gps.meta.baudRate).toBe(0)
+  })
+
+  it('createGPS routes a unit-annotated garmin port to the USB driver', () => {
+    const gps = factory.createGPS('garmin-usb:12345678')
+    expect(gps.meta.id).toBe('gps-usb')
+  })
 })
