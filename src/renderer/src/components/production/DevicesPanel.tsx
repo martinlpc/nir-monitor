@@ -170,9 +170,14 @@ export default function DevicesPanel({
   }
 
   // Construir lista de dispositivos para mostrar
+  const GPS_NAME_BY_ID: Record<string, string> = {
+    'gps-usb': 'GPS (GARMIN 18X USB)',
+    'gps-sim': 'GPS (SIMULADO)'
+  }
+  const gpsName = devices.gps?.id ? (GPS_NAME_BY_ID[devices.gps.id] ?? 'GPS (NMEA)') : 'GPS (NMEA)'
   const devicesList = KNOWN_DEVICE_IDS.map((id) => ({
     id,
-    name: KNOWN_DEVICES[id].name,
+    name: id === 'gps' ? gpsName : KNOWN_DEVICES[id].name,
     type: KNOWN_DEVICES[id].type,
     port: (id === 'nbm550' ? devices.nbm550?.port : devices.gps?.port) || 'No detectado',
     baudRate: KNOWN_DEVICES[id].baudRate

@@ -3,8 +3,8 @@ import type { DeviceManagerStateDTO } from '../../../../shared/dto'
 import type { DeviceId, PortInfo } from './types'
 
 const INITIAL_DEVICE_STATE: DeviceManagerStateDTO = {
-  nbm550: { port: null, status: 'disconnected' },
-  gps: { port: null, status: 'disconnected' },
+  nbm550: { id: null, port: null, status: 'disconnected' },
+  gps: { id: null, port: null, status: 'disconnected' },
   scanning: false
 }
 

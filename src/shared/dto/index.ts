@@ -14,10 +14,12 @@ export interface DeviceDTO {
 
 export interface DeviceManagerStateDTO {
   nbm550: {
+    id: string | null
     port: string | null
     status: DeviceStatus
   }
   gps: {
+    id: string | null
     port: string | null
     status: DeviceStatus
   }
