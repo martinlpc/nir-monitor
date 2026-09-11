@@ -14,12 +14,17 @@ export interface DeviceDTO {
 
 export interface DeviceManagerStateDTO {
   nbm550: {
+    id: string | null
     port: string | null
     status: DeviceStatus
+    reconnecting: boolean
   }
   gps: {
+    id: string | null
     port: string | null
     status: DeviceStatus
+    reconnecting: boolean
+    garminWinusbMissing: boolean
   }
   scanning: boolean
 }

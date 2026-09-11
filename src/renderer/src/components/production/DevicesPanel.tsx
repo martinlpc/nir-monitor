@@ -44,6 +44,8 @@ export default function DevicesPanel({
   const [intervalSec, setIntervalSec] = useState(5)
   const [confirmStop, setConfirmStop] = useState(false)
   const [showStartModal, setShowStartModal] = useState(false)
+  const [openingZadig, setOpeningZadig] = useState(false)
+  const [zadigError, setZadigError] = useState<string | null>(null)
   const { position } = useGpsPosition()
   const { driverStatus, check: checkDrivers, install: installDriver, installing } = useDriverCheck()
 
@@ -93,6 +95,21 @@ export default function DevicesPanel({
       console.error(`Error desconectando ${deviceId}:`, err)
     } finally {
       setLoadingDevice(null)
+    }
+  }
+
+  const handleOpenZadig = async (): Promise<void> => {
+    setOpeningZadig(true)
+    setZadigError(null)
+    try {
+      const result = await window.api.zadig.open()
+      if (!result.success) {
+        setZadigError(result.error ?? 'No se pudo abrir Zadig.')
+      }
+    } catch (err) {
+      setZadigError(err instanceof Error ? err.message : 'No se pudo abrir Zadig.')
+    } finally {
+      setOpeningZadig(false)
     }
   }
 
@@ -168,16 +185,24 @@ export default function DevicesPanel({
       console.error('Error stopping session:', err)
     }
   }
-
   // Construir lista de dispositivos para mostrar
+  const GPS_LABEL_BY_ID: Record<string, string> = {
+    'gps-usb': 'Garmin 18X USB',
+    'gps-sim': 'Simulado'
+  }
+  const gps = devices.gps
+  const gpsSuffix =
+    gps?.id && (gps.status === 'connected' || gps.reconnecting)
+      ? (GPS_LABEL_BY_ID[gps.id] ?? 'NMEA')
+      : null
+  const gpsName = gpsSuffix ? `GPS (${gpsSuffix})` : 'GPS'
   const devicesList = KNOWN_DEVICE_IDS.map((id) => ({
     id,
-    name: KNOWN_DEVICES[id].name,
+    name: id === 'gps' ? gpsName : KNOWN_DEVICES[id].name,
     type: KNOWN_DEVICES[id].type,
     port: (id === 'nbm550' ? devices.nbm550?.port : devices.gps?.port) || 'No detectado',
     baudRate: KNOWN_DEVICES[id].baudRate
   }))
-
   const allConnected = devices.isConnected('nbm550') && devices.isConnected('gps')
 
   return (
@@ -218,6 +243,34 @@ export default function DevicesPanel({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {devices.gps?.garminWinusbMissing && (
+        <div className="devices-panel__garmin-warning">
+          <span className="garmin-warning-icon">⚠</span>
+          <div className="garmin-warning-content">
+            <span className="garmin-warning-text">
+              Garmin 18x USB detectado sin driver WinUSB — configuralo con Zadig (<a
+                className="garmin-warning-link"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  void window.api.manual.openSection('section-4-3')
+                }}
+              >
+                Manual de uso - Sección 4.3
+              </a>)
+            </span>
+            <button
+              className="btn btn--primary btn--sm"
+              onClick={() => void handleOpenZadig()}
+              disabled={openingZadig}
+            >
+              {openingZadig ? 'Abriendo...' : 'Abrir Zadig'}
+            </button>
+          </div>
+          {zadigError && <span className="garmin-warning-error">{zadigError}</span>}
         </div>
       )}
 

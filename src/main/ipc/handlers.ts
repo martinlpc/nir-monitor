@@ -1,4 +1,4 @@
-import { ipcMain, app, dialog } from 'electron'
+import { ipcMain, app, dialog, shell } from 'electron'
 import { SerialPort } from 'serialport'
 import { readFileSync, writeFileSync } from 'fs'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
@@ -6,6 +6,9 @@ import { registerSessionServiceHandlers, bindSessionServiceEvents } from './Sess
 import { registerSettingsHandlers } from './SettingsHandler'
 import { registerTileCacheHandlers } from './TileCacheHandler'
 import { registerDriverHandlers } from './DriverHandler'
+import { registerZadigHandlers, resolveZadigPath } from './ZadigHandler'
+import { registerManualHandlers, resolveManualPath } from './ManualHandler'
+import { createManualOpener } from '../manual/ManualWindow'
 import { registerPortsHandlers } from './PortsHandler'
 import { registerLogsHandlers } from './LogsHandler'
 import { ConfigService } from '../services/ConfigService'
@@ -14,6 +17,8 @@ import { isEncrypted } from '../services/CryptoService'
 import type { CryptoService } from '../services/CryptoService'
 import { DriverDetector } from '../drivers/DriverDetector'
 import { DriverInstaller } from '../drivers/DriverInstaller'
+import { detectGarminUsb } from '../devices/gps/garmin/GarminUsbDetector'
+import { GARMIN_USB_PORT_PREFIX } from '../devices/gps/garmin/GarminUSBProtocol'
 import type { DeviceManager } from '../services/DeviceManager'
 import type { SessionService } from '../services/SessionService'
 import type { TileCacheService } from '../tile-cache/TileCacheService'
@@ -42,8 +47,24 @@ export function setupIPC(
     checkDrivers: () => detector.check(),
     installDriver: (driverType) => installer.install(driverType)
   })
+  registerZadigHandlers(ipcMain, {
+    zadigPath: resolveZadigPath(app.isPackaged, process.resourcesPath, process.cwd()),
+    openPath: (path) => shell.openPath(path)
+  })
+  const manualOpener = createManualOpener({
+    manualPath: resolveManualPath(app.isPackaged, process.resourcesPath, process.cwd())
+  })
+  registerManualHandlers(ipcMain, {
+    openManualSection: (sectionId) => manualOpener.open(sectionId)
+  })
   registerPortsHandlers(ipcMain, async () => {
     const ports = await SerialPort.list()
+    if ((await detectGarminUsb()).present) {
+      return [
+        ...ports.map((p) => ({ path: p.path, manufacturer: p.manufacturer })),
+        { path: GARMIN_USB_PORT_PREFIX, manufacturer: 'Garmin' }
+      ]
+    }
     return ports.map((p) => ({ path: p.path, manufacturer: p.manufacturer }))
   })
   registerLogsHandlers(ipcMain, {

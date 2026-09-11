@@ -2,6 +2,9 @@
 import { SerialPort } from 'serialport'
 import { NBM550Driver } from '../devices/nbm550/NBM550Driver'
 import { GPSDriver } from '../devices/gps/GPSDriver'
+import { GARMIN_USB_PORT_PREFIX } from '../devices/gps/garmin/GarminUSBProtocol'
+import { detectGarminUsb } from '../devices/gps/garmin/GarminUsbDetector'
+import type { GarminUsbStatus } from '../devices/gps/garmin/GarminUsbDetector'
 import type { ISerialPortScanner } from '../../shared/services/ISerialPortScanner'
 import type { ProbedDeviceInfo } from '../../shared/dto/index'
 import { DEFAULT_SERIAL_PROBE, GPS_BAUD_RATE, nbmBaudRateFor } from '../../shared/config.constants'
@@ -18,7 +21,8 @@ export interface DriverFactories {
 export class SerialPortScanner implements ISerialPortScanner {
   constructor(
     private readonly factories?: DriverFactories,
-    private readonly connectionType: NbmConnectionType = 'usb'
+    private readonly connectionType: NbmConnectionType = 'usb',
+    private readonly garminDetect: () => Promise<GarminUsbStatus> = detectGarminUsb
   ) {}
 
   async listAvailablePorts(): Promise<string[]> {
@@ -30,6 +34,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     nbmPort: string | null
     gpsPort: string | null
     allProbed: ProbedDeviceInfo[]
+    garminWinusbMissing: boolean
   }> {
     const ports = await this.listAvailablePorts()
     console.log(`[SerialPortScanner] Found ${ports.length} ports:`, ports)
@@ -38,8 +43,23 @@ export class SerialPortScanner implements ISerialPortScanner {
     let gpsPort: string | null = null
     const allProbed: ProbedDeviceInfo[] = []
 
-    // Paso 0: probar primero los puertos preferidos (última sesión conocida)
-    if (preferred?.gps && ports.includes(preferred.gps)) {
+    // Paso 0: si el Garmin 18x USB está conectado y accesible, es el GPS
+    const garmin = await this.garminDetect()
+    const garminWinusbMissing = garmin.present && !garmin.accessible
+    if (garmin.accessible) {
+      gpsPort = GARMIN_USB_PORT_PREFIX
+      allProbed.push({ port: GARMIN_USB_PORT_PREFIX, type: 'gps' })
+      console.log(
+        `[SerialPortScanner] ✓ Garmin 18x USB accessible, using ${GARMIN_USB_PORT_PREFIX} as GPS`
+      )
+    } else if (garmin.present) {
+      console.warn(
+        '[SerialPortScanner] Garmin 18x USB present but not accessible (WinUSB driver?), scanning serial ports'
+      )
+    }
+
+    // Paso 1: probar primero los puertos preferidos (última sesión conocida)
+    if (!gpsPort && preferred?.gps && ports.includes(preferred.gps)) {
       console.log(`[SerialPortScanner] Trying preferred GPS port: ${preferred.gps}`)
       const isGPS = await this.probeGPS(preferred.gps)
       if (isGPS) {
@@ -70,10 +90,10 @@ export class SerialPortScanner implements ISerialPortScanner {
     // Si ambos ya están resueltos, no hace falta escanear
     if (nbmPort && gpsPort) {
       console.log(`[SerialPortScanner] Both devices found via preferred ports. Skipping full scan.`)
-      return { nbmPort, gpsPort, allProbed }
+      return { nbmPort, gpsPort, allProbed, garminWinusbMissing }
     }
 
-    // Paso 1: buscar GPS en los puertos restantes (excluir los ya asignados)
+    // Paso 2: buscar GPS en los puertos restantes (excluir los ya asignados)
     const remainingPorts = ports.filter((p) => p !== gpsPort && p !== nbmPort)
 
     if (!gpsPort) {
@@ -90,7 +110,7 @@ export class SerialPortScanner implements ISerialPortScanner {
       }
     }
 
-    // Paso 2: buscar NBM550 en los puertos que no fueron tomados por GPS
+    // Paso 3: buscar NBM550 en los puertos que no fueron tomados por GPS
     if (!nbmPort) {
       const portsForNBM = ports.filter((p) => p !== gpsPort && p !== nbmPort)
       for (const port of portsForNBM) {
@@ -105,7 +125,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     }
 
     console.log(`[SerialPortScanner] Scan complete. NBM: ${nbmPort}, GPS: ${gpsPort}`)
-    return { nbmPort, gpsPort, allProbed }
+    return { nbmPort, gpsPort, allProbed, garminWinusbMissing }
   }
 
   async probeNBM(port: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {

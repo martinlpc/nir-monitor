@@ -74,7 +74,8 @@ const { serialPortListMock, serialPortInstances, FakeSerialPort, mockScanner } =
     scanAndProbeAll: vi.fn(async () => ({
       nbmPort: null,
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     })),
     probeNBM: vi.fn(async () => false),
     probeGPS: vi.fn(async () => false)
@@ -208,7 +209,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM9',
       gpsPort: 'COM8',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const state = await manager.scan()
@@ -224,7 +226,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM2',
       gpsPort: 'COM3',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const state = await manager.scan()
@@ -268,8 +271,14 @@ describe('DeviceManager', () => {
     expect(nbm.disconnect).toHaveBeenCalledTimes(1)
     expect(gps.disconnect).toHaveBeenCalledTimes(1)
     expect(manager.getState()).toEqual({
-      nbm550: { port: null, status: 'disconnected' },
-      gps: { port: null, status: 'disconnected' },
+      nbm550: { id: null, port: null, status: 'disconnected', reconnecting: false },
+      gps: {
+        id: null,
+        port: null,
+        status: 'disconnected',
+        reconnecting: false,
+        garminWinusbMissing: false
+      },
       scanning: false
     })
   })
@@ -280,7 +289,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const state = await manager.scan()
@@ -294,7 +304,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const state = await manager.scan()
@@ -307,7 +318,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: 'COM12',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const state = await manager.scan()
@@ -320,7 +332,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const state = await manager.scan()
@@ -403,7 +416,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     const samples: unknown[] = []
@@ -429,7 +443,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -458,7 +473,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -485,7 +501,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: 'COM12',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -513,7 +530,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -544,7 +562,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: 'COM12',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -588,7 +607,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: 'COM10',
       gpsPort: null,
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -617,7 +637,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: 'COM12',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()
@@ -640,7 +661,8 @@ describe('DeviceManager', () => {
     mockScanner.scanAndProbeAll = vi.fn(async () => ({
       nbmPort: null,
       gpsPort: 'COM12',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }))
 
     await manager.scan()

@@ -373,10 +373,10 @@
         </p>
         <p>
           Se conecta por puerto serie a un <strong>NARDA-STS NBM-550</strong> (medidor de
-          radiaciones no ionizantes de banda ancha) y a un <strong>receptor GPS</strong> (NMEA 0183)
-          para capturar lecturas georreferenciadas. Los datos se visualizan en tiempo real sobre un
-          mapa interactivo, se almacenan en una base de datos local y pueden exportarse en múltiples
-          formatos normalizados (GeoJSON, XLSX, KMZ).
+          radiaciones no ionizantes de banda ancha) y a un <strong>receptor GPS</strong> (NMEA 0183
+          o Garmin 18x USB) para capturar lecturas georreferenciadas. Los datos se visualizan en
+          tiempo real sobre un mapa interactivo, se almacenan en una base de datos local y pueden
+          exportarse en múltiples formatos normalizados (GeoJSON, XLSX, KMZ).
         </p>
       </section>
 
@@ -390,9 +390,17 @@
             conecta a la notebook mediante el <strong>cable propietario Narda a USB</strong>.
           </li>
           <li>
-            <strong>Receptor GPS</strong> (pastilla con cable USB integrado — todo en uno).
-            Compatible con protocolo NMEA 0183. Idealmente utilizar el GPS
-            <strong>GlobalSat BU-353S4</strong>.
+            <strong>Receptor GPS</strong> — Podés usar:
+            <ul>
+              <li>
+                Pastilla con cable USB integrado (todo en uno), compatible con protocolo
+                <strong>NMEA 0183</strong> (ej.: <strong>GlobalSat BU-353S4</strong>).
+              </li>
+              <li>
+                <strong>Garmin 18x USB</strong>: se conecta directo por USB y la aplicación lo
+                detecta automáticamente (no aparece como puerto COM).
+              </li>
+            </ul>
           </li>
           <li>
             <strong>Notebook o tablet con Windows 10 o superior</strong>. Existen instaladores para
@@ -465,6 +473,10 @@
           notebook al abrir la app, el escaneo los encuentra solo.
         </p>
         <p>
+          Si hay un <strong>Garmin 18x USB</strong> conectado y accesible, se usa directamente como
+          GPS (tiene prioridad sobre los receptores NMEA por puerto serie).
+        </p>
+        <p>
           La aplicación <strong>recuerda</strong> en qué puertos COM se conectaron los dispositivos
           la última vez. Si los volvés a conectar en los mismos puertos, el escaneo y la conexión
           son más rápidos.
@@ -477,10 +489,49 @@
         <p>
           El escaneo sondea cada puerto disponible: primero busca el GPS (escuchando tramas NMEA
           durante 12 segundos) y luego el NBM-550 (enviando el comando REMOTE ON y esperando
-          respuesta hasta 6 segundos).
+          respuesta hasta 6 segundos). El Garmin 18x USB se detecta sin necesidad de sondear puertos.
         </p>
 
-        <h3>4.3 Conexión</h3>
+        <h3 id="section-4-3">4.3 Garmin 18x USB (configuración inicial en Windows)</h3>
+        <p>
+          <em>Opcional:</em> esta sección solo aplica si vas a utilizar el
+          <strong>Garmin 18x USB</strong>. No todos los equipos tienen este dispositivo: si no lo
+          usás, podés omitir esta sección.
+        </p>
+        <p>
+          El Garmin 18x USB no usa un driver de puerto serie: Windows lo ve como un dispositivo USB
+          y la aplicación lo comunica en forma directa. La primera vez que lo conectes en una
+          notebook, puede ser necesario configurar su driver como
+          <strong>WinUSB</strong>:
+        </p>
+        <ol>
+          <li>
+            Con el Garmin conectado, abrí <strong>Zadig</strong>. Zadig viene incluido en la
+            instalación del RNI Monitor: la app muestra el botón <strong>"Abrir Zadig"</strong>
+            cuando detecta el Garmin sin WinUSB, o lo encontrás en la carpeta
+            <code>resources\drivers\zadig</code> de la instalación.
+          </li>
+          <li>
+            Andá a <strong>Options</strong> &gt; <strong>List All Devices</strong> para que Zadig
+            muestre todos los dispositivos conectados.
+          </li>
+          <li>
+            Desde el menú <strong>Device</strong> seleccioná <strong>Garmin GPS</strong>.
+          </li>
+          <li>
+            En el campo de la derecha elegí <strong>WinUSB</strong> y presioná
+            <strong>Replace Driver</strong>.
+          </li>
+        </ol>
+        <div class="info-box">
+          <strong>Tip:</strong> Esta configuración se hace una sola vez por notebook, pero está
+          asociada al puerto USB: si cambiás el Garmin a otro puerto USB, repetí la configuración
+          en ese puerto. Si el Garmin está presente pero la app no lo detecta como accesible, la
+          app te muestra el aviso en el panel de dispositivos y podés verificar los pasos en la
+          sección 11.
+        </div>
+
+        <h3>4.4 Conexión</h3>
         <p>
           Una vez detectados, cada dispositivo muestra su puerto COM asignado y la app los conecta
           automáticamente. El LED de estado indica:
@@ -528,7 +579,7 @@
           según las condiciones.
         </div>
 
-        <h3>4.4 Interfaz del NBM-550 (USB / Óptico)</h3>
+        <h3>4.5 Interfaz del NBM-550 (USB / Óptico)</h3>
         <p>
           El NBM-550 puede conectarse por <strong>USB</strong> (460800 bps) o por su
           <strong>puerto óptico</strong> (115200 bps). En la tarjeta del device, la app muestra un
@@ -1034,6 +1085,15 @@
               <td>
                 Ubicá la pastilla GPS con vista despejada al cielo. Puede tomar desde 30 segundos
                 hasta 5-10 minutos en la primera sincronización.
+              </td>
+            </tr>
+            <tr>
+              <td><strong>Garmin 18x USB presente pero no se detecta</strong></td>
+              <td>El dispositivo usa el driver incorrecto (serial o Garmin, no WinUSB).</td>
+              <td>
+                Configurá el Garmin con <strong>WinUSB</strong> usando <strong>Zadig</strong>
+                (incluido en la instalación, botón <strong>"Abrir Zadig"</strong> de la app; una
+                sola vez por notebook). La app lo toma automáticamente como GPS al escanear.
               </td>
             </tr>
             <tr>

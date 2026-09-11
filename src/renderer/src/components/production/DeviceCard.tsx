@@ -92,7 +92,7 @@ export default function DeviceCard({
             aria-label={`Estado: ${statusLabel}`}
           />
           <div>
-            <h3 className="device-name">{device.type === 'gps' ? 'GPS (NMEA)' : device.name}</h3>
+            <h3 className="device-name">{device.name}</h3>
             <p className="device-type">
               {device.type === 'emf' ? 'Medidor de RNI' : device.type.toUpperCase()}
             </p>

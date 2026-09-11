@@ -1,0 +1,16 @@
+Zadig - USB driver installation made easy
+https://zadig.akeo.ie/
+
+Zadig is free software, licensed under the GNU General Public License (GPL)
+version 3 or later.
+
+Copyright (c) 2010-2024 Pete Batard (Akeo Consulting)
+
+Source code: https://github.com/pbatard/libwdi
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+A copy of the GNU General Public License is included in this directory as
+LICENSE-GPL3.txt, or can be obtained from <https://www.gnu.org/licenses/gpl-3.0.txt>.

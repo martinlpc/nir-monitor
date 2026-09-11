@@ -7,8 +7,19 @@ import type { DeviceManagerStateDTO, DeviceStatus } from '../../../shared/dto'
  */
 export function useDevices(): {
   devices: DeviceManagerStateDTO | null
-  nbm550: { port: string | null; status: DeviceStatus } | null
-  gps: { port: string | null; status: DeviceStatus } | null
+  nbm550: {
+    id: string | null
+    port: string | null
+    status: DeviceStatus
+    reconnecting: boolean
+  } | null
+  gps: {
+    id: string | null
+    port: string | null
+    status: DeviceStatus
+    reconnecting: boolean
+    garminWinusbMissing: boolean
+  } | null
   isScanning: boolean
   error: string | null
   scanning: boolean

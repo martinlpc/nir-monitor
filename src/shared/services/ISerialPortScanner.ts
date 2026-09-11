@@ -15,6 +15,7 @@ export interface ISerialPortScanner {
     nbmPort: string | null
     gpsPort: string | null
     allProbed: ProbedDeviceInfo[]
+    garminWinusbMissing: boolean
   }>
 
   /**

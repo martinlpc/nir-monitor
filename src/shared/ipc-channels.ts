@@ -46,6 +46,8 @@ export const IPC_HANDLERS = {
   TILE_IMPORT: 'tile:import',
   DRIVERS_CHECK: 'drivers:check',
   DRIVERS_INSTALL: 'drivers:install',
+  ZADIG_OPEN: 'zadig:open',
+  MANUAL_OPEN_SECTION: 'manual:open-section',
   GET_APP_VERSION: 'app:get-version',
   GET_CHANGELOG: 'app:changelog',
   GET_SOUNDS_ENABLED: 'settings:get-sounds-enabled',

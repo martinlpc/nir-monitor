@@ -359,6 +359,16 @@ const api = {
       ipcRenderer.invoke(IPC_HANDLERS.DRIVERS_INSTALL, type)
   },
 
+  zadig: {
+    open: (): Promise<{ success: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_HANDLERS.ZADIG_OPEN)
+  },
+
+  manual: {
+    openSection: (sectionId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_HANDLERS.MANUAL_OPEN_SECTION, sectionId)
+  },
+
   app: {
     getVersion: (): Promise<{ version: string }> =>
       ipcRenderer.invoke(IPC_HANDLERS.GET_APP_VERSION),

@@ -211,6 +211,12 @@ declare global {
         check: () => Promise<DriverCheckResult>
         install: (type: DriverType) => Promise<void>
       }
+      zadig: {
+        open: () => Promise<{ success: boolean; error?: string }>
+      }
+      manual: {
+        openSection: (sectionId: string) => Promise<void>
+      }
       app: {
         getVersion: () => Promise<{ version: string }>
         getChangelog: () => Promise<{ content: string }>
