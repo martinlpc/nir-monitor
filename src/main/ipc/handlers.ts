@@ -7,6 +7,7 @@ import { registerSettingsHandlers } from './SettingsHandler'
 import { registerTileCacheHandlers } from './TileCacheHandler'
 import { registerDriverHandlers } from './DriverHandler'
 import { registerZadigHandlers, resolveZadigPath } from './ZadigHandler'
+import { registerManualHandlers, resolveManualPath } from './ManualHandler'
 import { registerPortsHandlers } from './PortsHandler'
 import { registerLogsHandlers } from './LogsHandler'
 import { ConfigService } from '../services/ConfigService'
@@ -48,6 +49,10 @@ export function setupIPC(
   registerZadigHandlers(ipcMain, {
     zadigPath: resolveZadigPath(app.isPackaged, process.resourcesPath, process.cwd()),
     openPath: (path) => shell.openPath(path)
+  })
+  registerManualHandlers(ipcMain, {
+    manualPath: resolveManualPath(app.isPackaged, process.resourcesPath, process.cwd()),
+    openUrl: (url) => shell.openExternal(url)
   })
   registerPortsHandlers(ipcMain, async () => {
     const ports = await SerialPort.list()

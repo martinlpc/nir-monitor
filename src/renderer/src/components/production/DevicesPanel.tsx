@@ -251,7 +251,16 @@ export default function DevicesPanel({
           <span className="garmin-warning-icon">⚠</span>
           <div className="garmin-warning-content">
             <span className="garmin-warning-text">
-              Garmin 18x USB detectado sin driver WinUSB — configuralo con Zadig (Manual de uso - Sección 4.3)
+              Garmin 18x USB detectado sin driver WinUSB — configuralo con Zadig (<a
+                className="garmin-warning-link"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault()
+                  void window.api.manual.openSection('section-4-3')
+                }}
+              >
+                Manual de uso - Sección 4.3
+              </a>)
             </span>
             <button
               className="btn btn--primary btn--sm"
