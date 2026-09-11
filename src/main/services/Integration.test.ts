@@ -33,7 +33,8 @@ describe('Integration: Device + Session + GeoFusion Flow', () => {
           id: 'gps',
           port: '/dev/ttyUSB1',
           status: 'connected' as const,
-          reconnecting: false
+          reconnecting: false,
+          garminWinusbMissing: false
         },
         scanning: false
       })),

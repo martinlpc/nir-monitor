@@ -24,6 +24,7 @@ export interface DeviceManagerStateDTO {
     port: string | null
     status: DeviceStatus
     reconnecting: boolean
+    garminWinusbMissing: boolean
   }
   scanning: boolean
 }

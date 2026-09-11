@@ -4,7 +4,13 @@ import type { DeviceId, PortInfo } from './types'
 
 const INITIAL_DEVICE_STATE: DeviceManagerStateDTO = {
   nbm550: { id: null, port: null, status: 'disconnected', reconnecting: false },
-  gps: { id: null, port: null, status: 'disconnected', reconnecting: false },
+  gps: {
+    id: null,
+    port: null,
+    status: 'disconnected',
+    reconnecting: false,
+    garminWinusbMissing: false
+  },
   scanning: false
 }
 

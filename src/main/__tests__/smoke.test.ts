@@ -116,7 +116,8 @@ describe('Smoke: full chain', () => {
       scanAndProbeAll: vi.fn(async () => ({
         nbmPort: 'COM3',
         gpsPort: 'COM4',
-        allProbed: []
+        allProbed: [],
+        garminWinusbMissing: false
       })),
       probeNBM: vi.fn(async () => false),
       probeGPS: vi.fn(async () => false)

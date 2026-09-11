@@ -34,6 +34,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     nbmPort: string | null
     gpsPort: string | null
     allProbed: ProbedDeviceInfo[]
+    garminWinusbMissing: boolean
   }> {
     const ports = await this.listAvailablePorts()
     console.log(`[SerialPortScanner] Found ${ports.length} ports:`, ports)
@@ -44,6 +45,7 @@ export class SerialPortScanner implements ISerialPortScanner {
 
     // Paso 0: si el Garmin 18x USB está conectado y accesible, es el GPS
     const garmin = await this.garminDetect()
+    const garminWinusbMissing = garmin.present && !garmin.accessible
     if (garmin.accessible) {
       gpsPort = GARMIN_USB_PORT_PREFIX
       allProbed.push({ port: GARMIN_USB_PORT_PREFIX, type: 'gps' })
@@ -88,7 +90,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     // Si ambos ya están resueltos, no hace falta escanear
     if (nbmPort && gpsPort) {
       console.log(`[SerialPortScanner] Both devices found via preferred ports. Skipping full scan.`)
-      return { nbmPort, gpsPort, allProbed }
+      return { nbmPort, gpsPort, allProbed, garminWinusbMissing }
     }
 
     // Paso 2: buscar GPS en los puertos restantes (excluir los ya asignados)
@@ -123,7 +125,7 @@ export class SerialPortScanner implements ISerialPortScanner {
     }
 
     console.log(`[SerialPortScanner] Scan complete. NBM: ${nbmPort}, GPS: ${gpsPort}`)
-    return { nbmPort, gpsPort, allProbed }
+    return { nbmPort, gpsPort, allProbed, garminWinusbMissing }
   }
 
   async probeNBM(port: string, timeoutMs = PROBE_TIMEOUT_MS): Promise<boolean> {

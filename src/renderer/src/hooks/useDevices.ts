@@ -18,6 +18,7 @@ export function useDevices(): {
     port: string | null
     status: DeviceStatus
     reconnecting: boolean
+    garminWinusbMissing: boolean
   } | null
   isScanning: boolean
   error: string | null

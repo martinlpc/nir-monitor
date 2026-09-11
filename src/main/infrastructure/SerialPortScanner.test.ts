@@ -165,12 +165,13 @@ describe('SerialPortScanner', () => {
     scanner.probeNBM = probeNBM
     scanner.probeGPS = probeGPS
 
-    await scanner.scanAndProbeAll({ nbm550: 'COM1', gps: 'COM2' })
+    const result = await scanner.scanAndProbeAll({ nbm550: 'COM1', gps: 'COM2' })
 
     // Solo debe probar los preferidos, no el resto
     expect(probeNBM).toHaveBeenCalledTimes(1)
     expect(probeNBM).toHaveBeenCalledWith('COM1')
     expect(probeGPS).toHaveBeenCalledTimes(1)
+    expect(result.garminWinusbMissing).toBe(false)
     expect(probeGPS).toHaveBeenCalledWith('COM2')
   })
 
@@ -252,6 +253,7 @@ describe('SerialPortScanner', () => {
 
     expect(result.nbmPort).toBeNull()
     expect(result.gpsPort).toBeNull()
+    expect(result.garminWinusbMissing).toBe(false)
   })
 
   it('scanAndProbeAll uses Garmin USB as GPS when it is accessible', async () => {
@@ -267,7 +269,9 @@ describe('SerialPortScanner', () => {
 
     expect(result.gpsPort).toBe(GARMIN_USB_PORT_PREFIX)
     expect(result.nbmPort).toBeNull()
+    expect(result.garminWinusbMissing).toBe(false)
     expect(probeGPS).not.toHaveBeenCalled()
+    expect(result.allProbed).toContainEqual({ port: GARMIN_USB_PORT_PREFIX, type: 'gps' })
   })
 
   it('scanAndProbeAll falls back to serial GPS when Garmin is present but not accessible', async () => {
@@ -281,5 +285,7 @@ describe('SerialPortScanner', () => {
     const result = await scanner.scanAndProbeAll()
 
     expect(result.gpsPort).toBe('COM7')
+    expect(result.nbmPort).toBeNull()
+    expect(result.garminWinusbMissing).toBe(true)
   })
 })

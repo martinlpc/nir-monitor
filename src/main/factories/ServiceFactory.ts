@@ -44,7 +44,8 @@ function createSimulatedScanner(): ISerialPortScanner {
     scanAndProbeAll: async () => ({
       nbmPort: 'COM-sim',
       gpsPort: 'COM-sim',
-      allProbed: []
+      allProbed: [],
+      garminWinusbMissing: false
     }),
     probeNBM: async () => true,
     probeGPS: async () => true

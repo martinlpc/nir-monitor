@@ -8,7 +8,13 @@ import type { INBMDriver } from '../../shared/driver-interfaces'
 
 const STATE: DeviceManagerState = {
   nbm550: { id: null, port: 'COM3', status: 'disconnected', reconnecting: false },
-  gps: { id: null, port: 'COM1', status: 'disconnected', reconnecting: false },
+  gps: {
+    id: null,
+    port: 'COM1',
+    status: 'disconnected',
+    reconnecting: false,
+    garminWinusbMissing: false
+  },
   scanning: false
 }
 

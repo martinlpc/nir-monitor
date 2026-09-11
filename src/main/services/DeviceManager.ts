@@ -21,6 +21,7 @@ export interface DeviceManagerState {
     port: string | null
     status: DeviceStatus
     reconnecting: boolean
+    garminWinusbMissing: boolean
   }
   scanning: boolean
 }
@@ -30,6 +31,7 @@ export class DeviceManager extends EventEmitter {
   private gps: IGPSDriver | null = null
   private portConfig: { nbm550?: string; gps?: string } = {}
   private scanning: boolean = false
+  private garminWinusbMissing: boolean = false
   private scanner: ISerialPortScanner
   private nbmIntentionalDisconnect: boolean = false
   private nbmReconnect: ReconnectController
@@ -149,7 +151,8 @@ export class DeviceManager extends EventEmitter {
         id: this.gps?.meta.id ?? null,
         port: this.gps?.meta.port ?? null,
         status: this.gps?.status ?? 'disconnected',
-        reconnecting: this.gpsReconnect.isReconnecting
+        reconnecting: this.gpsReconnect.isReconnecting,
+        garminWinusbMissing: this.garminWinusbMissing
       },
       scanning: this.scanning
     }
@@ -165,10 +168,11 @@ export class DeviceManager extends EventEmitter {
     try {
       await this.disconnectAll()
 
-      const { nbmPort, gpsPort } = await this.scanner.scanAndProbeAll({
+      const { nbmPort, gpsPort, garminWinusbMissing } = await this.scanner.scanAndProbeAll({
         gps: this.portConfig.gps,
         nbm550: this.portConfig.nbm550
       })
+      this.garminWinusbMissing = garminWinusbMissing
 
       console.log(`[DeviceManager] Scan complete. NBM: ${nbmPort}, GPS: ${gpsPort}`)
 
