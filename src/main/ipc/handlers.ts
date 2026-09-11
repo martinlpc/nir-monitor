@@ -1,4 +1,4 @@
-import { ipcMain, app, dialog } from 'electron'
+import { ipcMain, app, dialog, shell } from 'electron'
 import { SerialPort } from 'serialport'
 import { readFileSync, writeFileSync } from 'fs'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
@@ -6,6 +6,7 @@ import { registerSessionServiceHandlers, bindSessionServiceEvents } from './Sess
 import { registerSettingsHandlers } from './SettingsHandler'
 import { registerTileCacheHandlers } from './TileCacheHandler'
 import { registerDriverHandlers } from './DriverHandler'
+import { registerZadigHandlers, resolveZadigPath } from './ZadigHandler'
 import { registerPortsHandlers } from './PortsHandler'
 import { registerLogsHandlers } from './LogsHandler'
 import { ConfigService } from '../services/ConfigService'
@@ -43,6 +44,10 @@ export function setupIPC(
   registerDriverHandlers(ipcMain, {
     checkDrivers: () => detector.check(),
     installDriver: (driverType) => installer.install(driverType)
+  })
+  registerZadigHandlers(ipcMain, {
+    zadigPath: resolveZadigPath(app.isPackaged, process.resourcesPath, process.cwd()),
+    openPath: (path) => shell.openPath(path)
   })
   registerPortsHandlers(ipcMain, async () => {
     const ports = await SerialPort.list()
