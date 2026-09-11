@@ -1,3 +1,26 @@
+# 0.18.0 — 2026-09-11
+
+### Correcciones
+
+- add Options > List All Devices step in manual §4.3 and fix banner text
+- open manual in an internal window so the section anchor works
+- read Garmin packets from the interrupt IN endpoint and await interface release
+
+### Novedades
+
+- add Garmin USB protocol framing and PVT decoding
+- add GarminUsbDetector for presence and WinUSB accessibility
+- add GarminUSBDriver implementing IGPSDriver over node-usb
+- add test:garmin E2E diagnostic script for Garmin 18x USB
+- auto-detect Garmin 18x USB during port scan and list it as GPS port
+- bundle Zadig and open it from the driver warning banner
+- expose garmin WinUSB status in device manager state
+- make manual section link openable from the driver warning banner
+- route garmin-usb ports to GarminUSBDriver in RealDriverFactory
+- show connected GPS model in device panel
+- show GPS model only while connected or reconnecting
+- warn in device panel when Garmin needs the WinUSB driver
+
 # 0.17.0 — 2026-09-09
 
 ### Novedades
