@@ -44,6 +44,8 @@ export default function DevicesPanel({
   const [intervalSec, setIntervalSec] = useState(5)
   const [confirmStop, setConfirmStop] = useState(false)
   const [showStartModal, setShowStartModal] = useState(false)
+  const [openingZadig, setOpeningZadig] = useState(false)
+  const [zadigError, setZadigError] = useState<string | null>(null)
   const { position } = useGpsPosition()
   const { driverStatus, check: checkDrivers, install: installDriver, installing } = useDriverCheck()
 
@@ -93,6 +95,21 @@ export default function DevicesPanel({
       console.error(`Error desconectando ${deviceId}:`, err)
     } finally {
       setLoadingDevice(null)
+    }
+  }
+
+  const handleOpenZadig = async (): Promise<void> => {
+    setOpeningZadig(true)
+    setZadigError(null)
+    try {
+      const result = await window.api.zadig.open()
+      if (!result.success) {
+        setZadigError(result.error ?? 'No se pudo abrir Zadig.')
+      }
+    } catch (err) {
+      setZadigError(err instanceof Error ? err.message : 'No se pudo abrir Zadig.')
+    } finally {
+      setOpeningZadig(false)
     }
   }
 
@@ -226,6 +243,25 @@ export default function DevicesPanel({
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {devices.gps?.garminWinusbMissing && (
+        <div className="devices-panel__garmin-warning">
+          <span className="garmin-warning-icon">⚠</span>
+          <div className="garmin-warning-content">
+            <span className="garmin-warning-text">
+              Garmin 18x USB detectado sin driver WinUSB — configuralo con Zadig (manual §4.3)
+            </span>
+            <button
+              className="btn btn--primary btn--sm"
+              onClick={() => void handleOpenZadig()}
+              disabled={openingZadig}
+            >
+              {openingZadig ? 'Abriendo...' : 'Abrir Zadig'}
+            </button>
+          </div>
+          {zadigError && <span className="garmin-warning-error">{zadigError}</span>}
         </div>
       )}
 

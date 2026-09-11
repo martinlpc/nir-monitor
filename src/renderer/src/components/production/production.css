@@ -158,6 +158,41 @@
   line-height: 1.3;
 }
 
+.devices-panel__garmin-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0.75rem 0.5rem;
+  background: rgba(255, 193, 7, 0.12);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.garmin-warning-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.garmin-warning-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.garmin-warning-text {
+  color: var(--nir-text-secondary);
+  line-height: 1.3;
+}
+
+.garmin-warning-error {
+  color: var(--nir-color-danger, #e57373);
+  line-height: 1.3;
+}
+
 .devices-list {
   flex: 1;
   padding: 1rem;
