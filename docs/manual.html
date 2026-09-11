@@ -494,6 +494,11 @@
 
         <h3>4.3 Garmin 18x USB (configuración inicial en Windows)</h3>
         <p>
+          <em>Opcional:</em> esta sección solo aplica si vas a utilizar el
+          <strong>Garmin 18x USB</strong>. No todos los equipos tienen este dispositivo: si no lo
+          usás, podés omitir esta sección.
+        </p>
+        <p>
           El Garmin 18x USB no usa un driver de puerto serie: Windows lo ve como un dispositivo USB
           y la aplicación lo comunica en forma directa. La primera vez que lo conectes en una
           notebook, puede ser necesario configurar su driver como
@@ -501,11 +506,13 @@
         </p>
         <ol>
           <li>
-            Descargá e instalá <strong>Zadig</strong> (https://zadig.akeo.ie/) en la notebook.
+            Con el Garmin conectado, abrí <strong>Zadig</strong>. Zadig viene incluido en la
+            instalación del RNI Monitor: la app muestra el botón <strong>"Abrir Zadig"</strong>
+            cuando detecta el Garmin sin WinUSB, o lo encontrás en la carpeta
+            <code>resources\drivers\zadig</code> de la instalación.
           </li>
           <li>
-            Con el Garmin conectado, abrí Zadig y desde el menú
-            <strong>Device</strong> seleccioná <strong>Garmin GPS</strong>.
+            Desde el menú <strong>Device</strong> seleccioná <strong>Garmin GPS</strong>.
           </li>
           <li>
             En el campo de la derecha elegí <strong>WinUSB</strong> y presioná
@@ -513,9 +520,11 @@
           </li>
         </ol>
         <div class="info-box">
-          <strong>Tip:</strong> Esta configuración se hace una sola vez por notebook. Si el Garmin
-          está presente pero la app no lo detecta como accesible, el manual de resolución de
-          problemas indica cómo verificarlo (sección 11).
+          <strong>Tip:</strong> Esta configuración se hace una sola vez por notebook, pero está
+          asociada al puerto USB: si cambiás el Garmin a otro puerto USB, repetí la configuración
+          en ese puerto. Si el Garmin está presente pero la app no lo detecta como accesible, la
+          app te muestra el aviso en el panel de dispositivos y podés verificar los pasos en la
+          sección 11.
         </div>
 
         <h3>4.4 Conexión</h3>
@@ -1078,7 +1087,8 @@
               <td><strong>Garmin 18x USB presente pero no se detecta</strong></td>
               <td>El dispositivo usa el driver incorrecto (serial o Garmin, no WinUSB).</td>
               <td>
-                Configurá el Garmin con <strong>WinUSB</strong> usando <strong>Zadig</strong> (una
+                Configurá el Garmin con <strong>WinUSB</strong> usando <strong>Zadig</strong>
+                (incluido en la instalación, botón <strong>"Abrir Zadig"</strong> de la app; una
                 sola vez por notebook). La app lo toma automáticamente como GPS al escanear.
               </td>
             </tr>
