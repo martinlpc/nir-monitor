@@ -1,12 +1,10 @@
-import { pathToFileURL } from 'url'
 import { join } from 'path'
 import { IPC_HANDLERS } from '../../shared/ipc-channels'
 import type { IpcMainLike } from './ipcEnv'
 import { sanitizeReThrow } from './ipcEnv'
 
 export interface ManualHandlerDeps {
-  manualPath: string
-  openUrl: (url: string) => Promise<void>
+  openManualSection: (sectionId: string) => Promise<void>
 }
 
 export function registerManualHandlers(ipc: IpcMainLike, deps: ManualHandlerDeps): void {
@@ -15,8 +13,7 @@ export function registerManualHandlers(ipc: IpcMainLike, deps: ManualHandlerDeps
     async (_event: unknown, _sectionId: string): Promise<void> => {
       try {
         const section = _sectionId?.replace(/[^A-Za-z0-9-]/g, '') ?? ''
-        const url = `${pathToFileURL(deps.manualPath).href}#${section}`
-        await deps.openUrl(url)
+        await deps.openManualSection(section)
       } catch (err) {
         sanitizeReThrow(err)
       }
