@@ -39,7 +39,7 @@ export class DriverDetector {
     const ports = await SerialPort.list()
 
     const resolved: PortDriverInfo[] = ports.map((p) => {
-      const vid = p.vendorId ? p.vendorId.replace(/^0x/i, '').toLowerCase() : null
+      const vid = p.vendorId ? p.vendorId.replace(/^0x/i, '').toUpperCase() : null
       const mapped = vid ? VENDOR_MAP[vid] : null
       const driverType: DriverType = mapped?.type ?? 'unknown'
       const installed = checkDriverInstalled(driverType)
