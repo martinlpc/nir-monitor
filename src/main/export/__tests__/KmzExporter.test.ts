@@ -181,6 +181,48 @@ describe('KmzExporter', () => {
     expect(kml).toContain('<name>Recorrido test</name>')
   })
 
+  it('escapes XML special characters in the label used as layer name', async () => {
+    const exporter = new KmzExporter(APP_VERSION, null)
+    const zip = await exporter.export({
+      sessionId: 'test-session',
+      points: [makePoint(1, 0.5)],
+      metadata: makeMetadata({
+        label: 'A & B <x>',
+        provincia: undefined,
+        localidad: undefined
+      }),
+      stats: null
+    })
+
+    const kml = extractZipEntry(zip, 'doc.kml').toString('utf8')
+    expect(kml).toContain('<name>A &amp; B &lt;x&gt;</name>')
+    expect(kml).toContain('Sesión: A &amp; B &lt;x&gt;')
+    expect(kml).not.toContain('&amp;amp;')
+    expect(kml).not.toContain('A & B')
+  })
+
+  it('escapes XML special characters in location and instrument fields', async () => {
+    const exporter = new KmzExporter(APP_VERSION, null)
+    const base = makeMetadata()
+    const zip = await exporter.export({
+      sessionId: 'test-session',
+      points: [makePoint(1, 0.5)],
+      metadata: makeMetadata({
+        provincia: 'Río & Negro',
+        instrument: {
+          meter: { ...base.instrument!.meter, serial: 'SN<1>' },
+          probe: base.instrument!.probe
+        }
+      }),
+      stats: null
+    })
+
+    const kml = extractZipEntry(zip, 'doc.kml').toString('utf8')
+    expect(kml).toContain('<name>Río &amp; Negro - Plottier - ')
+    expect(kml).toContain('(S/N: SN&lt;1&gt;)')
+    expect(kml).not.toContain('SN<1>')
+  })
+
   it('writes corrected measurement only when a correction factor exists', async () => {
     const exporter = new KmzExporter(APP_VERSION, null)
     const zip = await exporter.export({
