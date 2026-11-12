@@ -37,7 +37,8 @@ export class KmzExporter implements IExporter<Buffer> {
   }
 
   private buildKML(metadata: SessionSummary, points: GeoTimestamp[]): string {
-    const escXml = (s: string): string => s.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>')
+    const escXml = (s: string): string =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     const esc = (s: string | null | undefined): string => escXml(s ?? '')
 
     const INTENSITY_LEVELS: { maxPercent: number; hex: string }[] = [
@@ -151,9 +152,7 @@ RNI Monitor v${this.appVersion}</description>
 
     const locationParts = [metadata.provincia, metadata.localidad].filter(Boolean)
     const layerName =
-      locationParts.length > 0
-        ? `${locationParts.join(' - ')} - ${dateOnly}`
-        : escXml(metadata.label)
+      locationParts.length > 0 ? `${locationParts.join(' - ')} - ${dateOnly}` : metadata.label
 
     const inst = metadata.instrument
     const instrumentDesc = inst
