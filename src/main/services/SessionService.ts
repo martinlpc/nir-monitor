@@ -11,6 +11,7 @@ import type { IGeoFusionService } from '../../shared/services/IGeoFusionService'
 import { CorrectionFactorResolver } from '../uncertainty/correctionFactor'
 import { ConfigService } from './ConfigService'
 import { AppError } from '../../shared/errors/AppError'
+import { MAX_SESSION_POINTS } from '../../shared/config.constants'
 
 export type SessionState = 'idle' | 'running' | 'stopped'
 
@@ -22,7 +23,10 @@ export class SessionService extends EventEmitter {
   private label: string = ''
   private accumulatedPoints: GeoTimestamp[] = []
   private pendingFinalize = false
+  private limitReached = false
+  private saveFailureNotified = false
   private readonly MAX_SAVE_RETRIES = 3
+  private readonly maxPoints: number
 
   private fusion: IGeoFusionService
   private nbm: INBMDriver | null = null
@@ -54,26 +58,65 @@ export class SessionService extends EventEmitter {
     fusion: IGeoFusionService,
     repository?: ISessionRepository,
     config?: ConfigService,
-    correctionResolver?: CorrectionFactorResolver
+    correctionResolver?: CorrectionFactorResolver,
+    options?: { maxPoints?: number }
   ) {
     super()
+    this.maxPoints = options?.maxPoints ?? MAX_SESSION_POINTS
     this.fusion = fusion
     this.repository = repository || null
     this.config = config ?? null
     this.correctionResolver = correctionResolver ?? new CorrectionFactorResolver(() => [])
 
     this.fusion.on('point', (point: GeoTimestamp) => {
-      this.pointCount++
-      this.accumulatedPoints.push(point)
-      console.log(
-        `[SessionService] Point captured! Count: ${this.pointCount}, timestamp: ${point.timestamp}`
-      )
-      this.emit('point', point)
-
-      if (this.state === 'running' && this.repository && this.currentSessionId) {
-        this.savePointWithRetry(this.currentSessionId, point)
-      }
+      void this.handlePoint(point)
     })
+  }
+
+  private async handlePoint(point: GeoTimestamp): Promise<void> {
+    // Alcanzado el tope, los puntos que lleguen mientras se cierra la sesión se descartan
+    if (this.limitReached) return
+
+    this.pointCount++
+    this.accumulatedPoints.push(point)
+    console.log(
+      `[SessionService] Point captured! Count: ${this.pointCount}, timestamp: ${point.timestamp}`
+    )
+    this.emit('point', point)
+
+    const sessionId = this.currentSessionId
+    if (this.state !== 'running' || !sessionId) return
+
+    const isLastAllowedPoint = this.pointCount >= this.maxPoints
+    if (isLastAllowedPoint) this.limitReached = true
+
+    await this.savePointWithRetry(sessionId, point)
+
+    if (isLastAllowedPoint && this.state === 'running' && this.currentSessionId === sessionId) {
+      await this.autoStop(
+        `Se alcanzó el límite de ${this.maxPoints} puntos por sesión. La medición se detuvo y quedó guardada. Inicie una nueva sesión para continuar.`,
+        'warning'
+      )
+    }
+  }
+
+  /** Detiene la sesión sin pedido del usuario y avisa el motivo. */
+  private async autoStop(message: string, severity: 'error' | 'warning'): Promise<void> {
+    console.warn(`[SessionService] Auto-stopping session: ${message}`)
+    this.emit('alert', { message, severity })
+    try {
+      const summary = await this.stop()
+      this.emit('autoStopped', summary)
+    } catch (err) {
+      console.error('[SessionService] Error auto-stopping session:', err)
+    }
+  }
+
+  private notifySaveFailure(message: string): void {
+    // Un aviso por sesión: con el disco lleno fallaría cada punto
+    if (this.saveFailureNotified) return
+    this.saveFailureNotified = true
+    this.emit('alert', { message, severity: 'error' })
   }
 
   private async savePointWithRetry(
@@ -85,15 +128,19 @@ export class SessionService extends EventEmitter {
     try {
       await this.repository.addPoint(sessionId, point)
     } catch (err) {
-      if (attempts < this.MAX_SAVE_RETRIES) {
+      const retryable = !(err instanceof AppError) || err.retryable
+      if (retryable && attempts < this.MAX_SAVE_RETRIES) {
         console.warn(
           `[SessionService] Retrying save point (attempt ${attempts + 1}/${this.MAX_SAVE_RETRIES})`
         )
         await new Promise((r) => setTimeout(r, 200 * (attempts + 1)))
         return this.savePointWithRetry(sessionId, point, attempts + 1)
       }
-      console.error('[SessionService] Failed to save point after retries:', err)
+      console.error('[SessionService] Failed to save point:', err)
       this.emit('session:saveError', { sessionId, error: err })
+      this.notifySaveFailure(
+        'No se pudo guardar un punto de la medición. Verifique el espacio en disco. Si el aviso se repite en una sesión nueva, no continúe midiendo.'
+      )
     }
   }
 
@@ -105,15 +152,10 @@ export class SessionService extends EventEmitter {
     const probeModel = driver.getProbeInfo()?.model ?? null
     this.syncCorrectionFactorFromProbe(probeModel)
     if (this.state === 'running' && probeModel && this.correctionFactor == null) {
-      const message = `No se encontró factor de corrección para la sonda "${probeModel}". La sesión se detuvo por seguridad.`
-      console.error(`[SessionService] ${message}`)
-      this.emit('alert', { message })
-      void this.stop().catch((err) => {
-        console.error(
-          '[SessionService] Error stopping session after missing correction factor:',
-          err
-        )
-      })
+      void this.autoStop(
+        `No se encontró factor de corrección para la sonda "${probeModel}". La sesión se detuvo por seguridad.`,
+        'error'
+      )
     }
   }
 
@@ -149,6 +191,8 @@ export class SessionService extends EventEmitter {
     this.pointCount = 0
     this.label = label || `Recorrido ${new Date().toLocaleDateString('es-AR')}`
     this.accumulatedPoints = []
+    this.limitReached = false
+    this.saveFailureNotified = false
     this.correctionFactor = null
     this.provincia = locationData?.provincia || ''
     this.localidad = locationData?.localidad || ''
@@ -297,6 +341,11 @@ export class SessionService extends EventEmitter {
         console.error(`[SessionService] Failed to finalize session: ${err}`)
         this.pendingFinalize = true
         this.emit('session:saveError', { sessionId: this.currentSessionId, error: err })
+        this.emit('alert', {
+          message:
+            'No se pudo cerrar la sesión en la base de datos. Los puntos capturados quedaron resguardados y se recuperarán al reiniciar la aplicación.',
+          severity: 'error'
+        })
       }
     }
 

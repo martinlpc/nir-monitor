@@ -44,7 +44,9 @@ export interface SessionServiceEvents {
     instrument: InstrumentInfo | null
   }
   stopped: SessionSummary
-  alert: { message: string }
+  /** La sesión se detuvo sola (tope de puntos, sonda sin factor), no por pedido del usuario */
+  autoStopped: SessionSummary
+  alert: { message: string; severity?: 'error' | 'warning' | 'info' }
   position: { coords: GeoPosition; valid: boolean }
   'session:saveError': { sessionId: string; error: unknown }
 }

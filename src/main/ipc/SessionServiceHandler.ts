@@ -60,6 +60,33 @@ function validateSessionId(sessionId: string): { success: false; error: string }
   return null
 }
 
+/**
+ * Guarda una copia cifrada del GeoJSON de la sesión en el escritorio.
+ * Nunca lanza: un fallo acá no debe afectar el cierre de la sesión.
+ */
+export async function saveEncryptedCopyToDesktop(
+  deps: Pick<
+    SessionServiceHandlerDeps,
+    'sessionService' | 'exportOrchestrator' | 'getDesktopPath' | 'encrypt' | 'writeFile'
+  >,
+  summary: SessionSummary | null | undefined
+): Promise<void> {
+  if (!summary?.localidad || !summary?.id) return
+  if (!deps.sessionService.getRepository()) return
+  try {
+    const desktop = deps.getDesktopPath()
+    const filename = buildEncryptedDesktopFilename(summary.localidad, summary.startedAt)
+    const filepath = join(desktop, filename)
+    const result = await deps.exportOrchestrator.export(summary.id, 'geojson')
+    const geojson = result.data as string
+    const encrypted = deps.encrypt(Buffer.from(geojson, 'utf-8'))
+    deps.writeFile(filepath, encrypted)
+    console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
+  } catch (err) {
+    console.warn('[SessionServiceHandler] Failed to save encrypted GeoJSON to desktop:', err)
+  }
+}
+
 // ── Funciones puras ────────────────────────────────────────
 
 export function sanitizeExportLabel(label: string): string {
@@ -223,26 +250,7 @@ export function registerSessionServiceHandlers(
   ipc.handle(IPC_HANDLERS.SESSION_STOP, async () => {
     try {
       const summary = await sessionService.stop()
-      if (summary?.localidad && summary?.id) {
-        const repository = sessionService.getRepository()
-        if (repository) {
-          try {
-            const desktop = deps.getDesktopPath()
-            const filename = buildEncryptedDesktopFilename(summary.localidad, summary.startedAt)
-            const filepath = join(desktop, filename)
-            const result = await exportOrchestrator.export(summary.id, 'geojson')
-            const geojson = result.data as string
-            const encrypted = deps.encrypt(Buffer.from(geojson, 'utf-8'))
-            deps.writeFile(filepath, encrypted)
-            console.log(`[SessionServiceHandler] Encrypted GeoJSON saved to desktop: ${filepath}`)
-          } catch (innerErr) {
-            console.warn(
-              '[SessionServiceHandler] Failed to save encrypted GeoJSON to desktop:',
-              innerErr
-            )
-          }
-        }
-      }
+      await saveEncryptedCopyToDesktop(deps, summary)
       return summary
     } catch (err) {
       sanitizeReThrow(err)
@@ -509,13 +517,21 @@ export function registerSessionServiceHandlers(
  */
 export function bindSessionServiceEvents(
   eventSink: EventSink,
-  sessionService: SessionServiceLike
+  sessionService: SessionServiceLike,
+  onAutoStopped?: (summary: SessionSummary) => Promise<void> | void
 ): void {
   sessionService.on('point', (point) => eventSink.send('session:sample', point))
   sessionService.on('started', (info) => eventSink.send('session:started', info))
   sessionService.on('stopped', (summary) => eventSink.send('session:stopped', summary))
-  sessionService.on('alert', (data) => {
-    eventSink.send('session:alert', data)
-    eventSink.alert(data.message, 'error')
+  sessionService.on(
+    'alert',
+    (data: { message: string; severity?: 'error' | 'warning' | 'info' }) => {
+      eventSink.send('session:alert', { message: data.message })
+      eventSink.alert(data.message, data.severity ?? 'error')
+    }
+  )
+  // La sesión se detuvo sola: generar igual la copia cifrada que hace session:stop
+  sessionService.on('autoStopped', (summary: SessionSummary) => {
+    void onAutoStopped?.(summary)
   })
 }

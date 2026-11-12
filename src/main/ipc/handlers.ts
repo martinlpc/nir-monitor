@@ -2,7 +2,12 @@ import { ipcMain, app, dialog, shell } from 'electron'
 import { SerialPort } from 'serialport'
 import { readFileSync, writeFileSync } from 'fs'
 import { registerDeviceManagerHandlers, bindDeviceManagerEvents } from './DeviceManagerHandler'
-import { registerSessionServiceHandlers, bindSessionServiceEvents } from './SessionServiceHandler'
+import {
+  registerSessionServiceHandlers,
+  bindSessionServiceEvents,
+  saveEncryptedCopyToDesktop
+} from './SessionServiceHandler'
+import type { SessionServiceHandlerDeps } from './SessionServiceHandler'
 import { registerSettingsHandlers } from './SettingsHandler'
 import { registerTileCacheHandlers } from './TileCacheHandler'
 import { registerDriverHandlers } from './DriverHandler'
@@ -81,7 +86,7 @@ export function setupIPC(
     connectDevice: (deviceId) => deviceManager.connectDevice(deviceId),
     disconnectDevice: (deviceId) => deviceManager.disconnectDevice(deviceId)
   })
-  registerSessionServiceHandlers(ipcMain, {
+  const sessionHandlerDeps: SessionServiceHandlerDeps = {
     eventSink: eventBus,
     sessionService,
     exportOrchestrator,
@@ -92,7 +97,8 @@ export function setupIPC(
     encrypt: (plaintext) => cryptoService.encrypt(plaintext),
     decrypt: (ciphertext) => cryptoService.decrypt(ciphertext),
     isEncrypted
-  })
+  }
+  registerSessionServiceHandlers(ipcMain, sessionHandlerDeps)
   registerSettingsHandlers(ipcMain, {
     app,
     readFile: (filePath) => readFileSync(filePath, 'utf-8'),
@@ -110,7 +116,9 @@ export function setupIPC(
   }
 
   bindDeviceManagerEvents(eventBus, deviceManager)
-  bindSessionServiceEvents(eventBus, sessionService)
+  bindSessionServiceEvents(eventBus, sessionService, (summary) =>
+    saveEncryptedCopyToDesktop(sessionHandlerDeps, summary)
+  )
 
   console.log('[IPC] All IPC handlers and event listeners registered')
 

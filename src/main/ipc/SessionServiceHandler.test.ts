@@ -5,6 +5,8 @@ import {
   buildEncryptedDesktopFilename,
   buildImportedSession,
   registerSessionServiceHandlers,
+  bindSessionServiceEvents,
+  saveEncryptedCopyToDesktop,
   sanitizeExportLabel,
   withSingleExtension,
   DEFAULT_MAX_EXPORT_POINTS
@@ -758,4 +760,95 @@ describe('pure helpers', () => {
       expect(points.every((p) => p.sessionId === NEW_ID)).toBe(true)
     }
   )
+})
+
+describe('bindSessionServiceEvents', () => {
+  function bind(onAutoStopped?: (summary: SessionSummary) => Promise<void> | void): {
+    deps: ReturnType<typeof makeDeps>
+    emit: (event: string, payload: unknown) => void
+  } {
+    const deps = makeDeps()
+    bindSessionServiceEvents(deps.eventSink, deps.sessionService, onAutoStopped)
+    const emit = (event: string, payload: unknown): void => {
+      for (const [name, listener] of vi.mocked(deps.sessionService.on).mock.calls) {
+        if (name === event) listener(payload)
+      }
+    }
+    return { deps, emit }
+  }
+
+  it('forwards alerts as errors by default', () => {
+    const { deps, emit } = bind()
+
+    emit('alert', { message: 'No se pudo guardar un punto' })
+
+    expect(deps.eventSink.send).toHaveBeenCalledWith('session:alert', {
+      message: 'No se pudo guardar un punto'
+    })
+    expect(deps.eventSink.alert).toHaveBeenCalledWith('No se pudo guardar un punto', 'error')
+  })
+
+  it('respects the alert severity when provided', () => {
+    const { deps, emit } = bind()
+
+    emit('alert', { message: 'Se alcanzó el límite', severity: 'warning' })
+
+    expect(deps.eventSink.alert).toHaveBeenCalledWith('Se alcanzó el límite', 'warning')
+  })
+
+  it('runs the auto-stop callback with the session summary', () => {
+    const onAutoStopped = vi.fn()
+    const { emit } = bind(onAutoStopped)
+    const summary = { id: SESSION_ID, localidad: 'Neuquén' } as SessionSummary
+
+    emit('autoStopped', summary)
+
+    expect(onAutoStopped).toHaveBeenCalledWith(summary)
+  })
+
+  it('tolerates an auto-stop without a callback', () => {
+    const { emit } = bind()
+    expect(() => emit('autoStopped', { id: SESSION_ID } as SessionSummary)).not.toThrow()
+  })
+})
+
+describe('saveEncryptedCopyToDesktop', () => {
+  const summary = {
+    id: SESSION_ID,
+    label: 'Recorrido 1',
+    startedAt: Date.parse('2026-07-31T12:00:00.000Z'),
+    stoppedAt: Date.parse('2026-07-31T12:01:00.000Z'),
+    sampleCount: 2,
+    instrument: null,
+    correctionFactor: 1.08,
+    localidad: 'Neuquén'
+  } as SessionSummary
+
+  it('writes the encrypted copy for an auto-stopped session', async () => {
+    const deps = makeDeps()
+
+    await saveEncryptedCopyToDesktop(deps, summary)
+
+    expect(deps.exportOrchestrator.export).toHaveBeenCalledWith(SESSION_ID, 'geojson')
+    expect(deps.writeFile).toHaveBeenCalledWith(
+      join('C:\\Desktop', buildEncryptedDesktopFilename('Neuquén', summary.startedAt)),
+      expect.any(Buffer)
+    )
+  })
+
+  it('never throws when the export fails', async () => {
+    const deps = makeDeps()
+    vi.mocked(deps.exportOrchestrator.export).mockRejectedValueOnce(new Error('boom'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    await expect(saveEncryptedCopyToDesktop(deps, summary)).resolves.toBeUndefined()
+    expect(deps.writeFile).not.toHaveBeenCalled()
+    warnSpy.mockRestore()
+  })
+
+  it('does nothing without a summary', async () => {
+    const deps = makeDeps()
+    await saveEncryptedCopyToDesktop(deps, null)
+    expect(deps.exportOrchestrator.export).not.toHaveBeenCalled()
+  })
 })
