@@ -420,6 +420,27 @@ describe('SQLiteSessionRepository (in-memory)', () => {
       repo.saveSession(metaB.id, metaB, [{ ...dupPoint, sessionId: metaB.id }])
     ).rejects.toThrow(/Cannot save session/)
     expect(await repo.getSessionPoints(metaB.id)).toEqual([])
+    // La transacción deshace también la fila de la sesión: no queda a medias
+    expect(await repo.getSession(metaB.id)).toBeNull()
+    expect(await repo.getSessionStats(metaB.id)).toBeNull()
+  })
+
+  it('saveSession persists location data and tolerates more than the capture limit', async () => {
+    const meta = makeSession()
+    const total = SQLiteSessionRepository.MAX_EXPORT_POINTS + 5
+    const pts = Array.from({ length: total }, (_, i) =>
+      makePoint({ sessionId: 'ignored', sequenceNumber: i + 1 })
+    )
+
+    await repo.saveSession(meta.id, { ...meta, sampleCount: total }, pts)
+
+    const loaded = await repo.getSession(meta.id)
+    expect(loaded?.metadata.provincia).toBe('Neuquén')
+    expect(loaded?.metadata.localidad).toBe('Neuquén')
+    expect(loaded?.metadata.apellido1).toBe('García')
+    expect(loaded?.metadata.apellido2).toBe('López')
+    expect(loaded?.points).toHaveLength(total)
+    expect((await repo.getSessionStats(meta.id))?.pointCount).toBe(total)
   })
 
   // ── Manejo de errores ──────────────────────────────────────

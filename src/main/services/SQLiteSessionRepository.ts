@@ -334,11 +334,13 @@ export class SQLiteSessionRepository implements ISessionRepository {
     await this.initialize()
     const db = this.ensureDb()
 
+    // Todo en una transacción: ante cualquier error no queda una sesión a medias
+    db.run('BEGIN')
     try {
-      // Guardar metadatos de sesión
       db.run(
-        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO sessions (id, label, startedAt, stoppedAt, sampleCount, correctionFactor, instrument,
+         provincia, localidad, apellido1, apellido2)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           sessionId,
           metadata.label,
@@ -346,30 +348,42 @@ export class SQLiteSessionRepository implements ISessionRepository {
           metadata.stoppedAt ? unixToISO(metadata.stoppedAt) : null,
           metadata.sampleCount,
           metadata.correctionFactor ?? null,
-          metadata.instrument ? JSON.stringify(metadata.instrument) : null
+          metadata.instrument ? JSON.stringify(metadata.instrument) : null,
+          metadata.provincia ?? null,
+          metadata.localidad ?? null,
+          metadata.apellido1 ?? null,
+          metadata.apellido2 ?? null
         ]
       )
 
-      // Guardar puntos en una transacción
-      db.run('BEGIN')
-      try {
-        for (const point of points) {
-          this.insertPoint(db, point.sessionId, point)
-        }
-        db.run('COMMIT')
-      } catch (err) {
-        db.run('ROLLBACK')
-        throw err
+      for (const point of points) {
+        this.insertPoint(db, sessionId, point)
       }
 
       this.storeStats(db, sessionId)
-
-      this.save()
-      console.log(`[SQLiteSessionRepository] Session ${sessionId} saved: ${points.length} points`)
+      db.run('COMMIT')
     } catch (err) {
+      try {
+        db.run('ROLLBACK')
+      } catch {
+        /* rollback error ignored */
+      }
       console.error(`[SQLiteSessionRepository] Error saving session:`, err)
       throw new Error(`Cannot save session: ${err}`)
     }
+
+    try {
+      this.save()
+    } catch (err) {
+      // No se pudo escribir a disco: se deshace en memoria para no mostrar una
+      // sesión que desaparecería al reiniciar
+      db.run('DELETE FROM geo_points WHERE sessionId = ?', [sessionId])
+      db.run('DELETE FROM session_stats WHERE sessionId = ?', [sessionId])
+      db.run('DELETE FROM sessions WHERE id = ?', [sessionId])
+      console.error(`[SQLiteSessionRepository] Error persisting session:`, err)
+      throw new Error(`Cannot save session: ${err}`)
+    }
+    console.log(`[SQLiteSessionRepository] Session ${sessionId} saved: ${points.length} points`)
   }
 
   // ── Flujo incremental: initSession → addPoint(s) → finalizeSession ──
