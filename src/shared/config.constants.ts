@@ -68,10 +68,16 @@ export const DEFAULT_GPS_RECONNECT: ReconnectConfig = {
 }
 
 // -- DB flush ---------------------------------------
+// Cada punto se guarda al instante en el journal (src/main/db/PointJournal.ts).
+// Estos valores solo regulan cada cuánto se vuelca la base completa a disco.
 export const DEFAULT_FLUSH: FlushConfig = {
-  everyNPoints: 5,
-  intervalMs: 5000
+  everyNPoints: 25,
+  intervalMs: 30_000
 }
+
+// -- Session limits -----------------------------------
+/** Tope de puntos por sesión de medición. Al alcanzarlo la sesión se detiene sola. */
+export const MAX_SESSION_POINTS = 5000
 
 // -- Geo fusion ---------------------------------------
 export const DEFAULT_GEO_FUSION: GeoFusionConfigOptions = {

@@ -288,7 +288,7 @@ idx_geo_lat_lon (lat, lon)
 
 El esquema y los mapeos de filas viven aparte, en `src/main/db/` (`SchemaManager.ts` aplica tablas, índices y los `ALTER TABLE` idempotentes de las columnas agregadas después del release inicial; `rowMappers.ts` traduce filas ↔ DTOs).
 
-**Flujo incremental:** `initSession()` → `addPoint()` × N → `finalizeSession()`. Flush cada **5 puntos o 5 s** (`DEFAULT_FLUSH` en `src/shared/config.constants.ts`).
+**Flujo incremental:** `initSession()` → `addPoint()` × N → `finalizeSession()`. Cada punto se resguarda al instante en un journal cifrado con fsync (`sessions.journal`, `src/main/db/PointJournal.ts`); la base completa se vuelca a disco de forma atómica cada **25 puntos o 30 s** (`DEFAULT_FLUSH` en `src/shared/config.constants.ts`). Al arrancar se reincorporan los puntos del journal y se cierran las sesiones que quedaron abiertas por un cierre inesperado. La captura se detiene sola al llegar a `MAX_SESSION_POINTS = 5000`.
 
 **Límite de exportación:** Toda exportación (GeoJSON, XLSX, KMZ) se trunca a `MAX_EXPORT_POINTS = 5000` puntos por sesión.
 

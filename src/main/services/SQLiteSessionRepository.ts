@@ -10,10 +10,28 @@ import type {
   PersistedSession,
   SessionStats
 } from '../../shared/services/ISessionRepository'
+import { MAX_SESSION_POINTS } from '../../shared/config.constants'
+import { AppError } from '../../shared/errors/AppError'
 import { isEncrypted } from './CryptoService'
 import type { CryptoService } from './CryptoService'
 import { applySchema } from '../db/SchemaManager'
-import { rowToGeoTimestamp, rowToSessionSummary, rowToSessionStats, unixToISO } from '../db/rowMappers'
+import { PointJournal } from '../db/PointJournal'
+import { writeFileAtomic } from '../db/atomicWrite'
+import {
+  rowToGeoTimestamp,
+  rowToSessionSummary,
+  rowToSessionStats,
+  unixToISO
+} from '../db/rowMappers'
+
+export interface RecoveryReport {
+  /** Puntos que estaban solo en el journal y se reincorporaron a la base */
+  replayedPoints: number
+  /** Sesiones que quedaron abiertas por un cierre inesperado y se cerraron */
+  closedSessions: number
+  /** Bytes descartados al final del journal (registro cortado por el apagón) */
+  discardedBytes: number
+}
 
 /**
  * SQLite-based session persistence using sql.js (WASM)
@@ -21,9 +39,13 @@ import { rowToGeoTimestamp, rowToSessionSummary, rowToSessionStats, unixToISO } 
  * - sessions: metadata (id, label, startedAt, stoppedAt, sampleCount)
  * - geo_points: individual points (sessionId, position, emf data)
  * - session_stats: pre-calculated statistics (avgCorrected, maxCorrected, etc.)
+ *
+ * Durabilidad: la base vive en memoria y se vuelca entera a disco de forma
+ * atómica (`save`). Entre volcados, cada punto queda resguardado en un journal
+ * append-only con fsync (`PointJournal`), que se reproduce al arrancar.
  */
 export class SQLiteSessionRepository implements ISessionRepository {
-  static readonly MAX_EXPORT_POINTS = 5000
+  static readonly MAX_EXPORT_POINTS = MAX_SESSION_POINTS
 
   private db: SqlJsDatabase | null = null
   private dbPath: string = ''
@@ -35,20 +57,24 @@ export class SQLiteSessionRepository implements ISessionRepository {
   private readonly FLUSH_INTERVAL_MS: number
   private readonly isTestMode: boolean
   private readonly crypto: CryptoService | null
+  private readonly journal: PointJournal | null
+  private lastRecovery: RecoveryReport | null = null
 
   constructor(options?: {
     testDb?: SqlJsDatabase
     flushEveryNPoints?: number
     flushIntervalMs?: number
     crypto?: CryptoService
+    journal?: PointJournal
   }) {
-    this.FLUSH_EVERY_N_POINTS = options?.flushEveryNPoints ?? 5
-    this.FLUSH_INTERVAL_MS = options?.flushIntervalMs ?? 5_000
+    this.FLUSH_EVERY_N_POINTS = options?.flushEveryNPoints ?? 25
+    this.FLUSH_INTERVAL_MS = options?.flushIntervalMs ?? 30_000
     this.crypto = options?.crypto ?? null
 
     if (options?.testDb) {
       this.db = options.testDb
       this.isTestMode = true
+      this.journal = options.journal ?? null
       return
     }
     this.isTestMode = false
@@ -64,6 +90,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
           : path.join(os.homedir(), '.config', 'RNI Monitor')
       this.dbPath = path.join(dataPath, 'sessions.db')
     }
+    this.journal =
+      options?.journal ??
+      new PointJournal(path.join(path.dirname(this.dbPath), 'sessions.journal'), this.crypto)
   }
 
   /**
@@ -123,6 +152,9 @@ export class SQLiteSessionRepository implements ISessionRepository {
       // Crear tablas, migraciones e índices
       applySchema(this.db)
 
+      // Reincorporar puntos del journal y cerrar sesiones interrumpidas
+      this.lastRecovery = this.recoverFromUncleanShutdown(this.db)
+
       this.save()
       this.initialized = true
       console.log('[SQLiteSessionRepository] Database initialized:', this.dbPath)
@@ -140,20 +172,158 @@ export class SQLiteSessionRepository implements ISessionRepository {
   }
 
   /**
-   * Guardar BD a archivo
+   * Volcar la BD completa a disco de forma atómica y vaciar el journal.
+   * Lanza si la escritura falla: el llamador decide cómo informarlo.
    */
   private save(): void {
     if (!this.db) return
     if (this.isTestMode) return
+    const data = this.db.export()
+    const buffer = Buffer.from(data)
+    const encrypted = this.crypto ? this.crypto.encrypt(buffer) : buffer
+    fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
+    writeFileAtomic(this.dbPath, encrypted)
+    // El volcado ya contiene todos los puntos: el journal deja de ser necesario
+    this.journal?.clear()
+  }
+
+  /** Volcado que no debe interrumpir la captura: el journal ya resguarda los puntos. */
+  private flushQuietly(context: string): void {
     try {
-      const data = this.db.export()
-      const buffer = Buffer.from(data)
-      const encrypted = this.crypto ? this.crypto.encrypt(buffer) : buffer
-      fs.mkdirSync(path.dirname(this.dbPath), { recursive: true })
-      fs.writeFileSync(this.dbPath, encrypted)
+      this.flush()
     } catch (err) {
-      console.error('[SQLiteSessionRepository] Save failed:', err)
+      console.error(`[SQLiteSessionRepository] ${context} failed, points remain in journal:`, err)
     }
+  }
+
+  // ── Helpers de escritura ─────────────────────────────────────
+
+  private insertPoint(
+    db: SqlJsDatabase,
+    sessionId: string,
+    point: GeoTimestamp,
+    ignoreDuplicates = false
+  ): void {
+    db.run(
+      `INSERT ${ignoreDuplicates ? 'OR IGNORE ' : ''}INTO geo_points
+       (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit, gps_gap)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        point.id,
+        sessionId,
+        point.sequenceNumber,
+        unixToISO(point.timestamp),
+        point.position.lat,
+        point.position.lon,
+        point.position.alt,
+        point.emf.rawMeasurement,
+        point.correctedMeasurement,
+        point.emf.unit,
+        point.gpsGap ? 1 : 0
+      ]
+    )
+  }
+
+  /** Calcula y guarda las estadísticas de la sesión (usando correctedMeasurement) */
+  private storeStats(db: SqlJsDatabase, sessionId: string): void {
+    const statsResult = db.exec(
+      `SELECT
+        AVG(correctedMeasurement) as avgCorrected,
+        MAX(correctedMeasurement) as maxCorrected,
+        MIN(correctedMeasurement) as minCorrected,
+        COUNT(*) as pointCount
+      FROM geo_points
+      WHERE sessionId = ?`,
+      [sessionId]
+    )
+
+    const row = statsResult[0]?.values[0]
+    const stats = row
+      ? {
+          avgCorrected: row[0] as number | null,
+          maxCorrected: row[1] as number | null,
+          minCorrected: row[2] as number | null,
+          pointCount: row[3] as number
+        }
+      : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
+
+    db.run(
+      `INSERT OR REPLACE INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
+       VALUES (?, ?, ?, ?, ?)`,
+      [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
+    )
+  }
+
+  // ── Recuperación tras cierre inesperado ──────────────────────
+
+  /**
+   * Se ejecuta una vez al abrir la base, antes de que pueda existir una sesión
+   * en curso. Reincorpora los puntos que quedaron solo en el journal y cierra
+   * las sesiones sin fecha de fin, para que se puedan ver y exportar.
+   */
+  private recoverFromUncleanShutdown(db: SqlJsDatabase): RecoveryReport {
+    const { entries, discardedBytes } = this.journal?.readAll() ?? {
+      entries: [],
+      discardedBytes: 0
+    }
+    let replayedPoints = 0
+
+    if (entries.length > 0) {
+      const knownSessions = new Map<string, boolean>()
+      const sessionExists = (sessionId: string): boolean => {
+        let known = knownSessions.get(sessionId)
+        if (known === undefined) {
+          const res = db.exec('SELECT 1 FROM sessions WHERE id = ?', [sessionId])
+          known = res.length > 0 && res[0].values.length > 0
+          knownSessions.set(sessionId, known)
+        }
+        return known
+      }
+
+      db.run('BEGIN')
+      try {
+        for (const entry of entries) {
+          if (!sessionExists(entry.sessionId)) continue
+          try {
+            this.insertPoint(db, entry.sessionId, entry.point, true)
+            replayedPoints += db.getRowsModified()
+          } catch (err) {
+            console.warn('[SQLiteSessionRepository] Skipping unreadable journal entry:', err)
+          }
+        }
+        db.run('COMMIT')
+      } catch (err) {
+        db.run('ROLLBACK')
+        throw err
+      }
+    }
+
+    const openSessions = db.exec('SELECT id FROM sessions WHERE stoppedAt IS NULL')
+    const openIds = (openSessions[0]?.values ?? []).map((row) => row[0] as string)
+    for (const sessionId of openIds) {
+      db.run(
+        `UPDATE sessions SET
+           stoppedAt = COALESCE(
+             (SELECT MAX(timestamp) FROM geo_points WHERE sessionId = ?), startedAt),
+           sampleCount = (SELECT COUNT(*) FROM geo_points WHERE sessionId = ?)
+         WHERE id = ?`,
+        [sessionId, sessionId, sessionId]
+      )
+      this.storeStats(db, sessionId)
+    }
+
+    if (replayedPoints > 0 || openIds.length > 0 || discardedBytes > 0) {
+      console.warn(
+        `[SQLiteSessionRepository] Recovery after unclean shutdown: ${replayedPoints} point(s) restored from journal, ${openIds.length} session(s) closed, ${discardedBytes} byte(s) discarded`
+      )
+    }
+
+    return { replayedPoints, closedSessions: openIds.length, discardedBytes }
+  }
+
+  /** Resultado de la recuperación hecha al abrir la base (null si aún no se abrió). */
+  getLastRecovery(): RecoveryReport | null {
+    return this.lastRecovery
   }
 
   async saveSession(
@@ -184,24 +354,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
       db.run('BEGIN')
       try {
         for (const point of points) {
-          db.run(
-            `INSERT INTO geo_points 
-             (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit, gps_gap)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [
-              point.id,
-              point.sessionId,
-              point.sequenceNumber,
-              unixToISO(point.timestamp),
-              point.position.lat,
-              point.position.lon,
-              point.position.alt,
-              point.emf.rawMeasurement,
-              point.correctedMeasurement,
-              point.emf.unit,
-              point.gpsGap ? 1 : 0
-            ]
-          )
+          this.insertPoint(db, point.sessionId, point)
         }
         db.run('COMMIT')
       } catch (err) {
@@ -209,32 +362,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
         throw err
       }
 
-      // Calcular y guardar estadísticas (usando correctedMeasurement)
-      const statsResult = db.exec(
-        `SELECT
-          AVG(correctedMeasurement) as avgCorrected,
-          MAX(correctedMeasurement) as maxCorrected,
-          MIN(correctedMeasurement) as minCorrected,
-          COUNT(*) as pointCount
-        FROM geo_points
-        WHERE sessionId = ?`,
-        [sessionId]
-      )
-
-      const stats = statsResult[0]?.values[0]
-        ? {
-            avgCorrected: statsResult[0].values[0][0] as number | null,
-            maxCorrected: statsResult[0].values[0][1] as number | null,
-            minCorrected: statsResult[0].values[0][2] as number | null,
-            pointCount: statsResult[0].values[0][3] as number
-          }
-        : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
-
-      db.run(
-        `INSERT INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
-         VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
-      )
+      this.storeStats(db, sessionId)
 
       this.save()
       console.log(`[SQLiteSessionRepository] Session ${sessionId} saved: ${points.length} points`)
@@ -269,6 +397,8 @@ export class SQLiteSessionRepository implements ISessionRepository {
           metadata.apellido2 ?? null
         ]
       )
+      // La fila de la sesión debe estar en disco antes del primer punto:
+      // el journal solo reincorpora puntos de sesiones que existen en la base.
       this.save()
       this.pendingPoints = 0
       this.startFlushTimer()
@@ -279,6 +409,10 @@ export class SQLiteSessionRepository implements ISessionRepository {
     }
   }
 
+  /**
+   * Agrega un punto. Cuando la promesa resuelve, el punto está en el journal
+   * forzado a disco. Lanza si no se pudo resguardar o insertar.
+   */
   async addPoint(sessionId: string, point: GeoTimestamp): Promise<void> {
     await this.initialize()
     const db = this.ensureDb()
@@ -291,41 +425,25 @@ export class SQLiteSessionRepository implements ISessionRepository {
       console.warn(
         `[SQLiteSessionRepository] Session ${sessionId} reached MAX_EXPORT_POINTS (${SQLiteSessionRepository.MAX_EXPORT_POINTS}), rejecting point`
       )
-      throw new Error(
-        `Límite de ${SQLiteSessionRepository.MAX_EXPORT_POINTS} puntos alcanzado para esta sesión`
-      )
+      throw new AppError({
+        code: 'SESSION_POINT_LIMIT',
+        message: `Límite de ${SQLiteSessionRepository.MAX_EXPORT_POINTS} puntos alcanzado para esta sesión`,
+        severity: 'warning',
+        category: 'session',
+        userAction: 'Inicie una nueva sesión para continuar midiendo',
+        retryable: false
+      })
     }
+
+    // Primero al journal: si la app muere después de esta línea, el punto se
+    // reincorpora al arrancar aunque nunca haya llegado al volcado completo.
+    this.journal?.append(sessionId, point)
 
     try {
       db.run('BEGIN')
-
-      db.run(
-        `INSERT INTO geo_points
-         (id, sessionId, sequenceNumber, timestamp, lat, lon, alt, rawMeasurement, correctedMeasurement, unit, gps_gap)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          point.id,
-          sessionId,
-          point.sequenceNumber,
-          unixToISO(point.timestamp),
-          point.position.lat,
-          point.position.lon,
-          point.position.alt,
-          point.emf.rawMeasurement,
-          point.correctedMeasurement,
-          point.emf.unit,
-          point.gpsGap ? 1 : 0
-        ]
-      )
-
+      this.insertPoint(db, sessionId, point)
       db.run(`UPDATE sessions SET sampleCount = sampleCount + 1 WHERE id = ?`, [sessionId])
-
       db.run('COMMIT')
-
-      this.pendingPoints++
-      if (this.pendingPoints >= this.FLUSH_EVERY_N_POINTS) {
-        this.flush()
-      }
     } catch (err) {
       try {
         db.run('ROLLBACK')
@@ -333,6 +451,12 @@ export class SQLiteSessionRepository implements ISessionRepository {
         /* rollback error ignored */
       }
       console.error(`[SQLiteSessionRepository] Error adding point:`, err)
+      throw new Error(`Cannot add point: ${err}`)
+    }
+
+    this.pendingPoints++
+    if (this.pendingPoints >= this.FLUSH_EVERY_N_POINTS) {
+      this.flushQuietly('Flush after N points')
     }
   }
 
@@ -358,32 +482,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
         ]
       )
 
-      // Calcular y guardar estadísticas (usando correctedMeasurement)
-      const statsResult = db.exec(
-        `SELECT
-          AVG(correctedMeasurement) as avgCorrected,
-          MAX(correctedMeasurement) as maxCorrected,
-          MIN(correctedMeasurement) as minCorrected,
-          COUNT(*) as pointCount
-        FROM geo_points
-        WHERE sessionId = ?`,
-        [sessionId]
-      )
-
-      const stats = statsResult[0]?.values[0]
-        ? {
-            avgCorrected: statsResult[0].values[0][0] as number | null,
-            maxCorrected: statsResult[0].values[0][1] as number | null,
-            minCorrected: statsResult[0].values[0][2] as number | null,
-            pointCount: statsResult[0].values[0][3] as number
-          }
-        : { avgCorrected: null, maxCorrected: null, minCorrected: null, pointCount: 0 }
-
-      db.run(
-        `INSERT OR REPLACE INTO session_stats (sessionId, avgCorrected, maxCorrected, minCorrected, pointCount)
-         VALUES (?, ?, ?, ?, ?)`,
-        [sessionId, stats.avgCorrected, stats.maxCorrected, stats.minCorrected, stats.pointCount]
-      )
+      this.storeStats(db, sessionId)
 
       this.stopFlushTimer()
       this.flush()
@@ -394,6 +493,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
     }
   }
 
+  /** Vuelca la base a disco. Lanza si la escritura falla. */
   flush(): void {
     this.save()
     this.pendingPoints = 0
@@ -406,7 +506,7 @@ export class SQLiteSessionRepository implements ISessionRepository {
         console.log(
           `[SQLiteSessionRepository] Periodic flush (${this.pendingPoints} pending points)`
         )
-        this.flush()
+        this.flushQuietly('Periodic flush')
       }
     }, this.FLUSH_INTERVAL_MS)
   }
@@ -574,11 +674,18 @@ export class SQLiteSessionRepository implements ISessionRepository {
   close(): void {
     this.stopFlushTimer()
     if (this.db) {
-      if (!this.isTestMode) this.save()
+      if (!this.isTestMode) {
+        try {
+          this.save()
+        } catch (err) {
+          console.error('[SQLiteSessionRepository] Save on close failed:', err)
+        }
+      }
       this.db.close()
       this.db = null
       this.initialized = false
       console.log('[SQLiteSessionRepository] Database closed')
     }
+    this.journal?.close()
   }
 }
