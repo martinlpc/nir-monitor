@@ -1,3 +1,11 @@
+## 0.18.1 — 2026-11-12
+
+### Correcciones
+
+- match vendor ids regardless of case
+- escape XML entities in KMZ output
+- replace imported session id when it is not a valid uuid
+
 # 0.18.0 — 2026-09-11
 
 ### Correcciones
