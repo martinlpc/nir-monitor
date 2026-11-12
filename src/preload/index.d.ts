@@ -84,6 +84,8 @@ declare global {
           sessionId?: string
           canceled?: boolean
           duplicate?: boolean
+          importedPoints?: number
+          skippedPoints?: number
           error?: string
         }>
         getStats: (sessionId: string) => Promise<{
@@ -168,9 +170,7 @@ declare global {
         getSoundsEnabled: () => Promise<{ success: boolean; enabled: boolean }>
         setSoundsEnabled: (enabled: boolean) => Promise<{ success: boolean }>
         getNbmConnectionType: () => Promise<{ success: boolean; connectionType: 'usb' | 'optical' }>
-        setNbmConnectionType: (
-          connectionType: 'usb' | 'optical'
-        ) => Promise<{ success: boolean }>
+        setNbmConnectionType: (connectionType: 'usb' | 'optical') => Promise<{ success: boolean }>
       }
       tileCache: {
         getStats: () => Promise<{

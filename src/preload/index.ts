@@ -170,6 +170,9 @@ const api = {
       success: boolean
       sessionId?: string
       canceled?: boolean
+      duplicate?: boolean
+      importedPoints?: number
+      skippedPoints?: number
       error?: string
     }> => ipcRenderer.invoke(IPC_HANDLERS.SESSION_IMPORT_GEOJSON),
 

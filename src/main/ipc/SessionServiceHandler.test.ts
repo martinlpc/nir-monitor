@@ -47,6 +47,7 @@ function makeDeps(
   const sessionService: SessionServiceLike = {
     start: vi.fn(async () => SESSION_ID),
     stop: vi.fn(async () => null as unknown as SessionSummary),
+    getState: vi.fn(() => 'idle'),
     getSummary: vi.fn(() => null),
     getRepository: vi.fn(() => repo),
     on: vi.fn()
@@ -107,10 +108,35 @@ function validSessionJson(): string {
       },
       {
         geometry: { coordinates: [-68.2, -38.95, 301] },
-        properties: { sequenceNumber: 2, timestamp: 1785542460000 }
+        properties: {
+          sequenceNumber: 2,
+          timestamp: 1785542460000,
+          rawMeasurement: 2,
+          unit: 'V/m',
+          gpsGap: true
+        }
       }
     ]
   })
+}
+
+function validFeature(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    geometry: { coordinates: [-68.1, -38.9, 300] },
+    properties: {
+      timestamp: 1785542400000,
+      rawMeasurement: 1.5,
+      unit: 'V/m',
+      correctedMeasurement: 1.62,
+      ...overrides
+    }
+  }
+}
+
+function sessionJsonWith(features: unknown[]): string {
+  const base = JSON.parse(validSessionJson())
+  base.features = features
+  return JSON.stringify(base)
 }
 
 describe('registerSessionServiceHandlers', () => {
@@ -571,10 +597,154 @@ describe('registerSessionServiceHandlers', () => {
       registerSessionServiceHandlers(ipc, deps)
 
       const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
-      expect(result).toEqual({ success: true, sessionId: SESSION_ID })
-      expect(deps.repo.initSession).toHaveBeenCalledOnce()
-      expect(deps.repo.addPoint).toHaveBeenCalledTimes(2)
-      expect(deps.repo.finalizeSession).toHaveBeenCalledOnce()
+      expect(result).toEqual({
+        success: true,
+        sessionId: SESSION_ID,
+        importedPoints: 2,
+        skippedPoints: 0
+      })
+      // Un único guardado transaccional, sin pasar por el flujo incremental
+      expect(deps.repo.saveSession).toHaveBeenCalledOnce()
+      const [id, metadata, points] = vi.mocked(deps.repo.saveSession).mock.calls[0]
+      expect(id).toBe(SESSION_ID)
+      expect(metadata.sampleCount).toBe(2)
+      expect(points).toHaveLength(2)
+      expect(deps.repo.initSession).not.toHaveBeenCalled()
+      expect(deps.repo.addPoint).not.toHaveBeenCalled()
+      expect(deps.repo.finalizeSession).not.toHaveBeenCalled()
+    })
+
+    it('imports the valid points and reports how many were skipped', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const json = sessionJsonWith([
+        validFeature(),
+        validFeature({ rawMeasurement: undefined }),
+        { geometry: null, properties: {} },
+        validFeature({ timestamp: 1785542460000 })
+      ])
+      const deps = makeDeps({ readFile: vi.fn(() => Buffer.from(json, 'utf-8')) })
+      vi.mocked(deps.dialog.showOpenDialog).mockResolvedValueOnce({
+        canceled: false,
+        filePaths: ['C:/in/s.geojson']
+      })
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect(result).toEqual({
+        success: true,
+        sessionId: SESSION_ID,
+        importedPoints: 2,
+        skippedPoints: 2
+      })
+      expect(vi.mocked(deps.repo.saveSession).mock.calls[0][2]).toHaveLength(2)
+    })
+
+    it('imports files with more than 5000 points without truncating', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const features = Array.from({ length: 5200 }, (_, i) =>
+        validFeature({ timestamp: 1785542400000 + i * 1000 })
+      )
+      const deps = makeDeps({
+        readFile: vi.fn(() => Buffer.from(sessionJsonWith(features), 'utf-8'))
+      })
+      vi.mocked(deps.dialog.showOpenDialog).mockResolvedValueOnce({
+        canceled: false,
+        filePaths: ['C:/in/big.geojson']
+      })
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect(result).toMatchObject({ success: true, importedPoints: 5200, skippedPoints: 0 })
+    })
+
+    it('rejects a file without any valid point', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const json = sessionJsonWith([validFeature({ unit: 'furlongs' }), { properties: {} }])
+      const deps = makeDeps({ readFile: vi.fn(() => Buffer.from(json, 'utf-8')) })
+      vi.mocked(deps.dialog.showOpenDialog).mockResolvedValueOnce({
+        canceled: false,
+        filePaths: ['C:/in/s.geojson']
+      })
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect(result).toEqual({
+        success: false,
+        error: 'El archivo no tiene puntos válidos (2 descartados por datos faltantes o inválidos).'
+      })
+      expect(deps.repo.saveSession).not.toHaveBeenCalled()
+    })
+
+    it('refuses to import while a measurement is running', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const deps = makeDeps()
+      vi.mocked(deps.sessionService.getState).mockReturnValue('running')
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect(result).toMatchObject({ success: false })
+      expect((result as { error: string }).error).toContain('durante una medición')
+      expect(deps.dialog.showOpenDialog).not.toHaveBeenCalled()
+    })
+
+    it('explains when the file cannot be decrypted', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const deps = makeDeps({
+        readFile: vi.fn(() => Buffer.from('CIPHER')),
+        isEncrypted: vi.fn(() => true),
+        decrypt: vi.fn(() => {
+          throw new Error('Unsupported state or unable to authenticate data')
+        })
+      })
+      vi.mocked(deps.dialog.showOpenDialog).mockResolvedValueOnce({
+        canceled: false,
+        filePaths: ['C:/in/s.geojson.enc']
+      })
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect((result as { error: string }).error).toContain('No se pudo descifrar')
+    })
+
+    it('reports points that already exist as a duplicate', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const deps = makeDeps({ readFile: vi.fn(() => Buffer.from(validSessionJson(), 'utf-8')) })
+      vi.mocked(deps.dialog.showOpenDialog).mockResolvedValueOnce({
+        canceled: false,
+        filePaths: ['C:/in/s.geojson']
+      })
+      vi.mocked(deps.repo.saveSession).mockRejectedValueOnce(
+        new Error('Cannot save session: Error: UNIQUE constraint failed: geo_points.id')
+      )
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect(result).toMatchObject({ success: false, duplicate: true })
+      errorSpy.mockRestore()
+    })
+
+    it('returns an error result when saving fails', async () => {
+      const { ipc, handlers } = createFakeIpc()
+      const deps = makeDeps({ readFile: vi.fn(() => Buffer.from(validSessionJson(), 'utf-8')) })
+      vi.mocked(deps.dialog.showOpenDialog).mockResolvedValueOnce({
+        canceled: false,
+        filePaths: ['C:/in/s.geojson']
+      })
+      vi.mocked(deps.repo.saveSession).mockRejectedValueOnce(new Error('disk full'))
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      registerSessionServiceHandlers(ipc, deps)
+
+      const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
+      expect(result).toEqual({ success: false, error: 'Error al guardar la sesión importada.' })
+      errorSpy.mockRestore()
     })
 
     it('decrypts encrypted geojson before importing', async () => {
@@ -592,7 +762,7 @@ describe('registerSessionServiceHandlers', () => {
       registerSessionServiceHandlers(ipc, deps)
 
       const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
-      expect(result).toEqual({ success: true, sessionId: SESSION_ID })
+      expect(result).toMatchObject({ success: true, sessionId: SESSION_ID })
       expect(deps.decrypt).toHaveBeenCalledWith(Buffer.from('CIPHER'))
     })
 
@@ -616,7 +786,7 @@ describe('registerSessionServiceHandlers', () => {
         duplicate: true,
         error: 'La sesión ya existe en la base de datos'
       })
-      expect(deps.repo.initSession).not.toHaveBeenCalled()
+      expect(deps.repo.saveSession).not.toHaveBeenCalled()
     })
 
     it('rejects a non-FeatureCollection file', async () => {
@@ -646,7 +816,10 @@ describe('registerSessionServiceHandlers', () => {
       registerSessionServiceHandlers(ipc, deps)
 
       const result = await handlers.get(IPC_HANDLERS.SESSION_IMPORT_GEOJSON)!(undefined)
-      expect(result).toEqual({ success: false, error: 'Error al importar el archivo GeoJSON.' })
+      expect(result).toEqual({
+        success: false,
+        error: 'El archivo no contiene un GeoJSON legible.'
+      })
     })
   })
 
@@ -723,7 +896,8 @@ describe('pure helpers', () => {
 
   it('builds session metadata and points from a parsed geojson', () => {
     const now = (): number => 999
-    const idFactory = (): string => 'new-id'
+    let created = 0
+    const idFactory = (): string => 'new-id-' + ++created
     const { sessionId, metadata, points } = buildImportedSession(JSON.parse(validSessionJson()), {
       idFactory,
       now
@@ -741,7 +915,96 @@ describe('pure helpers', () => {
       correctedMeasurement: 1.62
     })
     expect(points[1].sequenceNumber).toBe(2)
-    expect(points[1].id).toBe('new-id')
+    expect(points[1].id).toBe('new-id-2')
+    // Sin valor corregido en el archivo se calcula con el factor de la sesión
+    expect(points[1].correctedMeasurement).toBeCloseTo(2 * 1.08)
+    expect(points[1].gpsGap).toBe(true)
+    expect(points[0].gpsGap).toBeUndefined()
+  })
+
+  it.each([
+    ['missing coordinates', { geometry: {}, properties: validFeature().properties }],
+    ['latitude out of range', { ...validFeature(), geometry: { coordinates: [-68, -91, 0] } }],
+    ['longitude out of range', { ...validFeature(), geometry: { coordinates: [181, -38, 0] } }],
+    ['non numeric coordinate', { ...validFeature(), geometry: { coordinates: ['a', -38, 0] } }],
+    ['missing timestamp', validFeature({ timestamp: undefined })],
+    ['unparseable timestamp', validFeature({ timestamp: 'not a date' })],
+    ['missing measurement', validFeature({ rawMeasurement: undefined })],
+    ['negative measurement', validFeature({ rawMeasurement: -1 })],
+    ['non numeric measurement', validFeature({ rawMeasurement: '1.5' })],
+    ['negative corrected value', validFeature({ correctedMeasurement: -0.1 })],
+    ['missing unit', validFeature({ unit: undefined })],
+    ['unknown unit', validFeature({ unit: 'dBm' })],
+    ['null feature', null]
+  ])('skips a feature with %s', (_name, feature) => {
+    const geojson = JSON.parse(sessionJsonWith([validFeature(), feature]))
+
+    const { points, skippedPoints, metadata } = buildImportedSession(geojson)
+
+    expect(points).toHaveLength(1)
+    expect(skippedPoints).toBe(1)
+    expect(metadata.sampleCount).toBe(1)
+  })
+
+  it('accepts ISO timestamps, missing altitude and keeps valid point ids', () => {
+    const geojson = JSON.parse(
+      sessionJsonWith([
+        {
+          geometry: { coordinates: [-68.1, -38.9] },
+          properties: {
+            id: 'point-a',
+            datetime: '2026-07-31T12:00:05.000Z',
+            rawMeasurement: 0,
+            unit: 'A/m',
+            correctedMeasurement: 0
+          }
+        }
+      ])
+    )
+
+    const { points, skippedPoints } = buildImportedSession(geojson)
+
+    expect(skippedPoints).toBe(0)
+    expect(points[0]).toMatchObject({
+      id: 'point-a',
+      timestamp: Date.parse('2026-07-31T12:00:05.000Z'),
+      position: { lat: -38.9, lon: -68.1, alt: 0 },
+      emf: { rawMeasurement: 0, unit: 'A/m' }
+    })
+  })
+
+  it('skips a point whose id repeats inside the file', () => {
+    const geojson = JSON.parse(
+      sessionJsonWith([validFeature({ id: 'same' }), validFeature({ id: 'same' })])
+    )
+
+    const { points, skippedPoints } = buildImportedSession(geojson)
+
+    expect(points).toHaveLength(1)
+    expect(skippedPoints).toBe(1)
+  })
+
+  it('skips a point without corrected value when the session has no factor', () => {
+    const geojson = JSON.parse(sessionJsonWith([validFeature({ correctedMeasurement: undefined })]))
+    geojson.properties.correctionFactor = null
+
+    expect(buildImportedSession(geojson).skippedPoints).toBe(1)
+  })
+
+  it('falls back to the point timestamps when the session dates are invalid', () => {
+    const geojson = JSON.parse(
+      sessionJsonWith([
+        validFeature({ timestamp: 1785542400000 }),
+        validFeature({ timestamp: 1785542460000 })
+      ])
+    )
+    geojson.properties.session.startedAt = 'garbage'
+    delete geojson.properties.session.stoppedAt
+
+    const { metadata } = buildImportedSession(geojson)
+
+    expect(metadata.startedAt).toBe(1785542400000)
+    expect(metadata.stoppedAt).toBe(1785542460000)
   })
 
   it.each([['session-1'], [''], [12345], [null]])(

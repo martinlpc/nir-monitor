@@ -25,6 +25,7 @@ export interface SessionServiceLike {
     }
   ): Promise<string>
   stop(): Promise<SessionSummary>
+  getState(): string
   getSummary(): SessionSummary | null
   getRepository(): ISessionRepository | null
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -109,19 +110,23 @@ export function withSingleExtension(filePath: string, extension: string): string
   return `${finalPath}${extension}`
 }
 
+const IMPORT_UNITS = ['V/m', 'A/m', 'mW/cm^2', 'W/m^2'] as const
+type ImportUnit = (typeof IMPORT_UNITS)[number]
+
 export interface ImportedGeoFeatureProps {
-  id?: string
-  sequenceNumber?: number
-  timestamp?: number | string
-  datetime?: string
-  rawMeasurement?: number
-  unit?: 'V/m' | 'A/m' | 'mW/cm^2' | 'W/m^2'
-  correctedMeasurement?: number
+  id?: unknown
+  sequenceNumber?: unknown
+  timestamp?: unknown
+  datetime?: unknown
+  rawMeasurement?: unknown
+  unit?: unknown
+  correctedMeasurement?: unknown
+  gpsGap?: unknown
 }
 
 export interface ImportedGeoFeature {
-  geometry?: { coordinates?: number[] }
-  properties?: ImportedGeoFeatureProps
+  geometry?: { coordinates?: unknown } | null
+  properties?: ImportedGeoFeatureProps | null
 }
 
 export interface ImportedGeoJson {
@@ -129,7 +134,7 @@ export interface ImportedGeoJson {
   features: ImportedGeoFeature[]
   properties?: {
     session?: {
-      id?: string
+      id?: unknown
       label?: string
       localidad?: string
       provincia?: string
@@ -143,28 +148,121 @@ export interface ImportedGeoJson {
   }
 }
 
+export interface ImportedSession {
+  sessionId: string
+  metadata: SessionSummary
+  points: GeoTimestamp[]
+  /** Features descartadas por tener datos faltantes o inválidos */
+  skippedPoints: number
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function parseTimestamp(value: unknown): number | null {
+  if (isFiniteNumber(value)) return value > 0 ? value : null
+  if (typeof value === 'string' && value.trim() !== '') {
+    const ms = new Date(value).getTime()
+    return Number.isFinite(ms) && ms > 0 ? ms : null
+  }
+  return null
+}
+
+/**
+ * Convierte una feature en punto. Devuelve null si le falta algún dato de la
+ * medición o si es inválido: no se inventan coordenadas ni valores.
+ */
+function parseImportedFeature(
+  feature: ImportedGeoFeature | null | undefined,
+  index: number,
+  sessionId: string,
+  correctionFactor: number | null,
+  idFactory: () => string
+): GeoTimestamp | null {
+  const coordinates = feature?.geometry?.coordinates
+  if (!Array.isArray(coordinates)) return null
+  const [lon, lat, alt] = coordinates as unknown[]
+  if (!isFiniteNumber(lon) || lon < -180 || lon > 180) return null
+  if (!isFiniteNumber(lat) || lat < -90 || lat > 90) return null
+
+  const props = feature?.properties ?? {}
+
+  const timestamp = parseTimestamp(props.timestamp) ?? parseTimestamp(props.datetime)
+  if (timestamp === null) return null
+
+  const rawMeasurement = props.rawMeasurement
+  if (!isFiniteNumber(rawMeasurement) || rawMeasurement < 0) return null
+
+  let correctedMeasurement = props.correctedMeasurement
+  if (correctedMeasurement === undefined || correctedMeasurement === null) {
+    if (!isFiniteNumber(correctionFactor)) return null
+    correctedMeasurement = rawMeasurement * correctionFactor
+  }
+  if (!isFiniteNumber(correctedMeasurement) || correctedMeasurement < 0) return null
+
+  const unit = props.unit
+  if (typeof unit !== 'string' || !IMPORT_UNITS.includes(unit as ImportUnit)) return null
+
+  const sequenceNumber =
+    isFiniteNumber(props.sequenceNumber) && Number.isInteger(props.sequenceNumber)
+      ? props.sequenceNumber
+      : index + 1
+
+  const point: GeoTimestamp = {
+    id: typeof props.id === 'string' && props.id.trim() !== '' ? props.id : idFactory(),
+    sessionId,
+    sequenceNumber,
+    timestamp,
+    position: { lat, lon, alt: isFiniteNumber(alt) ? alt : 0 },
+    emf: { deviceId: 'nbm550', rawMeasurement, unit: unit as ImportUnit },
+    correctedMeasurement
+  }
+  if (props.gpsGap === true) point.gpsGap = true
+  return point
+}
+
 export function buildImportedSession(
   geojson: ImportedGeoJson,
   options?: { idFactory?: () => string; now?: () => number }
-): { sessionId: string; metadata: SessionSummary; points: GeoTimestamp[] } {
+): ImportedSession {
   const idFactory = options?.idFactory ?? uuidv4
   const now = options?.now ?? Date.now
 
   const props = geojson.properties?.session || {}
   const instrument = geojson.properties?.instrument ?? null
-  const correctionFactor = geojson.properties?.correctionFactor ?? null
-  const nowMs = now()
+  const rawFactor = geojson.properties?.correctionFactor
+  const correctionFactor = isFiniteNumber(rawFactor) ? rawFactor : null
 
   // Un ID que no sea UUID v4 dejaría la sesión inaccesible: todos los handlers lo validan
   const sessionId =
     typeof props.id === 'string' && isValidSessionId(props.id) ? props.id : idFactory()
 
+  const points: GeoTimestamp[] = []
+  const seenIds = new Set<string>()
+  let skippedPoints = 0
+  geojson.features.forEach((feature, index) => {
+    const point = parseImportedFeature(feature, index, sessionId, correctionFactor, idFactory)
+    // Un ID repetido dentro del archivo es el mismo punto duplicado
+    if (!point || seenIds.has(point.id)) {
+      skippedPoints++
+      return
+    }
+    seenIds.add(point.id)
+    points.push(point)
+  })
+
+  // Sin fechas de sesión válidas se usan las del primer y último punto
+  const timestamps = points.map((p) => p.timestamp)
+  const firstPoint = timestamps.length > 0 ? Math.min(...timestamps) : now()
+  const lastPoint = timestamps.length > 0 ? Math.max(...timestamps) : firstPoint
+
   const metadata: SessionSummary = {
     id: sessionId,
     label: props.label || props.localidad || 'Importada',
-    startedAt: props.startedAt ? new Date(props.startedAt).getTime() : nowMs,
-    stoppedAt: props.stoppedAt ? new Date(props.stoppedAt).getTime() : nowMs,
-    sampleCount: geojson.features.length,
+    startedAt: parseTimestamp(props.startedAt) ?? firstPoint,
+    stoppedAt: parseTimestamp(props.stoppedAt) ?? lastPoint,
+    sampleCount: points.length,
     instrument: instrument
       ? {
           meter: instrument.meter,
@@ -178,29 +276,7 @@ export function buildImportedSession(
     apellido2: props.apellido2 || undefined
   }
 
-  const points: GeoTimestamp[] = geojson.features.map((feature, index) => {
-    const [lon, lat, alt] = feature.geometry?.coordinates || [0, 0, 0]
-    const featProps = feature.properties || {}
-    return {
-      id: featProps.id || idFactory(),
-      sessionId,
-      sequenceNumber: featProps.sequenceNumber ?? index + 1,
-      timestamp: featProps.timestamp
-        ? typeof featProps.timestamp === 'number'
-          ? featProps.timestamp
-          : new Date(featProps.datetime || featProps.timestamp).getTime()
-        : nowMs,
-      position: { lat, lon, alt: alt ?? 0 },
-      emf: {
-        deviceId: 'nbm550',
-        rawMeasurement: featProps.rawMeasurement ?? 0,
-        unit: featProps.unit || 'V/m'
-      },
-      correctedMeasurement: featProps.correctedMeasurement ?? 0
-    }
-  })
-
-  return { sessionId, metadata, points }
+  return { sessionId, metadata, points, skippedPoints }
 }
 
 // ── Registro de handlers ───────────────────────────────────
@@ -422,9 +498,16 @@ export function registerSessionServiceHandlers(
     if (!repository) {
       return { success: false, error: 'Repositorio no disponible.' }
     }
+    if (sessionService.getState() === 'running') {
+      return {
+        success: false,
+        error: 'No se puede importar durante una medición. Detenga la sesión e intente de nuevo.'
+      }
+    }
 
+    let result: Awaited<ReturnType<DialogLike['showOpenDialog']>>
     try {
-      const result = await deps.dialog.showOpenDialog(eventSink.getWindow()!, {
+      result = await deps.dialog.showOpenDialog(eventSink.getWindow()!, {
         title: 'Importar GeoJSON',
         filters: [
           { name: 'GeoJSON cifrado', extensions: ['geojson.enc'] },
@@ -433,44 +516,78 @@ export function registerSessionServiceHandlers(
         ],
         properties: ['openFile']
       })
+    } catch {
+      return { success: false, error: 'No se pudo abrir el selector de archivos.' }
+    }
 
-      if (result.canceled || !result.filePaths?.[0]) {
-        return { success: false, canceled: true }
-      }
+    if (result.canceled || !result.filePaths?.[0]) {
+      return { success: false, canceled: true }
+    }
 
-      const filePath = result.filePaths[0]
-      const raw = deps.readFile(filePath)
-      let geojsonStr: string
+    let raw: Buffer
+    try {
+      raw = deps.readFile(result.filePaths[0])
+    } catch {
+      return { success: false, error: 'No se pudo leer el archivo seleccionado.' }
+    }
 
-      if (deps.isEncrypted(raw)) {
+    let geojsonStr: string
+    if (deps.isEncrypted(raw)) {
+      try {
         geojsonStr = deps.decrypt(raw).toString('utf-8')
-      } else {
-        geojsonStr = raw.toString('utf-8')
+      } catch {
+        return {
+          success: false,
+          error:
+            'No se pudo descifrar el archivo. Puede estar dañado o haberse generado con otra clave.'
+        }
       }
+    } else {
+      geojsonStr = raw.toString('utf-8')
+    }
 
-      const geojson = JSON.parse(geojsonStr) as ImportedGeoJson
-      if (geojson.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
-        return { success: false, error: 'El archivo no es un GeoJSON válido' }
+    let geojson: ImportedGeoJson
+    try {
+      geojson = JSON.parse(geojsonStr) as ImportedGeoJson
+    } catch {
+      return { success: false, error: 'El archivo no contiene un GeoJSON legible.' }
+    }
+    if (geojson?.type !== 'FeatureCollection' || !Array.isArray(geojson.features)) {
+      return { success: false, error: 'El archivo no es un GeoJSON válido' }
+    }
+
+    const { sessionId, metadata, points, skippedPoints } = buildImportedSession(geojson)
+
+    if (points.length === 0) {
+      return {
+        success: false,
+        error:
+          skippedPoints > 0
+            ? `El archivo no tiene puntos válidos (${skippedPoints} descartados por datos faltantes o inválidos).`
+            : 'El archivo no contiene puntos de medición.'
       }
+    }
 
-      const { sessionId, metadata, points } = buildImportedSession(geojson)
-
+    try {
       const existing = await repository.getSession(sessionId)
       if (existing) {
         return { success: false, duplicate: true, error: 'La sesión ya existe en la base de datos' }
       }
 
-      await repository.initSession(sessionId, metadata)
+      // Una sola transacción y un único guardado: entra la sesión completa o nada
+      await repository.saveSession(sessionId, metadata, points)
 
-      for (const point of points) {
-        await repository.addPoint(sessionId, point)
+      return { success: true, sessionId, importedPoints: points.length, skippedPoints }
+    } catch (err) {
+      console.error('[SessionServiceHandler] SESSION_IMPORT_GEOJSON Error:', err)
+      if (String(err).includes('UNIQUE constraint failed: geo_points.id')) {
+        return {
+          success: false,
+          duplicate: true,
+          error: 'Los puntos de este archivo ya están en la base de datos.'
+        }
       }
-
-      await repository.finalizeSession(sessionId, metadata)
-
-      return { success: true, sessionId }
-    } catch {
-      return { success: false, error: 'Error al importar el archivo GeoJSON.' }
+      return { success: false, error: 'Error al guardar la sesión importada.' }
     }
   })
 
