@@ -330,7 +330,7 @@
       />
       <h1>RNI <span>Monitor</span></h1>
       <p class="subtitle">Manual de uso</p>
-      <p class="meta">Versión <strong>0.18.1</strong> &mdash; Noviembre 2026</p>
+      <p class="meta">Versión <strong>0.18.2</strong> &mdash; Noviembre 2026</p>
       <p class="cover-org">
         <strong>Ente Nacional de Comunicaciones</strong><br />
         Dirección Nacional de Control y Fiscalización
@@ -840,6 +840,13 @@
           cargar la sesión más tarde desde el panel <strong>Historial</strong>.
         </div>
         <div class="info-box">
+          <strong>Cierre inesperado:</strong> Cada punto se guarda en disco en el momento en que se
+          captura. Si la PC se apaga o la aplicación se cierra durante una medición, al volver a
+          abrirla la sesión aparece en el <strong>Historial</strong> con todos los puntos
+          registrados hasta ese instante. En ese caso no se genera el archivo del Escritorio:
+          exportala desde el Historial.
+        </div>
+        <div class="info-box">
           <strong>Tip:</strong> Durante una medición activa no se puede cargar una sesión previa
           como principal. Podés seguir usando los checkboxes para superponer sesiones en el mapa.
         </div>
@@ -900,12 +907,15 @@
 
         <p>
           También podés <strong>importar</strong> archivos GeoJSON existentes desde el panel
-          Historial con el botón <strong>"📥 Importar"</strong>.
+          Historial con el botón <strong>"📥 Importar"</strong>. Los puntos del archivo con datos
+          faltantes o inválidos (coordenadas, fecha, medición o unidad) se omiten y la aplicación
+          informa cuántos fueron. No se puede importar mientras hay una medición en curso.
         </p>
 
         <div class="warn-box">
           <strong>Límite:</strong> La sesión guarda hasta <strong>5000 puntos</strong>. Al alcanzar
-          ese número se detiene la captura automáticamente.
+          ese número la medición se detiene sola, muestra un aviso y deja la sesión guardada, con
+          su archivo en el Escritorio. Para seguir midiendo iniciá una sesión nueva.
         </div>
       </section>
 
@@ -1172,7 +1182,7 @@
         Contacto:
         <a href="mailto:mpacheco@enacom.gob.ar" style="color: #bce4f4">mpacheco@enacom.gob.ar</a>
       </p>
-      <p style="margin-top: 0.3rem; font-size: 0.75rem">Versión 0.18.1 &mdash; Noviembre 2026</p>
+      <p style="margin-top: 0.3rem; font-size: 0.75rem">Versión 0.18.2 &mdash; Noviembre 2026</p>
     </footer>
   </body>
 </html>

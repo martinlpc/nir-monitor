@@ -1,3 +1,13 @@
+## 0.18.2 — 2026-11-12
+
+### Correcciones
+
+- journal every point and write the database atomically
+- save a full session in a single transaction
+- quote the inf path so pnputil works from Program Files
+- validate geojson points and skip the invalid ones
+- stop at the point limit and alert when a save fails
+
 ## 0.18.1 — 2026-11-12
 
 ### Correcciones
