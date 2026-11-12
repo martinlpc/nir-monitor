@@ -128,7 +128,9 @@ export function buildImportedSession(
   const correctionFactor = geojson.properties?.correctionFactor ?? null
   const nowMs = now()
 
-  const sessionId = props.id || idFactory()
+  // Un ID que no sea UUID v4 dejaría la sesión inaccesible: todos los handlers lo validan
+  const sessionId =
+    typeof props.id === 'string' && isValidSessionId(props.id) ? props.id : idFactory()
 
   const metadata: SessionSummary = {
     id: sessionId,

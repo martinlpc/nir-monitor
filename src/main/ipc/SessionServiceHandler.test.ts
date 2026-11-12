@@ -741,4 +741,21 @@ describe('pure helpers', () => {
     expect(points[1].sequenceNumber).toBe(2)
     expect(points[1].id).toBe('new-id')
   })
+
+  it.each([['session-1'], [''], [12345], [null]])(
+    'replaces a session id that is not a valid uuid (%j)',
+    (badId) => {
+      const NEW_ID = '0b7d6c1e-8a2f-4e3b-9c4d-5f6a7b8c9d0e'
+      const geojson = JSON.parse(validSessionJson())
+      geojson.properties.session.id = badId
+
+      const { sessionId, metadata, points } = buildImportedSession(geojson, {
+        idFactory: () => NEW_ID
+      })
+
+      expect(sessionId).toBe(NEW_ID)
+      expect(metadata.id).toBe(NEW_ID)
+      expect(points.every((p) => p.sessionId === NEW_ID)).toBe(true)
+    }
+  )
 })
