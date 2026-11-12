@@ -122,7 +122,7 @@ electron-builder --win     # Empaqueta NSIS
 | `npm run typecheck`        | tsc node + web                                  |
 | `npm run start`            | Preview del build de producción                 |
 | `npm run build:unpack`     | Build sin instalador (carpeta --dir)            |
-| `npm run changelog`        | Genera CHANGELOG.md desde los commits           |
+| `npm run changelog`        | Agrega a CHANGELOG.md la sección de la versión  |
 | `npm run generate:nsh-key` | Genera build/key.nsh desde .env                 |
 | `npm run build:win`        | Build NSIS installer (incluye generate:nsh-key) |
 | `npm run build:mac`        | Build DMG                                       |

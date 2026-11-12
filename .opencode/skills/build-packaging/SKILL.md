@@ -95,7 +95,7 @@ npm run build:win
   -> electron-builder --win       # empaqueta en NSIS
 
 npm run changelog
-  -> regenera CHANGELOG.md desde Conventional Commits
+  -> agrega a CHANGELOG.md la seccion de la version actual (commits desde el ultimo tag)
   -> se incluye como extraResource en el instalador
   -> disponible en la app via "Ver novedades"
 ```

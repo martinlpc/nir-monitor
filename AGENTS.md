@@ -46,7 +46,7 @@ git checkout main && git pull gitlab main
 | `npm run format`        | Prettier --write                                 |
 | `npm run typecheck`     | tsc node + web                                   |
 | `npm run seed:mock`     | Seeds SQLite con datos mock (Neuquen)            |
-| `npm run changelog`     | Regenera CHANGELOG.md desde Conventional Commits |
+| `npm run changelog`     | Agrega a CHANGELOG.md la seccion de la version   |
 | `npm run build:win`     | Build NSIS installer                             |
 | `npm run build:mac`     | Build DMG                                        |
 | `npm run build:linux`   | Build AppImage/snap/deb                          |

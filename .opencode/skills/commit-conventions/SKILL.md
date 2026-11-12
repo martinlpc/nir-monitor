@@ -149,13 +149,16 @@ Confirmado el bump, ejecutar en orden:
    - **Contenido:** solo si los cambios afectan flujo de conexión, parámetros de
      captura, comportamiento de sesión, formatos de exportación, configuración de
      mapa o modo simulación
-4. `npm run changelog` — regenera CHANGELOG.md
+4. `npm run changelog` — agrega la sección de la versión nueva a CHANGELOG.md.
+   Lista todos los commits desde el último tag (cualquier tipo) y no toca las
+   versiones anteriores. Requiere haber actualizado antes `package.json`
 5. Commit: `chore: bump to X.Y.Z and update changelog/manual/readme`
 
 #### 7. Tags
 
 ```
 git tag vX.Y.Z
+git push gitlab main
 git push gitlab vX.Y.Z
 ```
 
