@@ -34,6 +34,8 @@ export default function SessionsPanel({
     sessionId?: string
     canceled?: boolean
     duplicate?: boolean
+    importedPoints?: number
+    skippedPoints?: number
   }>
   onGetSession: (sessionId: string) => Promise<PersistedSession>
 }): React.JSX.Element {
@@ -145,8 +147,20 @@ export default function SessionsPanel({
         return
       }
 
+      const skipped = result.skippedPoints ?? 0
+      if (skipped > 0) {
+        setLoadStatus({
+          message: `⚠ GeoJSON importado: ${result.importedPoints ?? 0} puntos. Se omitieron ${skipped} por datos faltantes o inválidos`,
+          type: 'warning'
+        })
+        return
+      }
+
       setLoadStatus({
-        message: '✓ GeoJSON importado correctamente',
+        message:
+          result.importedPoints !== undefined
+            ? `✓ GeoJSON importado correctamente (${result.importedPoints} puntos)`
+            : '✓ GeoJSON importado correctamente',
         type: 'success'
       })
     } catch (err) {

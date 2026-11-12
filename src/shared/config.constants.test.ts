@@ -43,8 +43,8 @@ describe('config constants', () => {
   })
 
   it('has correct default flush config', () => {
-    expect(DEFAULT_FLUSH.everyNPoints).toBe(5)
-    expect(DEFAULT_FLUSH.intervalMs).toBe(5000)
+    expect(DEFAULT_FLUSH.everyNPoints).toBe(25)
+    expect(DEFAULT_FLUSH.intervalMs).toBe(30_000)
   })
 
   it('has correct default NBM driver config', () => {

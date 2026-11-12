@@ -446,3 +446,169 @@ describe('SessionService', () => {
     expect(session.hasPendingFinalize()).toBe(true)
   })
 })
+
+class FakeFusion extends EventEmitter {
+  stop = vi.fn()
+  start = vi.fn()
+  setNBM = vi.fn()
+  setGPS = vi.fn()
+  setCorrectionFactor = vi.fn()
+  updateConfig = vi.fn()
+  onGPSPosition = vi.fn()
+
+  emitPoint(seq: number): void {
+    const point: GeoTimestamp = {
+      id: `p-${seq}`,
+      sessionId: 's',
+      sequenceNumber: seq,
+      timestamp: 1_700_000_000_000 + seq * 1000,
+      position: { lat: -34.6, lon: -58.38, alt: 22 },
+      emf: { deviceId: 'nbm550', rawMeasurement: 1, unit: 'V/m' },
+      correctedMeasurement: 1.1
+    }
+    this.emit('point', point)
+  }
+}
+
+const flushAsync = (): Promise<void> => new Promise((r) => setTimeout(r, 0))
+
+async function startedSession(
+  repo: FakeRepository,
+  maxPoints?: number
+): Promise<{ session: SessionService; fusion: FakeFusion }> {
+  const fusion = new FakeFusion()
+  const session = new SessionService(
+    fusion as never,
+    asRepo(repo),
+    undefined,
+    asResolver(() => 1.1),
+    maxPoints === undefined ? undefined : { maxPoints }
+  )
+  const gps = new FakeGPSDriver()
+  gps.setPosition({ lat: -34.6037, lon: -58.3816, alt: 22 })
+  session.setNBM(new FakeNBMDriver() as never)
+  session.setGPS(gps as never)
+  await session.start('Limit test')
+  return { session, fusion }
+}
+
+describe('SessionService point limit and save failures', () => {
+  it('stops the session by itself when the point limit is reached', async () => {
+    const repo = createFakeRepo()
+    const { session, fusion } = await startedSession(repo, 2)
+    const alerts: { message: string; severity?: string }[] = []
+    const autoStopped = vi.fn()
+    session.on('alert', (a) => alerts.push(a))
+    session.on('autoStopped', autoStopped)
+
+    fusion.emitPoint(1)
+    fusion.emitPoint(2)
+    fusion.emitPoint(3)
+    await flushAsync()
+
+    expect(repo.addPoint).toHaveBeenCalledTimes(2)
+    expect(repo.finalizeSession).toHaveBeenCalledOnce()
+    expect(session.getState()).toBe('stopped')
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].severity).toBe('warning')
+    expect(alerts[0].message).toContain('límite de 2 puntos')
+    expect(autoStopped).toHaveBeenCalledWith(expect.objectContaining({ sampleCount: 2 }))
+  })
+
+  it('saves the last allowed point before finalizing', async () => {
+    const repo = createFakeRepo()
+    const order: string[] = []
+    repo.addPoint.mockImplementation(async (_id: string, p: GeoTimestamp) => {
+      await flushAsync()
+      order.push(`add:${p.sequenceNumber}`)
+    })
+    repo.finalizeSession.mockImplementation(async () => {
+      order.push('finalize')
+    })
+    const { fusion } = await startedSession(repo, 1)
+
+    fusion.emitPoint(1)
+    await new Promise((r) => setTimeout(r, 20))
+
+    expect(order).toEqual(['add:1', 'finalize'])
+  })
+
+  it('allows a new session to capture again after hitting the limit', async () => {
+    const repo = createFakeRepo()
+    const { session, fusion } = await startedSession(repo, 1)
+    fusion.emitPoint(1)
+    await flushAsync()
+    expect(session.getState()).toBe('stopped')
+
+    await session.start('Second run')
+    fusion.emitPoint(1)
+    await flushAsync()
+
+    expect(repo.addPoint).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not retry a non-retryable save error', async () => {
+    const repo = createFakeRepo()
+    repo.addPoint.mockRejectedValue(
+      new AppError({
+        code: 'SESSION_POINT_LIMIT',
+        message: 'Límite alcanzado',
+        severity: 'warning',
+        category: 'session',
+        retryable: false
+      })
+    )
+    const { session, fusion } = await startedSession(repo)
+    const saveError = vi.fn()
+    session.on('session:saveError', saveError)
+
+    fusion.emitPoint(1)
+    await flushAsync()
+
+    expect(repo.addPoint).toHaveBeenCalledTimes(1)
+    expect(saveError).toHaveBeenCalledOnce()
+  })
+
+  it('alerts the user only once per session when saves keep failing', async () => {
+    const repo = createFakeRepo()
+    repo.addPoint.mockRejectedValue(
+      new AppError({
+        code: 'DISK_FULL',
+        message: 'ENOSPC',
+        severity: 'error',
+        category: 'session',
+        retryable: false
+      })
+    )
+    const { session, fusion } = await startedSession(repo)
+    const alerts: { message: string; severity?: string }[] = []
+    const saveError = vi.fn()
+    session.on('alert', (a) => alerts.push(a))
+    session.on('session:saveError', saveError)
+
+    fusion.emitPoint(1)
+    fusion.emitPoint(2)
+    fusion.emitPoint(3)
+    await flushAsync()
+
+    expect(saveError).toHaveBeenCalledTimes(3)
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].severity).toBe('error')
+    expect(alerts[0].message).toContain('No se pudo guardar')
+    expect(session.getState()).toBe('running')
+  })
+
+  it('alerts when the session cannot be finalized', async () => {
+    const repo = createFakeRepo()
+    repo.finalizeSession.mockRejectedValue(new Error('disk full'))
+    const { session } = await startedSession(repo)
+    const alerts: { message: string }[] = []
+    session.on('alert', (a) => alerts.push(a))
+
+    await session.stop()
+
+    expect(alerts).toHaveLength(1)
+    expect(alerts[0].message).toContain('No se pudo cerrar la sesión')
+    expect(session.hasPendingFinalize()).toBe(true)
+  })
+})

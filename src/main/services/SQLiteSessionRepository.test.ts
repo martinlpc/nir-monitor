@@ -8,6 +8,7 @@ import { app } from 'electron'
 import { SQLiteSessionRepository } from './SQLiteSessionRepository'
 import { isEncrypted, createCryptoServiceFromEnv } from './CryptoService'
 import { applySchema } from '../db/SchemaManager'
+import type { PointJournal } from '../db/PointJournal'
 import type { GeoTimestamp, GeoPosition } from '../../shared/GeoTimestamp'
 import type { SessionSummary } from '../../shared/ipc.types'
 
@@ -419,11 +420,32 @@ describe('SQLiteSessionRepository (in-memory)', () => {
       repo.saveSession(metaB.id, metaB, [{ ...dupPoint, sessionId: metaB.id }])
     ).rejects.toThrow(/Cannot save session/)
     expect(await repo.getSessionPoints(metaB.id)).toEqual([])
+    // La transacción deshace también la fila de la sesión: no queda a medias
+    expect(await repo.getSession(metaB.id)).toBeNull()
+    expect(await repo.getSessionStats(metaB.id)).toBeNull()
+  })
+
+  it('saveSession persists location data and tolerates more than the capture limit', async () => {
+    const meta = makeSession()
+    const total = SQLiteSessionRepository.MAX_EXPORT_POINTS + 5
+    const pts = Array.from({ length: total }, (_, i) =>
+      makePoint({ sessionId: 'ignored', sequenceNumber: i + 1 })
+    )
+
+    await repo.saveSession(meta.id, { ...meta, sampleCount: total }, pts)
+
+    const loaded = await repo.getSession(meta.id)
+    expect(loaded?.metadata.provincia).toBe('Neuquén')
+    expect(loaded?.metadata.localidad).toBe('Neuquén')
+    expect(loaded?.metadata.apellido1).toBe('García')
+    expect(loaded?.metadata.apellido2).toBe('López')
+    expect(loaded?.points).toHaveLength(total)
+    expect((await repo.getSessionStats(meta.id))?.pointCount).toBe(total)
   })
 
   // ── Manejo de errores ──────────────────────────────────────
 
-  it('rolls back and logs when adding a duplicate point', async () => {
+  it('rolls back and rejects when adding a duplicate point', async () => {
     const meta = makeSession()
     await repo.initSession(meta.id, meta)
 
@@ -431,9 +453,62 @@ describe('SQLiteSessionRepository (in-memory)', () => {
     await repo.addPoint(meta.id, point)
 
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    await repo.addPoint(meta.id, point)
+    await expect(repo.addPoint(meta.id, point)).rejects.toThrow(/Cannot add point/)
     expect(errorSpy).toHaveBeenCalled()
     errorSpy.mockRestore()
+
+    expect(await repo.getSessionPoints(meta.id)).toHaveLength(1)
+    expect((await repo.getSession(meta.id))?.metadata.sampleCount).toBe(1)
+  })
+
+  it('rejects the point limit with a non-retryable error', async () => {
+    const meta = makeSession()
+    await repo.initSession(meta.id, meta)
+    const priv = repo as unknown as { db: SqlJsDatabase }
+    priv.db.run('UPDATE sessions SET sampleCount = ? WHERE id = ?', [
+      SQLiteSessionRepository.MAX_EXPORT_POINTS,
+      meta.id
+    ])
+
+    await expect(repo.addPoint(meta.id, makePoint({ sessionId: meta.id }))).rejects.toMatchObject({
+      code: 'SESSION_POINT_LIMIT',
+      retryable: false
+    })
+  })
+
+  it('journals each point before inserting it and rejects when the journal fails', async () => {
+    const calls: string[] = []
+    const journal = {
+      append: vi.fn((sessionId: string) => {
+        calls.push(`append:${sessionId}`)
+      }),
+      readAll: vi.fn(() => ({ entries: [], discardedBytes: 0 })),
+      clear: vi.fn(),
+      close: vi.fn()
+    }
+    const journaled = new SQLiteSessionRepository({
+      testDb: db,
+      journal: journal as unknown as PointJournal
+    })
+    const meta = makeSession()
+    await journaled.initSession(meta.id, meta)
+
+    const point = makePoint({ sessionId: meta.id })
+    await journaled.addPoint(meta.id, point)
+    expect(journal.append).toHaveBeenCalledWith(meta.id, point)
+
+    journal.append.mockImplementationOnce(() => {
+      throw new Error('ENOSPC: no space left on device')
+    })
+    await expect(
+      journaled.addPoint(meta.id, makePoint({ sessionId: meta.id, sequenceNumber: 2 }))
+    ).rejects.toThrow(/ENOSPC/)
+    // El punto que no se pudo resguardar tampoco queda en memoria
+    expect(await journaled.getSessionPoints(meta.id)).toHaveLength(1)
+
+    const priv = journaled as unknown as { stopFlushTimer(): void; db: SqlJsDatabase | null }
+    priv.stopFlushTimer()
+    priv.db = null
   })
 
   it('wraps initSession errors', async () => {
@@ -634,6 +709,124 @@ describe('SQLiteSessionRepository (real file mode)', () => {
 
       realRepo.close()
       reloaded.close()
+    } finally {
+      fs.rmSync(dir, { recursive: true, force: true })
+      getPathMock.mockImplementation(previous ?? (() => '/tmp/nir-test'))
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('recovers points and closes the session after an unclean shutdown', async () => {
+    vi.stubEnv('NIR_DB_ENCRYPTION_KEY', 'test-key-real-mode')
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nir-repo-crash-'))
+    const getPathMock = vi.mocked(app.getPath)
+    const previous = getPathMock.getMockImplementation()
+    getPathMock.mockImplementation(() => path.join(dir, 'userData'))
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      const userDataDir = path.join(dir, 'userData')
+      const journalPath = path.join(userDataDir, 'sessions.journal')
+
+      // Volcado completo cada 100 puntos: los 3 puntos quedan solo en el journal
+      const crashed = new SQLiteSessionRepository({
+        flushEveryNPoints: 100,
+        flushIntervalMs: 60_000,
+        crypto: createCryptoServiceFromEnv()
+      })
+      const meta = makeSession({ stoppedAt: null })
+      await crashed.initSession(meta.id, meta)
+      const t0 = meta.startedAt
+      for (let i = 1; i <= 3; i++) {
+        await crashed.addPoint(
+          meta.id,
+          makePoint({
+            sessionId: meta.id,
+            sequenceNumber: i,
+            timestamp: t0 + i * 1000,
+            correctedMeasurement: i
+          })
+        )
+      }
+      expect(fs.statSync(journalPath).size).toBeGreaterThan(0)
+
+      // Simula que el proceso muere: no hay finalize, flush ni close
+      const priv = crashed as unknown as {
+        stopFlushTimer(): void
+        journal: PointJournal
+        db: SqlJsDatabase | null
+      }
+      priv.stopFlushTimer()
+      priv.journal.close()
+      priv.db = null
+
+      // Además el último registro quedó escrito a medias
+      fs.appendFileSync(journalPath, Buffer.from([0, 0, 1, 0, 7, 7, 7]))
+
+      const restarted = new SQLiteSessionRepository({
+        flushEveryNPoints: 100,
+        crypto: createCryptoServiceFromEnv()
+      })
+      const loaded = await restarted.getSession(meta.id)
+
+      expect(loaded?.points).toHaveLength(3)
+      expect(loaded?.metadata.sampleCount).toBe(3)
+      expect(loaded?.metadata.stoppedAt).toBe(t0 + 3000)
+
+      const stats = await restarted.getSessionStats(meta.id)
+      expect(stats?.pointCount).toBe(3)
+      expect(stats?.maxCorrected).toBe(3)
+
+      expect(restarted.getLastRecovery()).toEqual({
+        replayedPoints: 3,
+        closedSessions: 1,
+        discardedBytes: 7
+      })
+      // Lo recuperado ya está en el volcado: el journal queda vacío
+      expect(fs.statSync(journalPath).size).toBe(0)
+      expect(fs.readdirSync(userDataDir).filter((f) => f.endsWith('.tmp'))).toEqual([])
+
+      restarted.close()
+
+      // Un segundo arranque no tiene nada que recuperar ni duplica puntos
+      const again = new SQLiteSessionRepository({ crypto: createCryptoServiceFromEnv() })
+      expect((await again.getSession(meta.id))?.points).toHaveLength(3)
+      expect(again.getLastRecovery()).toEqual({
+        replayedPoints: 0,
+        closedSessions: 0,
+        discardedBytes: 0
+      })
+      again.close()
+    } finally {
+      warnSpy.mockRestore()
+      fs.rmSync(dir, { recursive: true, force: true })
+      getPathMock.mockImplementation(previous ?? (() => '/tmp/nir-test'))
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('ignores journal points whose session is not in the database', async () => {
+    vi.stubEnv('NIR_DB_ENCRYPTION_KEY', 'test-key-real-mode')
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nir-repo-orphan-'))
+    const getPathMock = vi.mocked(app.getPath)
+    const previous = getPathMock.getMockImplementation()
+    getPathMock.mockImplementation(() => path.join(dir, 'userData'))
+
+    try {
+      const userDataDir = path.join(dir, 'userData')
+      const { PointJournal: RealJournal } = await import('../db/PointJournal')
+      const journal = new RealJournal(
+        path.join(userDataDir, 'sessions.journal'),
+        createCryptoServiceFromEnv()
+      )
+      journal.append('deleted-session', makePoint({ sessionId: 'deleted-session' }))
+      journal.close()
+
+      const repo = new SQLiteSessionRepository({ crypto: createCryptoServiceFromEnv() })
+      expect(await repo.listSessions()).toEqual([])
+      expect(await repo.getSessionPoints('deleted-session')).toEqual([])
+      expect(repo.getLastRecovery()?.replayedPoints).toBe(0)
+      repo.close()
     } finally {
       fs.rmSync(dir, { recursive: true, force: true })
       getPathMock.mockImplementation(previous ?? (() => '/tmp/nir-test'))

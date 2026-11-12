@@ -25,7 +25,13 @@ export function usePersistentSessions(): {
     format: 'geojson' | 'xlsx' | 'kmz',
     label: string
   ) => Promise<{ filePaths?: string[]; canceled?: boolean }>
-  importGeoJSON: () => Promise<{ sessionId?: string; canceled?: boolean }>
+  importGeoJSON: () => Promise<{
+    sessionId?: string
+    canceled?: boolean
+    duplicate?: boolean
+    importedPoints?: number
+    skippedPoints?: number
+  }>
   getStats: (sessionId: string) => Promise<{
     avgCorrected: number
     maxCorrected: number
@@ -134,6 +140,8 @@ export function usePersistentSessions(): {
     sessionId?: string
     canceled?: boolean
     duplicate?: boolean
+    importedPoints?: number
+    skippedPoints?: number
   }> => {
     try {
       const result = await window.api.session.importGeoJSON()
@@ -145,7 +153,11 @@ export function usePersistentSessions(): {
       }
       if (result.success && result.sessionId) {
         await loadSessions()
-        return { sessionId: result.sessionId }
+        return {
+          sessionId: result.sessionId,
+          importedPoints: result.importedPoints,
+          skippedPoints: result.skippedPoints
+        }
       }
       throw new Error(result.error || 'Failed to import GeoJSON')
     } catch (err) {
